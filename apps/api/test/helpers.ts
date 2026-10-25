@@ -33,7 +33,11 @@ export async function makeApp(configure?: (app: Awaited<ReturnType<typeof buildA
 
 type App = Awaited<ReturnType<typeof makeApp>>;
 
-export async function createUser(app: App, role: Role, extra: { canViewStartCodes?: boolean } = {}) {
+export async function createUser(
+  app: App,
+  role: Role,
+  extra: { canViewStartCodes?: boolean } = {},
+) {
   const email = `${role.toLowerCase()}-${randomBytes(4).toString('hex')}@fleethub.test`;
   await app.db.user.create({
     data: { email, name: `Test ${role}`, role, passwordHash: await hash(PASSWORD), ...extra },

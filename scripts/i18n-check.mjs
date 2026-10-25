@@ -17,11 +17,13 @@ const he = flatten(load('he'));
 const problems = [];
 for (const key of Object.keys(en)) {
   if (!(key in he)) problems.push(`missing in he: ${key}`);
-  else if (typeof he[key] !== 'string' || he[key].trim() === '') problems.push(`empty in he: ${key}`);
+  else if (typeof he[key] !== 'string' || he[key].trim() === '')
+    problems.push(`empty in he: ${key}`);
 }
 for (const key of Object.keys(he)) {
   if (!(key in en)) problems.push(`missing in en: ${key}`);
-  else if (typeof en[key] !== 'string' || en[key].trim() === '') problems.push(`empty in en: ${key}`);
+  else if (typeof en[key] !== 'string' || en[key].trim() === '')
+    problems.push(`empty in en: ${key}`);
 }
 
 if (problems.length) {

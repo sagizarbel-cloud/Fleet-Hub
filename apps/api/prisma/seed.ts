@@ -49,8 +49,18 @@ const vehicleTypes: {
   nameHe: string;
   category: VehicleCategory;
 }[] = [
-  { code: 'tracked_excavator', nameEn: 'Tracked excavator', nameHe: 'מחפר זחלי', category: 'EQUIPMENT' },
-  { code: 'wheeled_excavator', nameEn: 'Wheeled excavator', nameHe: 'מחפר גלגלי', category: 'EQUIPMENT' },
+  {
+    code: 'tracked_excavator',
+    nameEn: 'Tracked excavator',
+    nameHe: 'מחפר זחלי',
+    category: 'EQUIPMENT',
+  },
+  {
+    code: 'wheeled_excavator',
+    nameEn: 'Wheeled excavator',
+    nameHe: 'מחפר גלגלי',
+    category: 'EQUIPMENT',
+  },
   { code: 'backhoe_loader', nameEn: 'Backhoe loader', nameHe: 'מחפרון', category: 'EQUIPMENT' },
   { code: 'wheel_loader', nameEn: 'Wheel loader', nameHe: 'שופל', category: 'EQUIPMENT' },
   { code: 'skid_steer', nameEn: 'Skid-steer', nameHe: 'בובקט', category: 'EQUIPMENT' },
@@ -94,22 +104,134 @@ const fleet: {
   dept: string;
   plan: Plan;
 }[] = [
-  { serial: 'EX-101', type: 'tracked_excavator', make: 'Caterpillar', model: '320', dept: 'earthworks', plan: 'green' },
-  { serial: 'EX-102', type: 'tracked_excavator', make: 'Komatsu', model: 'PC210', dept: 'earthworks', plan: 'red_malfunction' },
-  { serial: 'EX-201', type: 'wheeled_excavator', make: 'Volvo', model: 'EW160', dept: 'roads', plan: 'green' },
-  { serial: 'BL-301', type: 'backhoe_loader', make: 'JCB', model: '3CX', dept: 'roads', plan: 'amber' },
-  { serial: 'BL-302', type: 'backhoe_loader', make: 'Caterpillar', model: '432', dept: 'earthworks', plan: 'green' },
-  { serial: 'WL-401', type: 'wheel_loader', make: 'Volvo', model: 'L90', dept: 'earthworks', plan: 'amber' },
-  { serial: 'SS-501', type: 'skid_steer', make: 'Bobcat', model: 'S650', dept: 'roads', plan: 'green' },
-  { serial: 'TR-601', type: 'tractor', make: 'John Deere', model: '6120M', dept: 'maintenance', plan: 'amber' },
-  { serial: 'FL-701', type: 'forklift', make: 'Toyota', model: '8FD25', dept: 'logistics', plan: 'green' },
-  { serial: 'TK-801', type: 'truck', make: 'Volvo', model: 'FH 500', dept: 'logistics', plan: 'green' },
-  { serial: 'TK-802', type: 'truck', make: 'Mercedes-Benz', model: 'Actros', dept: 'logistics', plan: 'red_test' },
-  { serial: 'PU-901', type: 'pickup', make: 'Toyota', model: 'Hilux', dept: 'maintenance', plan: 'green' },
-  { serial: 'PU-902', type: 'pickup', make: 'Mitsubishi', model: 'Triton', dept: 'roads', plan: 'amber' },
-  { serial: 'PU-903', type: 'pickup', make: 'Toyota', model: 'Hilux', dept: 'earthworks', plan: 'green' },
-  { serial: 'VN-951', type: 'van', make: 'Ford', model: 'Transit', dept: 'logistics', plan: 'green' },
-  { serial: 'OT-991', type: 'other', make: 'Atlas Copco', model: 'XAS 185', dept: 'maintenance', plan: 'green' },
+  {
+    serial: 'EX-101',
+    type: 'tracked_excavator',
+    make: 'Caterpillar',
+    model: '320',
+    dept: 'earthworks',
+    plan: 'green',
+  },
+  {
+    serial: 'EX-102',
+    type: 'tracked_excavator',
+    make: 'Komatsu',
+    model: 'PC210',
+    dept: 'earthworks',
+    plan: 'red_malfunction',
+  },
+  {
+    serial: 'EX-201',
+    type: 'wheeled_excavator',
+    make: 'Volvo',
+    model: 'EW160',
+    dept: 'roads',
+    plan: 'green',
+  },
+  {
+    serial: 'BL-301',
+    type: 'backhoe_loader',
+    make: 'JCB',
+    model: '3CX',
+    dept: 'roads',
+    plan: 'amber',
+  },
+  {
+    serial: 'BL-302',
+    type: 'backhoe_loader',
+    make: 'Caterpillar',
+    model: '432',
+    dept: 'earthworks',
+    plan: 'green',
+  },
+  {
+    serial: 'WL-401',
+    type: 'wheel_loader',
+    make: 'Volvo',
+    model: 'L90',
+    dept: 'earthworks',
+    plan: 'amber',
+  },
+  {
+    serial: 'SS-501',
+    type: 'skid_steer',
+    make: 'Bobcat',
+    model: 'S650',
+    dept: 'roads',
+    plan: 'green',
+  },
+  {
+    serial: 'TR-601',
+    type: 'tractor',
+    make: 'John Deere',
+    model: '6120M',
+    dept: 'maintenance',
+    plan: 'amber',
+  },
+  {
+    serial: 'FL-701',
+    type: 'forklift',
+    make: 'Toyota',
+    model: '8FD25',
+    dept: 'logistics',
+    plan: 'green',
+  },
+  {
+    serial: 'TK-801',
+    type: 'truck',
+    make: 'Volvo',
+    model: 'FH 500',
+    dept: 'logistics',
+    plan: 'green',
+  },
+  {
+    serial: 'TK-802',
+    type: 'truck',
+    make: 'Mercedes-Benz',
+    model: 'Actros',
+    dept: 'logistics',
+    plan: 'red_test',
+  },
+  {
+    serial: 'PU-901',
+    type: 'pickup',
+    make: 'Toyota',
+    model: 'Hilux',
+    dept: 'maintenance',
+    plan: 'green',
+  },
+  {
+    serial: 'PU-902',
+    type: 'pickup',
+    make: 'Mitsubishi',
+    model: 'Triton',
+    dept: 'roads',
+    plan: 'amber',
+  },
+  {
+    serial: 'PU-903',
+    type: 'pickup',
+    make: 'Toyota',
+    model: 'Hilux',
+    dept: 'earthworks',
+    plan: 'green',
+  },
+  {
+    serial: 'VN-951',
+    type: 'van',
+    make: 'Ford',
+    model: 'Transit',
+    dept: 'logistics',
+    plan: 'green',
+  },
+  {
+    serial: 'OT-991',
+    type: 'other',
+    make: 'Atlas Copco',
+    model: 'XAS 185',
+    dept: 'maintenance',
+    plan: 'green',
+  },
 ];
 
 const serviceTexts = [
@@ -135,7 +257,10 @@ const malfunctionTexts = [
 const usedPlates = new Set<string>();
 function fakePlate(): string {
   for (;;) {
-    const plate = faker.string.numeric({ length: faker.helpers.arrayElement([7, 8]), allowLeadingZeros: false });
+    const plate = faker.string.numeric({
+      length: faker.helpers.arrayElement([7, 8]),
+      allowLeadingZeros: false,
+    });
     if (!usedPlates.has(plate)) {
       usedPlates.add(plate);
       return plate;
@@ -182,7 +307,9 @@ async function main() {
     })),
   });
   await db.fluidType.createMany({ data: fluidTypes.map((d, i) => ({ ...d, sortOrder: i })) });
-  await db.receiptCategory.createMany({ data: receiptCategories.map((d, i) => ({ ...d, sortOrder: i })) });
+  await db.receiptCategory.createMany({
+    data: receiptCategories.map((d, i) => ({ ...d, sortOrder: i })),
+  });
 
   const byCode = async <T extends { id: string; code: string }>(rows: Promise<T[]>) =>
     Object.fromEntries((await rows).map((r) => [r.code, r]));
@@ -223,10 +350,13 @@ async function main() {
     const type = typeBy[plan.type]!;
     const road = type.category === 'ROAD';
     const isPickup = plan.type === 'pickup';
-    const startUsage = road ? faker.number.int({ min: 20_000, max: 180_000 }) : faker.number.int({ min: 800, max: 9_000 });
+    const startUsage = road
+      ? faker.number.int({ min: 20_000, max: 180_000 })
+      : faker.number.int({ min: 800, max: 9_000 });
     const homeLoc = faker.helpers.arrayElement(locCodes);
     const testDate = daysAgo(faker.number.int({ min: 30, max: 160 }));
-    const annualTestExpiry = plan.plan === 'red_test' ? daysAgo(12) : new Date(testDate.getTime() + 365 * DAY);
+    const annualTestExpiry =
+      plan.plan === 'red_test' ? daysAgo(12) : new Date(testDate.getTime() + 365 * DAY);
     const insuranceDate = daysAgo(faker.number.int({ min: 20, max: 170 }));
     const insuranceExpiry = new Date(insuranceDate.getTime() + 365 * DAY);
     const purchaseDate = faker.date.past({ years: 8, refDate: daysAgo(200) });
@@ -262,8 +392,12 @@ async function main() {
     // Fuel log, roughly weekly, with usage climbing over six months
     let usage = startUsage;
     for (let d = 180; d > 0; d -= faker.number.int({ min: 5, max: 10 })) {
-      usage += road ? faker.number.int({ min: 400, max: 1_400 }) : faker.number.int({ min: 25, max: 60 });
-      const liters = road ? faker.number.int({ min: 45, max: 180 }) : faker.number.int({ min: 60, max: 260 });
+      usage += road
+        ? faker.number.int({ min: 400, max: 1_400 })
+        : faker.number.int({ min: 25, max: 60 });
+      const liters = road
+        ? faker.number.int({ min: 45, max: 180 })
+        : faker.number.int({ min: 60, max: 260 });
       const entry = await db.fuelEntry.create({
         data: {
           vehicleId: vehicle.id,
@@ -291,7 +425,13 @@ async function main() {
           engineHours: road ? null : usage - d * 6,
         },
       });
-      event('SERVICE', vehicle.id, service.date, { description }, { type: 'ServiceRecord', id: service.id });
+      event(
+        'SERVICE',
+        vehicle.id,
+        service.date,
+        { description },
+        { type: 'ServiceRecord', id: service.id },
+      );
     }
 
     // Fluid top-ups
@@ -306,14 +446,21 @@ async function main() {
           liters: new Prisma.Decimal(liters),
         },
       });
-      event('FLUID_ADDED', vehicle.id, add.date, { fluid: fluid.code, liters }, { type: 'FluidAddition', id: add.id });
+      event(
+        'FLUID_ADDED',
+        vehicle.id,
+        add.date,
+        { fluid: fluid.code, liters },
+        { type: 'FluidAddition', id: add.id },
+      );
     }
 
     // Movements between fake sites, ending at the current location
     let from = faker.helpers.arrayElement(locCodes.filter((c) => c !== homeLoc));
     const moves = faker.number.int({ min: 1, max: 3 });
     for (let i = 0; i < moves; i++) {
-      const to = i === moves - 1 ? homeLoc : faker.helpers.arrayElement(locCodes.filter((c) => c !== from));
+      const to =
+        i === moves - 1 ? homeLoc : faker.helpers.arrayElement(locCodes.filter((c) => c !== from));
       const move = await db.movement.create({
         data: {
           vehicleId: vehicle.id,
@@ -328,11 +475,19 @@ async function main() {
 
     // Inspections: annual test, insurance, and a certified-inspector check for equipment
     const inspections: { kind: InspectionKind; date: Date; validUntil: Date }[] = [
-      { kind: 'ANNUAL_TEST', date: plan.plan === 'red_test' ? daysAgo(377) : testDate, validUntil: annualTestExpiry },
+      {
+        kind: 'ANNUAL_TEST',
+        date: plan.plan === 'red_test' ? daysAgo(377) : testDate,
+        validUntil: annualTestExpiry,
+      },
       { kind: 'INSURANCE', date: insuranceDate, validUntil: insuranceExpiry },
     ];
     if (!road) {
-      inspections.push({ kind: 'SAFETY_CHECK', date: daysAgo(faker.number.int({ min: 30, max: 160 })), validUntil: vehicle.safetyCheckExpiry! });
+      inspections.push({
+        kind: 'SAFETY_CHECK',
+        date: daysAgo(faker.number.int({ min: 30, max: 160 })),
+        validUntil: vehicle.safetyCheckExpiry!,
+      });
     }
     for (const insp of inspections) {
       const row = await db.inspection.create({
@@ -344,12 +499,22 @@ async function main() {
         },
       });
       if (insp.date > daysAgo(185)) {
-        event('INSPECTION', vehicle.id, row.date, { kind: insp.kind }, { type: 'Inspection', id: row.id });
+        event(
+          'INSPECTION',
+          vehicle.id,
+          row.date,
+          { kind: insp.kind },
+          { type: 'Inspection', id: row.id },
+        );
       }
     }
 
     // Malfunctions: some resolved history, plus the open ones the plan calls for
-    const malfunctions: { severity: MalfunctionSeverity; state: MalfunctionState; daysAgo: number }[] = [];
+    const malfunctions: {
+      severity: MalfunctionSeverity;
+      state: MalfunctionState;
+      daysAgo: number;
+    }[] = [];
     for (let i = 0; i < faker.number.int({ min: 0, max: 2 }); i++) {
       malfunctions.push({
         severity: faker.helpers.arrayElement(['LOW', 'MEDIUM', 'HIGH'] as const),
@@ -384,12 +549,22 @@ async function main() {
         },
       });
       const src = { type: 'Malfunction', id: row.id };
-      event('MALFUNCTION_REPORTED', vehicle.id, reportedAt, { severity: m.severity, description }, src);
+      event(
+        'MALFUNCTION_REPORTED',
+        vehicle.id,
+        reportedAt,
+        { severity: m.severity, description },
+        src,
+      );
       if (resolvedAt) event('MALFUNCTION_RESOLVED', vehicle.id, resolvedAt, { description }, src);
     }
 
     const note = await db.note.create({
-      data: { vehicleId: vehicle.id, body: faker.lorem.sentence(), createdAt: daysAgo(faker.number.int({ min: 5, max: 90 })) },
+      data: {
+        vehicleId: vehicle.id,
+        body: faker.lorem.sentence(),
+        createdAt: daysAgo(faker.number.int({ min: 5, max: 90 })),
+      },
     });
     event('NOTE_ADDED', vehicle.id, note.createdAt, {}, { type: 'Note', id: note.id });
 
@@ -402,7 +577,12 @@ async function main() {
         nextServiceKm: road ? usage + faker.number.int({ min: 500, max: 9_000 }) : null,
         nextServiceHours: road ? null : usage + faker.number.int({ min: 20, max: 240 }),
         nextServiceDate: daysAhead(120 - lastService + faker.number.int({ min: -20, max: 40 })),
-        readinessPct: plan.plan === 'green' ? 100 : plan.plan === 'amber' ? faker.number.int({ min: 60, max: 85 }) : 0,
+        readinessPct:
+          plan.plan === 'green'
+            ? 100
+            : plan.plan === 'amber'
+              ? faker.number.int({ min: 60, max: 85 })
+              : 0,
         status: deriveStatus({ malfunctions, annualTestExpiry, insuranceExpiry }, NOW),
       },
     });
@@ -421,17 +601,37 @@ async function main() {
     { kind: 'pallet_forks', name: 'Pallet forks', model: 'PF-1500', spec: '1,500 mm' },
     { kind: 'tool', name: 'Diagnostic scanner', model: 'DS-4', spec: 'OBD / J1939' },
   ];
-  const hosts = ['EX-101', 'EX-102', 'EX-201', 'BL-301', 'WL-401', 'SS-501', 'TK-801', 'PU-901', 'PU-903', 'VN-951'];
+  const hosts = [
+    'EX-101',
+    'EX-102',
+    'EX-201',
+    'BL-301',
+    'WL-401',
+    'SS-501',
+    'TK-801',
+    'PU-901',
+    'PU-903',
+    'VN-951',
+  ];
   for (const [i, def] of itemDefs.entries()) {
     const current = hosts[i]!;
     const previous = faker.helpers.arrayElement(hosts.filter((h) => h !== current));
     const item = await db.item.create({
-      data: { ...def, serial: `IT-${faker.string.alphanumeric({ length: 6, casing: 'upper' })}`, currentVehicleId: vehicleIds[current]! },
+      data: {
+        ...def,
+        serial: `IT-${faker.string.alphanumeric({ length: 6, casing: 'upper' })}`,
+        currentVehicleId: vehicleIds[current]!,
+      },
     });
     const movedAt = daysAgo(faker.number.int({ min: 20, max: 90 }));
     await db.itemAssignment.createMany({
       data: [
-        { itemId: item.id, vehicleId: vehicleIds[previous]!, assignedAt: daysAgo(175), removedAt: movedAt },
+        {
+          itemId: item.id,
+          vehicleId: vehicleIds[previous]!,
+          assignedAt: daysAgo(175),
+          removedAt: movedAt,
+        },
         { itemId: item.id, vehicleId: vehicleIds[current]!, assignedAt: movedAt },
       ],
     });
@@ -444,10 +644,13 @@ async function main() {
   const serials = Object.keys(vehicleIds);
   for (let i = 0; i < 32; i++) {
     const cat = faker.helpers.arrayElement(receiptCategories).code;
-    const tagged = faker.helpers.arrayElements(serials, faker.helpers.weightedArrayElement([
-      { weight: 8, value: 1 },
-      { weight: 2, value: 2 },
-    ]));
+    const tagged = faker.helpers.arrayElements(
+      serials,
+      faker.helpers.weightedArrayElement([
+        { weight: 8, value: 1 },
+        { weight: 2, value: 2 },
+      ]),
+    );
     const amount = money(80, 8_000);
     const doc = await db.document.create({
       data: {
@@ -460,7 +663,13 @@ async function main() {
       },
     });
     for (const s of tagged) {
-      event('DOCUMENT_ADDED', vehicleIds[s]!, doc.date, { category: cat, amount: amount.toNumber() }, { type: 'Document', id: doc.id });
+      event(
+        'DOCUMENT_ADDED',
+        vehicleIds[s]!,
+        doc.date,
+        { category: cat, amount: amount.toNumber() },
+        { type: 'Document', id: doc.id },
+      );
     }
   }
 
@@ -478,9 +687,21 @@ async function main() {
         status: quoteStatuses[i]!,
         lines: {
           create: Array.from({ length: faker.number.int({ min: 2, max: 5 }) }, (_, n) => ({
-            item: faker.helpers.arrayElement(['Hydraulic pump', 'Bucket teeth set', 'Track roller', 'Alternator', 'Tire 12R22.5', 'Filter kit', 'Seat']),
+            item: faker.helpers.arrayElement([
+              'Hydraulic pump',
+              'Bucket teeth set',
+              'Track roller',
+              'Alternator',
+              'Tire 12R22.5',
+              'Filter kit',
+              'Seat',
+            ]),
             partNo: faker.string.alphanumeric({ length: 8, casing: 'upper' }),
-            condition: faker.helpers.arrayElement(['IN_STOCK', 'NEW', 'NEEDS_REPLACEMENT'] as const),
+            condition: faker.helpers.arrayElement([
+              'IN_STOCK',
+              'NEW',
+              'NEEDS_REPLACEMENT',
+            ] as const),
             quantity: faker.number.int({ min: 1, max: 8 }),
             unitPrice: money(90, 14_000),
             sortOrder: n,
@@ -490,7 +711,13 @@ async function main() {
       },
     });
     for (const s of linked) {
-      event('QUOTE_LINKED', vehicleIds[s]!, date, { supplier: supplier.name }, { type: 'Quote', id: quote.id });
+      event(
+        'QUOTE_LINKED',
+        vehicleIds[s]!,
+        date,
+        { supplier: supplier.name },
+        { type: 'Quote', id: quote.id },
+      );
     }
   }
 
@@ -498,8 +725,12 @@ async function main() {
 
   const counts = await db.vehicle.groupBy({ by: ['status'], _count: true });
   const summary = Object.fromEntries(counts.map((c) => [c.status, c._count]));
-  console.log(`Seeded ${fleet.length} vehicles (${JSON.stringify(summary)}), ${events.length} events.`);
-  console.log('Users: admin@fleethub.test, editor@fleethub.test, viewer@fleethub.test (password from SEED_PASSWORD).');
+  console.log(
+    `Seeded ${fleet.length} vehicles (${JSON.stringify(summary)}), ${events.length} events.`,
+  );
+  console.log(
+    'Users: admin@fleethub.test, editor@fleethub.test, viewer@fleethub.test (password from SEED_PASSWORD).',
+  );
 }
 
 main()

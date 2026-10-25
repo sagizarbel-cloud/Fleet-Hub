@@ -8,7 +8,13 @@ const PLAIN = '7319';
 beforeAll(async () => {
   app = await makeApp();
   const type = await app.db.vehicleType.create({
-    data: { code: 'pickup_test', nameEn: 'Pickup', nameHe: 'טנדר', category: 'ROAD', usageUnit: 'KM' },
+    data: {
+      code: 'pickup_test',
+      nameEn: 'Pickup',
+      nameHe: 'טנדר',
+      category: 'ROAD',
+      usageUnit: 'KM',
+    },
   });
   await app.db.vehicle.create({
     data: {

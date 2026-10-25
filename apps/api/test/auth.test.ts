@@ -92,14 +92,22 @@ describe('session', () => {
     expect(me.statusCode).toBe(200);
     expect(me.json().user).toMatchObject({ email, role: 'ADMIN', canViewStartCodes: true });
 
-    const out = await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { cookie, origin: ORIGIN } });
+    const out = await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { cookie, origin: ORIGIN },
+    });
     expect(out.statusCode).toBe(200);
     const after = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
     expect(after.statusCode).toBe(401);
   });
 
   it('rejects a forged cookie', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie: 'fh_session=forged.value' } });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      headers: { cookie: 'fh_session=forged.value' },
+    });
     expect(res.statusCode).toBe(401);
   });
 
@@ -115,14 +123,24 @@ describe('session', () => {
 describe('role guards', () => {
   it('gives a viewer 403 on an editor-only route, and lets an editor through', async () => {
     const custom = await makeApp((a) => {
-      a.get('/api/test/editor-only', { preHandler: requireRole('EDITOR') }, async () => ({ ok: true }));
+      a.get('/api/test/editor-only', { preHandler: requireRole('EDITOR') }, async () => ({
+        ok: true,
+      }));
     });
 
     const viewer = await login(custom, await createUser(custom, 'VIEWER'));
     const editor = await login(custom, await createUser(custom, 'EDITOR'));
     const anon = await custom.inject({ method: 'GET', url: '/api/test/editor-only' });
-    const asViewer = await custom.inject({ method: 'GET', url: '/api/test/editor-only', headers: { cookie: viewer } });
-    const asEditor = await custom.inject({ method: 'GET', url: '/api/test/editor-only', headers: { cookie: editor } });
+    const asViewer = await custom.inject({
+      method: 'GET',
+      url: '/api/test/editor-only',
+      headers: { cookie: viewer },
+    });
+    const asEditor = await custom.inject({
+      method: 'GET',
+      url: '/api/test/editor-only',
+      headers: { cookie: editor },
+    });
     expect(anon.statusCode).toBe(401);
     expect(asViewer.statusCode).toBe(403);
     expect(asEditor.statusCode).toBe(200);

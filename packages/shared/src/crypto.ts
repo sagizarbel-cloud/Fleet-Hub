@@ -15,13 +15,19 @@ export function encryptStartCode(plain: string, base64Key: string): string {
   const cipher = createCipheriv('aes-256-gcm', keyFrom(base64Key), iv);
   const ciphertext = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return [VERSION, iv, tag, ciphertext].map((p) => (typeof p === 'string' ? p : p.toString('base64'))).join(':');
+  return [VERSION, iv, tag, ciphertext]
+    .map((p) => (typeof p === 'string' ? p : p.toString('base64')))
+    .join(':');
 }
 
 export function decryptStartCode(stored: string, base64Key: string): string {
   const [version, iv, tag, ciphertext] = stored.split(':');
-  if (version !== VERSION || !iv || !tag || !ciphertext) throw new Error('Unrecognized start code format');
+  if (version !== VERSION || !iv || !tag || !ciphertext)
+    throw new Error('Unrecognized start code format');
   const decipher = createDecipheriv('aes-256-gcm', keyFrom(base64Key), Buffer.from(iv, 'base64'));
   decipher.setAuthTag(Buffer.from(tag, 'base64'));
-  return Buffer.concat([decipher.update(Buffer.from(ciphertext, 'base64')), decipher.final()]).toString('utf8');
+  return Buffer.concat([
+    decipher.update(Buffer.from(ciphertext, 'base64')),
+    decipher.final(),
+  ]).toString('utf8');
 }

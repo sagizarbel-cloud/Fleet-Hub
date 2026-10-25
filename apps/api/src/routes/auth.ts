@@ -61,7 +61,8 @@ export const authRoutes: FastifyPluginAsync<{ secureCookies: boolean }> = async 
   );
 
   app.post('/logout', async (req, reply) => {
-    if (req.sessionId) await app.db.session.delete({ where: { id: req.sessionId } }).catch(() => {});
+    if (req.sessionId)
+      await app.db.session.delete({ where: { id: req.sessionId } }).catch(() => {});
     reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return { ok: true };
   });

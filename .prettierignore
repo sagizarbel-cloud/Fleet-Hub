@@ -5,3 +5,7 @@ playwright-report
 test-results
 apps/api/prisma/migrations
 docs/screenshots
+docs
+CLAUDE.md
+README.md
+pnpm-workspace.yaml

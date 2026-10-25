@@ -12,12 +12,21 @@ describe('deriveStatus', () => {
   });
 
   it('is red with a critical open malfunction', () => {
-    expect(deriveStatus({ ...base, malfunctions: [{ severity: 'CRITICAL', state: 'OPEN' }] }, now)).toBe('RED');
+    expect(
+      deriveStatus({ ...base, malfunctions: [{ severity: 'CRITICAL', state: 'OPEN' }] }, now),
+    ).toBe('RED');
   });
 
   it('treats in-progress as open', () => {
-    expect(deriveStatus({ ...base, malfunctions: [{ severity: 'CRITICAL', state: 'IN_PROGRESS' }] }, now)).toBe('RED');
-    expect(deriveStatus({ ...base, malfunctions: [{ severity: 'LOW', state: 'IN_PROGRESS' }] }, now)).toBe('AMBER');
+    expect(
+      deriveStatus(
+        { ...base, malfunctions: [{ severity: 'CRITICAL', state: 'IN_PROGRESS' }] },
+        now,
+      ),
+    ).toBe('RED');
+    expect(
+      deriveStatus({ ...base, malfunctions: [{ severity: 'LOW', state: 'IN_PROGRESS' }] }, now),
+    ).toBe('AMBER');
   });
 
   it('is red when the annual test or insurance has expired', () => {
@@ -26,15 +35,21 @@ describe('deriveStatus', () => {
   });
 
   it('is amber with a non-critical open malfunction', () => {
-    expect(deriveStatus({ ...base, malfunctions: [{ severity: 'HIGH', state: 'OPEN' }] }, now)).toBe('AMBER');
+    expect(
+      deriveStatus({ ...base, malfunctions: [{ severity: 'HIGH', state: 'OPEN' }] }, now),
+    ).toBe('AMBER');
   });
 
   it('ignores resolved malfunctions', () => {
-    expect(deriveStatus({ ...base, malfunctions: [{ severity: 'CRITICAL', state: 'RESOLVED' }] }, now)).toBe('GREEN');
+    expect(
+      deriveStatus({ ...base, malfunctions: [{ severity: 'CRITICAL', state: 'RESOLVED' }] }, now),
+    ).toBe('GREEN');
   });
 
   it('treats missing compliance dates as not expired', () => {
-    expect(deriveStatus({ ...base, annualTestExpiry: null, insuranceExpiry: null }, now)).toBe('GREEN');
+    expect(deriveStatus({ ...base, annualTestExpiry: null, insuranceExpiry: null }, now)).toBe(
+      'GREEN',
+    );
   });
 
   it('lets a manual override win', () => {

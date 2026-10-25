@@ -49,7 +49,8 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
     }
     const status = (err as { statusCode?: number }).statusCode;
     if (status === 429) return reply.status(429).send({ error: 'rate_limited' });
-    if (status && status >= 400 && status < 500) return reply.status(status).send({ error: 'bad_request' });
+    if (status && status >= 400 && status < 500)
+      return reply.status(status).send({ error: 'bad_request' });
     req.log.error(err);
     return reply.status(500).send({ error: 'internal' });
   });
@@ -58,7 +59,10 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
     await app.db.$queryRaw`SELECT 1`;
     return { ok: true };
   });
-  await app.register(authRoutes, { prefix: '/api/auth', secureCookies: env.NODE_ENV === 'production' });
+  await app.register(authRoutes, {
+    prefix: '/api/auth',
+    secureCookies: env.NODE_ENV === 'production',
+  });
   await app.register(lookupRoutes, { prefix: '/api/lookups' });
   await app.register(vehicleRoutes, { prefix: '/api/vehicles' });
 
