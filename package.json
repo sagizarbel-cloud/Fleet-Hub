@@ -19,6 +19,7 @@
     "db:seed": "pnpm --filter @fleet-hub/api db:seed",
     "db:reset": "pnpm --filter @fleet-hub/api db:reset",
     "i18n:check": "node scripts/i18n-check.mjs",
+    "check:arm64": "node scripts/check-arm64.mjs",
     "docker:arm64": "docker buildx build --platform linux/arm64 -f apps/api/Dockerfile.arm64-check -t fleet-hub-api:arm64-check ."
   },
   "devDependencies": {
