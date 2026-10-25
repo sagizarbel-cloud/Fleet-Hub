@@ -2,5 +2,21 @@
   "name": "@fleet-hub/shared",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./crypto": "./src/crypto.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "vitest": "3.2.7"
+  }
 }
