@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Fleet Hub</title>
+    <script>
+      // Apply the saved language and theme before first paint to avoid a flash.
+      try {
+        var lang = localStorage.getItem('fh.lang') === 'he' ? 'he' : 'en';
+        var theme = localStorage.getItem('fh.theme') === 'light' ? 'light' : 'dark';
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+        document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

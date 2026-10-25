@@ -1,0 +1,85 @@
+{
+  "app": {
+    "name": "Fleet Hub",
+    "tagline": "Fleet history and maintenance"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "mainNav": "Main navigation"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "fleetTable": "Fleet table",
+    "receipts": "Receipts",
+    "quotes": "Price quotes",
+    "equipment": "Equipment & tools",
+    "settings": "Settings"
+  },
+  "topbar": {
+    "search": "Search serial, VIN, license or item",
+    "add": "Add",
+    "comingSoon": "Coming in a later phase"
+  },
+  "language": {
+    "toggle": "Change language",
+    "en": "English",
+    "he": "עברית",
+    "short": "EN"
+  },
+  "theme": {
+    "toggle": "Switch theme",
+    "toDark": "Switch to dark theme",
+    "toLight": "Switch to light theme"
+  },
+  "user": {
+    "menu": "Account menu",
+    "signOut": "Sign out",
+    "role": {
+      "VIEWER": "Viewer",
+      "EDITOR": "Editor",
+      "ADMIN": "Admin"
+    }
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Use the email and password your admin gave you.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "invalid": "Wrong email or password.",
+    "rateLimited": "Too many attempts. Wait a minute and try again.",
+    "error": "Something went wrong. Try again.",
+    "forgot": "Forgot your password? Ask an admin for a reset link."
+  },
+  "status": {
+    "legend": "Status colors",
+    "GREEN": "Operational",
+    "AMBER": "Has issues",
+    "RED": "Inoperable"
+  },
+  "areas": {
+    "dashboard": "Recent activity and the fleet grid will appear here.",
+    "fleetTable": "Every vehicle and every field, in one table, will appear here.",
+    "receipts": "Receipts and invoices tagged by vehicle will appear here.",
+    "quotes": "Price quotes for parts and tools will appear here.",
+    "equipment": "Attachable equipment and its assignment history will appear here.",
+    "settings": "Lookup lists, default vitals, and users and roles will appear here."
+  },
+  "common": {
+    "loading": "Loading…",
+    "comingSoon": "Coming soon"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "back": "Back to the dashboard"
+  },
+  "i18nCheck": {
+    "title": "Translation check",
+    "allGood": "Every key has a Hebrew value ({{count}} keys).",
+    "missingCount": "Keys missing a Hebrew value: {{count}}",
+    "key": "Key",
+    "english": "English",
+    "hebrew": "Hebrew"
+  }
+}
