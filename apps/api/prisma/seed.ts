@@ -462,9 +462,10 @@ async function main() {
       plan.type !== 'trailer' && d > 0;
       d -= faker.number.int({ min: 5, max: 10 })
     ) {
+      // About one tank between fill-ups.
       const step = road
-        ? faker.number.int({ min: 400, max: 1_400 })
-        : faker.number.int({ min: 25, max: 60 });
+        ? faker.number.int({ min: 300, max: 650 })
+        : faker.number.int({ min: 14, max: 32 });
       usage += step;
       const noise = faker.number.float({ min: 0.93, max: 1.07 });
       const worse = dropAt >= 0 && d <= dropAt && d > dropAt - 10 ? 1.45 : 1;

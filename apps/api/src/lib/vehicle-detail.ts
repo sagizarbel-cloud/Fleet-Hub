@@ -29,6 +29,7 @@ const detailSelect = {
   safetyCheckExpiry: true,
   status: true,
   statusOverride: true,
+  statusOverrideReason: true,
   hasStartCode: true,
   purchaseDate: true,
   purchasePrice: true,

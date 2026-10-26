@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  MALFUNCTION_SEVERITIES,
-  MALFUNCTION_STATES,
-  ROLES,
-  VEHICLE_STATUSES,
-} from './enums';
+import { MALFUNCTION_SEVERITIES, MALFUNCTION_STATES, ROLES, VEHICLE_STATUSES } from './enums';
 import { INSPECTION_KINDS, RECORD_KINDS, SORT_DIRS, type RecordKind } from './records';
 import { DETAIL_VIEWS, VITAL_KEYS } from './vitals';
 
