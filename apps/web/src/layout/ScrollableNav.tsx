@@ -70,7 +70,7 @@ export function ScrollableNav() {
                   cn(
                     'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
                     isActive
-                      ? 'bg-accent/15 text-accent'
+                      ? 'bg-accent text-accent-contrast'
                       : 'text-muted hover:text-text hover:bg-border',
                   )
                 }

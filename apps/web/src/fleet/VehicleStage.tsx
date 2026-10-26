@@ -381,7 +381,7 @@ export function VehicleStage({
                     onClick={() => chooseView(v)}
                     className={cn(
                       'rounded-md px-2.5 py-1',
-                      view === v ? 'bg-accent/15 text-accent' : 'text-muted',
+                      view === v ? 'bg-accent text-accent-contrast' : 'text-muted',
                     )}
                   >
                     {t(v === 'side' ? 'vehicle.sideView' : 'vehicle.isoView')}
@@ -401,7 +401,7 @@ export function VehicleStage({
                     title={t('topbar.comingSoon')}
                     className="glass text-muted flex h-full w-full items-center gap-2 p-3 text-start text-xs disabled:cursor-not-allowed"
                   >
-                    <Icon aria-hidden className="text-accent size-4 shrink-0" />
+                    <Icon aria-hidden className="text-accent-ink size-4 shrink-0" />
                     {t(`vehicle.records.${key}`)}
                   </button>
                 </motion.li>

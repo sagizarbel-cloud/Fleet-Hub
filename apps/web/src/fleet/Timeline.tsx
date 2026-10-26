@@ -238,7 +238,7 @@ export function Chip({
       className={cn(
         'inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs transition-colors',
         pressed
-          ? 'border-accent/60 bg-accent/15 text-accent'
+          ? 'border-accent bg-accent text-accent-contrast'
           : 'border-border text-muted hover:text-text hover:border-border-strong',
       )}
     >

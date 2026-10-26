@@ -66,6 +66,8 @@ export function TopBar({ user }: { user: SessionUser }) {
       </div>
 
       <ScrollableNav />
+      {/* Machine-yellow band with a red end: the brand accents, decorative only. */}
+      <div aria-hidden className="fh-band mx-4 h-0.5 rounded-full" />
     </header>
   );
 }

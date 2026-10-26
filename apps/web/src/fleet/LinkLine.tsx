@@ -60,7 +60,7 @@ export function LinkLine() {
         key={event.id}
         d={geo.d}
         fill="none"
-        stroke="var(--fh-accent)"
+        stroke="var(--fh-accent-ink)"
         strokeWidth={1.5}
         strokeLinecap="round"
         initial={{ pathLength: 0, opacity: 0 }}
@@ -72,7 +72,7 @@ export function LinkLine() {
         cx={geo.end.x}
         cy={geo.end.y}
         r={3.5}
-        fill="var(--fh-accent)"
+        fill="var(--fh-accent-ink)"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.25, duration: 0.15 }}

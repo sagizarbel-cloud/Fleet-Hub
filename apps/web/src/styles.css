@@ -14,43 +14,51 @@
 
 /* ---------- Design tokens ---------- */
 
+/* Industrial palette (2026-10-26, from Sagi): black and dark grey, or light grey and white,
+   with machine-yellow as the main accent and red as the second one. Status colours stay
+   separate: warn is orange so it never reads as the yellow accent. */
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --fh-bg: #060a14;
-  --fh-bg-grid: rgb(56 189 248 / 0.045);
-  --fh-surface: rgb(13 20 37 / 0.72);
-  --fh-surface-strong: #0d1527;
-  --fh-border: rgb(148 163 184 / 0.14);
-  --fh-border-strong: rgb(148 163 184 / 0.28);
-  --fh-text: #e3e9f3;
-  --fh-muted: #8b98ad;
-  --fh-accent: #22d3ee;
-  --fh-accent-contrast: #04121a;
-  --fh-ok: #34d399;
-  --fh-warn: #fbbf24;
-  --fh-bad: #f87171;
-  --fh-focus: #67e8f9;
-  --fh-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+  --fh-bg: #0a0a0b;
+  --fh-bg-grid: rgb(255 255 255 / 0.028);
+  --fh-surface: rgb(24 24 26 / 0.78);
+  --fh-surface-strong: #18181a;
+  --fh-border: rgb(255 255 255 / 0.09);
+  --fh-border-strong: rgb(255 255 255 / 0.2);
+  --fh-text: #ececec;
+  --fh-muted: #9a9a9f;
+  --fh-accent: #ffcd11;
+  --fh-accent-ink: #ffcd11;
+  --fh-accent-contrast: #141414;
+  --fh-accent-2: #e3262f;
+  --fh-ok: #3fcf8e;
+  --fh-warn: #ff8a2a;
+  --fh-bad: #f2545b;
+  --fh-focus: #ffcd11;
+  --fh-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.7);
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --fh-bg: #f3f6fb;
-  --fh-bg-grid: rgb(14 116 144 / 0.06);
-  --fh-surface: rgb(255 255 255 / 0.82);
+  --fh-bg: #e8e9eb;
+  --fh-bg-grid: rgb(0 0 0 / 0.035);
+  --fh-surface: rgb(255 255 255 / 0.86);
   --fh-surface-strong: #ffffff;
-  --fh-border: rgb(15 23 42 / 0.1);
-  --fh-border-strong: rgb(15 23 42 / 0.2);
-  --fh-text: #0f172a;
-  --fh-muted: #526079;
-  --fh-accent: #0e7490;
-  --fh-accent-contrast: #ffffff;
+  --fh-border: rgb(0 0 0 / 0.09);
+  --fh-border-strong: rgb(0 0 0 / 0.2);
+  --fh-text: #161616;
+  --fh-muted: #5c5f66;
+  --fh-accent: #ffc400;
+  /* Yellow is too light for text on white, so text and thin lines use a deep ochre. */
+  --fh-accent-ink: #8a6400;
+  --fh-accent-contrast: #141414;
+  --fh-accent-2: #c8102e;
   --fh-ok: #047857;
-  --fh-warn: #b45309;
+  --fh-warn: #c2410c;
   --fh-bad: #b91c1c;
-  --fh-focus: #0891b2;
-  --fh-shadow: 0 10px 30px -16px rgb(15 23 42 / 0.25);
+  --fh-focus: #161616;
+  --fh-shadow: 0 10px 30px -16px rgb(0 0 0 / 0.22);
 }
 
 @theme inline {
@@ -63,6 +71,8 @@
   --color-muted: var(--fh-muted);
   --color-accent: var(--fh-accent);
   --color-accent-contrast: var(--fh-accent-contrast);
+  --color-accent-ink: var(--fh-accent-ink);
+  --color-accent-2: var(--fh-accent-2);
   --color-ok: var(--fh-ok);
   --color-warn: var(--fh-warn);
   --color-bad: var(--fh-bad);
@@ -120,6 +130,18 @@
   border: 1px solid var(--fh-border);
   border-radius: var(--radius-panel);
   box-shadow: var(--fh-shadow);
+}
+
+@utility fh-band {
+  background: linear-gradient(
+    to right,
+    var(--fh-accent) 0 82%,
+    transparent 82% 84%,
+    var(--fh-accent-2) 84%
+  );
+  &:dir(rtl) {
+    transform: scaleX(-1);
+  }
 }
 
 /* IDs and numbers: mono with tabular figures everywhere. */
