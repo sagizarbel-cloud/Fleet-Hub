@@ -45,6 +45,7 @@
 - Second visual style (top photo crossfading to a side photo) comes with uploads in Phase 7, using Sagi's own or dealer-permitted photos only, never manufacturer-site photos. `HeroVisual` is the slot that will take the photos; vehicles without photos keep the drawing.
 - Transition budget measured in the page on the production build: about 1.15 s from click until every animation has finished (the e2e test checks stage-mount to settled ≤ 1.1 s on the dev server).
 - `packages/shared` is marked side-effect free, so the web bundle only takes the enums it uses (zod stays on the server for now): dashboard JS is 234 KB gzipped.
+- Isometric view (2026-10-26, Sagi: the CSS-tilted flat layers didn't look good): each type now also has a small 3D model (boxes, extruded profiles, wheels) projected to an isometric SVG with shaded faces. The transition still tilts the flat top view with CSS 3D (SPEC 5.2 step 3) and hands over to the 3D drawing at the end of the tilt. Pickup side profile shortened.
 - The Side | Isometric toggle on the vehicle page is in Phase 2 (it decides the last step of the transition); the rest of the vehicle page is Phase 3.
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 
