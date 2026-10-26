@@ -1,8 +1,35 @@
 {
   "name": "fleet-hub",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"
+  },
+  "scripts": {
+    "env:init": "node scripts/init-env.mjs",
+    "dev": "pnpm --parallel --filter @fleet-hub/api --filter @fleet-hub/web dev",
+    "build": "pnpm -r build",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "e2e": "pnpm --filter @fleet-hub/web e2e",
+    "db:migrate": "pnpm --filter @fleet-hub/api db:migrate",
+    "db:seed": "pnpm --filter @fleet-hub/api db:seed",
+    "db:reset": "pnpm --filter @fleet-hub/api db:reset",
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "check:arm64": "node scripts/check-arm64.mjs",
+    "docker:arm64": "docker buildx build --platform linux/arm64 -f apps/api/Dockerfile.arm64-check -t fleet-hub-api:arm64-check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "eslint-plugin-i18next": "6.1.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "^16.0.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.0"
   }
 }

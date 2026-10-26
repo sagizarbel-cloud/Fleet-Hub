@@ -1,0 +1,569 @@
+// Fleet Hub data model (SPEC A7). Every write that changes a vehicle also writes an Event.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  VIEWER
+  EDITOR
+  ADMIN
+}
+
+enum VehicleStatus {
+  GREEN
+  AMBER
+  RED
+}
+
+enum VehicleCategory {
+  ROAD
+  EQUIPMENT
+}
+
+enum UsageUnit {
+  KM
+  HOURS
+}
+
+enum EventType {
+  VEHICLE_CREATED
+  VEHICLE_UPDATED
+  STATUS_CHANGED
+  STATUS_OVERRIDDEN
+  SERVICE
+  MALFUNCTION_REPORTED
+  MALFUNCTION_UPDATED
+  MALFUNCTION_RESOLVED
+  FLUID_ADDED
+  FUEL_ADDED
+  MOVEMENT
+  INSPECTION
+  ITEM_ASSIGNED
+  ITEM_REMOVED
+  DOCUMENT_ADDED
+  QUOTE_LINKED
+  NOTE_ADDED
+}
+
+enum MalfunctionSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MalfunctionState {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum InspectionKind {
+  ANNUAL_TEST
+  INSURANCE
+  SAFETY_CHECK
+}
+
+enum DocumentKind {
+  RECEIPT
+  INVOICE
+  OTHER
+}
+
+enum QuoteStatus {
+  REQUESTED
+  RECEIVED
+  APPROVED
+  ORDERED
+  REJECTED
+}
+
+enum LineCondition {
+  IN_STOCK
+  NEW
+  NEEDS_REPLACEMENT
+}
+
+// ---------- Lookups (bilingual) ----------
+
+model Department {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  nameEn    String
+  nameHe    String
+  sortOrder Int       @default(0)
+  active    Boolean   @default(true)
+  vehicles  Vehicle[]
+}
+
+model Location {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  nameEn    String
+  nameHe    String
+  sortOrder Int        @default(0)
+  active    Boolean    @default(true)
+  vehicles  Vehicle[]
+  movesFrom Movement[] @relation("MovementFrom")
+  movesTo   Movement[] @relation("MovementTo")
+}
+
+model VehicleType {
+  id                  String          @id @default(cuid())
+  code                String          @unique
+  nameEn              String
+  nameHe              String
+  category            VehicleCategory
+  usageUnit           UsageUnit
+  defaultHasStartCode Boolean         @default(false)
+  sortOrder           Int             @default(0)
+  active              Boolean         @default(true)
+  vehicles            Vehicle[]
+}
+
+model FluidType {
+  id        String          @id @default(cuid())
+  code      String          @unique
+  nameEn    String
+  nameHe    String
+  sortOrder Int             @default(0)
+  active    Boolean         @default(true)
+  additions FluidAddition[]
+}
+
+model ReceiptCategory {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  nameEn    String
+  nameHe    String
+  sortOrder Int        @default(0)
+  active    Boolean    @default(true)
+  documents Document[]
+}
+
+// ---------- Vehicle and its event log ----------
+
+model Vehicle {
+  id           String      @id @default(cuid())
+  serial       String      @unique
+  vin          String?     @unique
+  licenseNo    String?     @unique
+  typeId       String
+  type         VehicleType @relation(fields: [typeId], references: [id])
+  make         String
+  model        String
+  year         Int?
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  locationId   String?
+  location     Location?   @relation(fields: [locationId], references: [id])
+  operatorName String?
+
+  // Usage and maintenance
+  odometerKm       Int?
+  engineHours      Int?
+  nextServiceKm    Int?
+  nextServiceHours Int?
+  nextServiceDate  DateTime?
+  readinessPct     Int       @default(100)
+
+  // Compliance
+  annualTestExpiry  DateTime?
+  insuranceExpiry   DateTime?
+  safetyCheckExpiry DateTime?
+
+  // Status: derived and cached here, with an optional logged override
+  status               VehicleStatus  @default(GREEN)
+  statusOverride       VehicleStatus?
+  statusOverrideReason String?
+  statusOverrideById   String?
+  statusOverrideAt     DateTime?
+
+  // Start code: AES-256-GCM ciphertext, never selected in list queries
+  hasStartCode Boolean @default(false)
+  startCodeEnc String?
+
+  // Ownership and warranty
+  purchaseDate   DateTime?
+  supplierId     String?
+  supplier       Supplier? @relation(fields: [supplierId], references: [id])
+  purchasePrice  Decimal?  @db.Decimal(12, 2)
+  warrantyTerms  String?
+  warrantyExpiry DateTime?
+
+  customImageId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events          Event[]
+  services        ServiceRecord[]
+  malfunctions    Malfunction[]
+  fluidAdditions  FluidAddition[]
+  fuelEntries     FuelEntry[]
+  movements       Movement[]
+  inspections     Inspection[]
+  notes           Note[]
+  itemAssignments ItemAssignment[]
+  currentItems    Item[]           @relation("CurrentVehicle")
+  documents       DocumentVehicle[]
+  quotes          QuoteVehicle[]
+
+  @@index([typeId])
+  @@index([departmentId])
+  @@index([status])
+}
+
+model Event {
+  id         String    @id @default(cuid())
+  type       EventType
+  vehicleId  String
+  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  occurredAt DateTime
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  /// Template parameters; the sentence is built from translated templates at render time.
+  params     Json      @default("{}")
+  sourceType String?
+  sourceId   String?
+  createdAt  DateTime  @default(now())
+
+  @@index([vehicleId, occurredAt])
+  @@index([occurredAt])
+  @@index([sourceType, sourceId])
+}
+
+// ---------- Records ----------
+
+model ServiceRecord {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date        DateTime
+  odometerKm  Int?
+  engineHours Int?
+  description String
+  vendor      String?
+  cost        Decimal?  @db.Decimal(12, 2)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([vehicleId, date])
+}
+
+model Malfunction {
+  id            String              @id @default(cuid())
+  vehicleId     String
+  vehicle       Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  reportedAt    DateTime
+  resolvedAt    DateTime?
+  severity      MalfunctionSeverity
+  state         MalfunctionState    @default(OPEN)
+  isAccident    Boolean             @default(false)
+  description   String
+  downtimeHours Int?
+  cost          Decimal?            @db.Decimal(12, 2)
+  createdById   String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  deletedAt     DateTime?
+
+  @@index([vehicleId, reportedAt])
+  @@index([state])
+}
+
+model FluidAddition {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date        DateTime
+  fluidTypeId String
+  fluidType   FluidType @relation(fields: [fluidTypeId], references: [id])
+  liters      Decimal   @db.Decimal(8, 2)
+  notes       String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([vehicleId, date])
+}
+
+model FuelEntry {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date        DateTime
+  liters      Decimal   @db.Decimal(8, 2)
+  odometerKm  Int?
+  engineHours Int?
+  cost        Decimal?  @db.Decimal(12, 2)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([vehicleId, date])
+}
+
+model Movement {
+  id             String    @id @default(cuid())
+  vehicleId      String
+  vehicle        Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date           DateTime
+  fromLocationId String?
+  fromLocation   Location? @relation("MovementFrom", fields: [fromLocationId], references: [id])
+  toLocationId   String
+  toLocation     Location  @relation("MovementTo", fields: [toLocationId], references: [id])
+  notes          String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  @@index([vehicleId, date])
+}
+
+model Inspection {
+  id          String         @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  kind        InspectionKind
+  date        DateTime
+  validUntil  DateTime
+  inspector   String?
+  passed      Boolean        @default(true)
+  cost        Decimal?       @db.Decimal(12, 2)
+  notes       String?
+  createdById String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  @@index([vehicleId, date])
+}
+
+model Note {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  body        String
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([vehicleId, createdAt])
+}
+
+/// A file attached to any record. ownerType names the model (e.g. "Inspection").
+model Attachment {
+  id           String   @id @default(cuid())
+  ownerType    String
+  ownerId      String
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  storagePath  String
+  thumbPath    String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([ownerType, ownerId])
+}
+
+// ---------- Items ----------
+
+model Item {
+  id               String           @id @default(cuid())
+  kind             String
+  name             String
+  model            String?
+  spec             String?
+  serial           String?          @unique
+  currentVehicleId String?
+  currentVehicle   Vehicle?         @relation("CurrentVehicle", fields: [currentVehicleId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  assignments      ItemAssignment[]
+
+  @@index([currentVehicleId])
+}
+
+model ItemAssignment {
+  id         String    @id @default(cuid())
+  itemId     String
+  item       Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  vehicleId  String
+  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  assignedAt DateTime
+  removedAt  DateTime?
+
+  @@index([itemId, assignedAt])
+  @@index([vehicleId])
+}
+
+// ---------- Money ----------
+
+model Supplier {
+  id        String     @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  notes     String?
+  createdAt DateTime   @default(now())
+  vehicles  Vehicle[]
+  quotes    Quote[]
+}
+
+model Document {
+  id               String            @id @default(cuid())
+  kind             DocumentKind      @default(RECEIPT)
+  date             DateTime
+  vendor           String?
+  amount           Decimal?          @db.Decimal(12, 2)
+  categoryId       String?
+  category         ReceiptCategory?  @relation(fields: [categoryId], references: [id])
+  linkedRecordType String?
+  linkedRecordId   String?
+  notes            String?
+  createdById      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  vehicles         DocumentVehicle[]
+
+  @@index([date])
+}
+
+model DocumentVehicle {
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  vehicleId  String
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, vehicleId])
+  @@index([vehicleId])
+}
+
+model Quote {
+  id          String         @id @default(cuid())
+  supplierId  String
+  supplier    Supplier       @relation(fields: [supplierId], references: [id])
+  date        DateTime
+  validUntil  DateTime?
+  status      QuoteStatus    @default(REQUESTED)
+  notes       String?
+  createdById String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+  lines       QuoteLine[]
+  vehicles    QuoteVehicle[]
+
+  @@index([date])
+}
+
+model QuoteLine {
+  id        String        @id @default(cuid())
+  quoteId   String
+  quote     Quote         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  item      String
+  partNo    String?
+  condition LineCondition @default(NEW)
+  quantity  Int           @default(1)
+  unitPrice Decimal       @db.Decimal(12, 2)
+  sortOrder Int           @default(0)
+}
+
+model QuoteVehicle {
+  quoteId   String
+  quote     Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@id([quoteId, vehicleId])
+  @@index([vehicleId])
+}
+
+// ---------- Users and access ----------
+
+model User {
+  id                String               @id @default(cuid())
+  email             String               @unique
+  name              String
+  passwordHash      String
+  role              Role                 @default(VIEWER)
+  canViewStartCodes Boolean              @default(false)
+  active            Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  events            Event[]
+  preference        UserPreference?
+  resetTokens       PasswordResetToken[] @relation("ResetFor")
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  targetType String?
+  targetId   String?
+  meta       Json     @default("{}")
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+model UserPreference {
+  userId       String   @id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pinnedVitals String[] @default([])
+  detailView   String   @default("side")
+  language     String?
+  theme        String?
+}
+
+/// One-time password reset link created by an admin (Phase 7).
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  tokenHash   String    @unique
+  userId      String
+  user        User      @relation("ResetFor", fields: [userId], references: [id], onDelete: Cascade)
+  createdById String?
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+}

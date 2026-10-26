@@ -2,5 +2,37 @@
   "name": "@fleet-hub/api",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/server.ts",
+    "build": "node scripts/build.mjs",
+    "start": "node --env-file-if-exists=../../.env dist/server.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx --env-file-if-exists=../../.env prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force --skip-seed && pnpm db:seed",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@fastify/cookie": "11.1.3",
+    "@fastify/helmet": "13.2.0",
+    "@fastify/rate-limit": "11.2.1",
+    "@fleet-hub/shared": "workspace:*",
+    "@node-rs/argon2": "2.2.2",
+    "@prisma/client": "6.19.3",
+    "fastify": "5.12.7",
+    "fastify-plugin": "^5.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "10.6.0",
+    "@types/node": "22.20.5",
+    "esbuild": "^0.25.0",
+    "prisma": "6.19.3",
+    "tsx": "4.23.15",
+    "vitest": "3.2.7"
+  }
 }

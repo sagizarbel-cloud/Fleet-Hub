@@ -1,0 +1,139 @@
+@import 'tailwindcss';
+
+/* Self-hosted IBM Plex (bundled from @fontsource, no external requests). */
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-sans-hebrew/400.css';
+@import '@fontsource/ibm-plex-sans-hebrew/500.css';
+@import '@fontsource/ibm-plex-sans-hebrew/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* ---------- Design tokens ---------- */
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --fh-bg: #060a14;
+  --fh-bg-grid: rgb(56 189 248 / 0.045);
+  --fh-surface: rgb(13 20 37 / 0.72);
+  --fh-surface-strong: #0d1527;
+  --fh-border: rgb(148 163 184 / 0.14);
+  --fh-border-strong: rgb(148 163 184 / 0.28);
+  --fh-text: #e3e9f3;
+  --fh-muted: #8b98ad;
+  --fh-accent: #22d3ee;
+  --fh-accent-contrast: #04121a;
+  --fh-ok: #34d399;
+  --fh-warn: #fbbf24;
+  --fh-bad: #f87171;
+  --fh-focus: #67e8f9;
+  --fh-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --fh-bg: #f3f6fb;
+  --fh-bg-grid: rgb(14 116 144 / 0.06);
+  --fh-surface: rgb(255 255 255 / 0.82);
+  --fh-surface-strong: #ffffff;
+  --fh-border: rgb(15 23 42 / 0.1);
+  --fh-border-strong: rgb(15 23 42 / 0.2);
+  --fh-text: #0f172a;
+  --fh-muted: #526079;
+  --fh-accent: #0e7490;
+  --fh-accent-contrast: #ffffff;
+  --fh-ok: #047857;
+  --fh-warn: #b45309;
+  --fh-bad: #b91c1c;
+  --fh-focus: #0891b2;
+  --fh-shadow: 0 10px 30px -16px rgb(15 23 42 / 0.25);
+}
+
+@theme inline {
+  --color-bg: var(--fh-bg);
+  --color-surface: var(--fh-surface);
+  --color-surface-strong: var(--fh-surface-strong);
+  --color-border: var(--fh-border);
+  --color-border-strong: var(--fh-border-strong);
+  --color-text: var(--fh-text);
+  --color-muted: var(--fh-muted);
+  --color-accent: var(--fh-accent);
+  --color-accent-contrast: var(--fh-accent-contrast);
+  --color-ok: var(--fh-ok);
+  --color-warn: var(--fh-warn);
+  --color-bad: var(--fh-bad);
+  --color-focus: var(--fh-focus);
+
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Hebrew', system-ui, sans-serif;
+  --font-hebrew: 'IBM Plex Sans Hebrew', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --shadow-panel: var(--fh-shadow);
+  --radius-panel: 0.875rem;
+
+  /* Motion: CSS durations; springs live in src/lib/motion.ts */
+  --default-transition-duration: 160ms;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Base ---------- */
+
+@layer base {
+  html {
+    background: var(--fh-bg);
+    color: var(--fh-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  html:lang(he) {
+    font-family: var(--font-hebrew);
+  }
+  body {
+    min-height: 100dvh;
+    /* Blueprint grid, static (no animated properties). */
+    background-image:
+      linear-gradient(var(--fh-bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--fh-bg-grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-attachment: fixed;
+  }
+  :focus-visible {
+    outline: 2px solid var(--fh-focus);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--fh-accent) 30%, transparent);
+  }
+}
+
+@utility glass {
+  background: var(--fh-surface);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--fh-border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--fh-shadow);
+}
+
+/* IDs and numbers: mono with tabular figures everywhere. */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

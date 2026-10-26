@@ -18,12 +18,16 @@ Bilingual (English/Hebrew, RTL) fleet-management web app, self-hosted on our own
 - Dev: `docker compose -f docker-compose.dev.yml up -d` runs PostgreSQL; `pnpm dev` runs web + api
 - Prod: Docker Compose (postgres, api, caddy serving the web build and proxying `/api`)
 
-## Commands (create these in Phase 1, keep this list accurate)
+## Commands (keep this list accurate)
 
-- `pnpm dev` · `pnpm build`
-- `pnpm lint` · `pnpm typecheck` · `pnpm test` (Vitest) · `pnpm e2e` (Playwright)
-- `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:reset`
-- `pnpm i18n:check` (fails on any key without a Hebrew value)
+- First run: `pnpm install` · `pnpm env:init` (writes `.env` with fresh secrets) · `docker compose -f docker-compose.dev.yml up -d` · `pnpm db:migrate` · `pnpm db:seed`
+- `pnpm dev` (web on :5173, api on :3001, `/api` proxied) · `pnpm build`
+- `pnpm lint` · `pnpm format` · `pnpm typecheck` · `pnpm test` (Vitest; api tests use `DATABASE_URL_TEST`) · `pnpm e2e` (Playwright, against `pnpm dev` and the seeded dev DB)
+- `pnpm db:migrate` · `pnpm db:seed` (wipes and reloads the fake fleet) · `pnpm db:reset`
+- `pnpm i18n:check` (fails on any key without a Hebrew value; also the hidden `/i18n-check` page)
+- `pnpm check:arm64` (static: arm64 Prisma engine + argon2 prebuilt) · `pnpm docker:arm64` (full: installs and loads the api in a linux/arm64 container; needs an ARM host or QEMU)
+- Seed logins: `admin@`, `editor@`, `viewer@fleethub.test`, password `SEED_PASSWORD` from `.env`
+- Screenshots: `SCREENSHOTS=1 pnpm --filter @fleet-hub/web exec playwright test screenshots` → `docs/screenshots/`
 
 ## How we work
 
