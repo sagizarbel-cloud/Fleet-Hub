@@ -1,20 +1,17 @@
 import { test, type Page } from '@playwright/test';
 
-// Saves the current phase's screenshots for the PR: the record panels, a form, the fuel chart
-// and the status override, EN and HE, desktop and phone. Earlier phases keep their own folders.
-const OUT = '../../docs/screenshots/phase-4';
+// Saves the current phase's screenshots for the PR: the fleet table with its column groups,
+// grouping, an opened row, saved views and filters, EN and HE, desktop and phone. Earlier
+// phases keep their own folders.
+const OUT = '../../docs/screenshots/phase-5';
 const SIZES = { desktop: { width: 1440, height: 900 }, phone: { width: 390, height: 844 } };
 
 test.skip(!process.env.SCREENSHOTS, 'set SCREENSHOTS=1 to refresh docs/screenshots');
 
-async function panel(page: Page, serial: string, key: string) {
-  await page.goto(`/vehicles/${serial}?panel=${key}`);
-  const el = page.getByTestId('record-panel');
-  await el.waitFor();
-  await page.getByTestId(`records-${key}`).waitFor();
-  await page.waitForTimeout(900);
-  await el.evaluate((n) => n.scrollIntoView({ block: 'start' }));
-  await page.waitForTimeout(200);
+async function table(page: Page, query = '') {
+  await page.goto(`/fleet${query}`);
+  await page.getByTestId('fleet-grid').waitFor();
+  await page.waitForTimeout(700);
 }
 
 for (const [sizeName, viewport] of Object.entries(SIZES)) {
@@ -30,29 +27,42 @@ for (const [sizeName, viewport] of Object.entries(SIZES)) {
       const page = await context.newPage();
       const shot = (name: string) =>
         page.screenshot({ path: `${OUT}/${name}-${lang}-${sizeName}.png` });
+      await page.request.put('/api/me/preferences', {
+        headers: { origin: 'http://localhost:5173' },
+        data: { fleetViewId: null },
+      });
 
-      await panel(page, 'PU-901', 'fuel');
-      await shot('fuel');
-      await panel(page, 'EX-101', 'service');
-      await shot('service');
-      await panel(page, 'WL-401', 'malfunctions');
-      await shot('malfunctions');
-      await page.getByTestId('add-record').click();
-      await page.getByTestId('sheet').waitFor();
+      await table(page);
+      await shot('fleet-table');
+
+      // Scrolled sideways to the compliance and cost columns, with one row opened.
+      await page.locator('tr[data-row="EX-102"]').getByTestId('expand-row').click();
+      await page.getByTestId('detail-EX-102').locator('li').first().waitFor();
+      await page.getByTestId('fleet-scroller').evaluate((el, rtl) => {
+        el.scrollLeft = (rtl ? -1 : 1) * el.scrollWidth;
+      }, lang === 'he');
       await page.waitForTimeout(300);
-      await shot('malfunction-form');
+      await shot('row-detail');
+
+      await table(page);
+      await page.getByTestId('views-menu').click();
+      await page.waitForTimeout(200);
+      await shot('saved-views');
       await page.keyboard.press('Escape');
-      await panel(page, 'EX-101', 'inspections');
-      await shot('inspections');
+
       if (sizeName === 'desktop') {
-        await panel(page, 'EX-101', 'ownership');
-        await shot('ownership');
-        await page.goto('/vehicles/TK-801');
-        await page.getByTestId('vitals').waitFor();
-        const label = lang === 'he' ? 'קביעת סטטוס ידנית' : 'Set the status by hand';
-        await page.getByRole('button', { name: label }).click();
-        await page.getByTestId('status-override').waitFor();
-        await shot('status-override');
+        const select = page.getByLabel(lang === 'he' ? 'קיבוץ לפי' : 'Group by');
+        await select.selectOption('type');
+        await page.waitForTimeout(300);
+        await shot('grouped-by-type');
+        await page.getByTestId('group-compliance').click();
+        await page.waitForTimeout(200);
+        await shot('column-group-menu');
+      } else {
+        await page.getByTestId('filters-button').click();
+        await page.getByTestId('sheet').waitFor();
+        await page.waitForTimeout(300);
+        await shot('filters');
       }
       await context.close();
     });
