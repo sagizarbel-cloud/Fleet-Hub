@@ -37,7 +37,7 @@
 - Excel import page added to Phase 7: Sagi has existing Excel sheets.
 - Backups moved to a new Phase 10: location to be decided later.
 - Stack in CLAUDE.md unchanged.
-- Price quotes (2026-10-26, from Sagi): only admins see all quotes; every user, viewers included, can add quotes and sees only their own. Enforced server-side in Phase 6 (SPEC 5.6).
+- Price quotes (2026-10-26, from Sagi): every user, viewers included, can add quotes. Levels: standard (creator + admins, default), public (everyone), admins only (sensitive). Only admins change the level; admins see all. Enforced server-side in Phase 6 (SPEC 5.6). Defaults to confirm with Sagi: new quotes start standard; a creator loses sight of their quote once it's admins-only; public quotes are read-only for non-creators.
 - Pinned to well-established majors (TypeScript 5.9, Vite 7, Vitest 3, ESLint 9, Prisma 6): newer majors exist but are fresh; upgrade deliberately later.
 - Login rate limit keyed by IP + email: 20–30 users may share one office IP, so a per-IP limit would lock out everyone at once.
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
