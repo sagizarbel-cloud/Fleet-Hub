@@ -128,6 +128,11 @@ A dedicated area for quotes on vehicle parts and tools, assignable to vehicles.
 - Line items: part or tool, part no./model, condition (in stock / new / needs replacement), quantity, unit price, total.
 - "+ Assign vehicle" opens a picker with mini drawings. A quote can link to several vehicles and appears in their Quotes tab.
 - Compare quotes for the same part side by side; Excel export.
+- Visibility (enforced by the API, not only hidden in the UI):
+  - Every signed-in user, viewers included, can add a quote.
+  - Admins see every quote. Everyone else sees only the quotes they created, everywhere quotes appear: the Quotes area, a vehicle's Quotes tab and its count, comparisons, search, Excel exports and the activity timeline ("quote linked" events).
+  - A non-admin can edit or delete only their own quotes; admins can edit or delete any.
+  - Asking for someone else's quote by id returns "not found", so its existence isn't revealed.
 
 ### 5.7 Equipment & tools
 
@@ -184,7 +189,7 @@ One unified Event log feeds every timeline and activity feed.
 - Start code: some vehicles need a PIN to start, mainly pickups such as Toyota Hilux and Mitsubishi Triton, not excavators or loaders. Store a per-vehicle "has start code" flag (on by default for pickups) and the code itself, encrypted at rest. Show it masked; only users with the "view start codes" permission can reveal it, and every reveal is written to an audit log. Never include it in exports, search, logs, API list responses or the fleet table.
 - Records: ServiceRecord, Malfunction (severity, open / in progress / resolved, downtime, cost, accident flag), FluidAddition, FuelEntry, Movement, Inspection.
 - Items: Item and ItemAssignment (history of which vehicle held it).
-- Money: Document/Receipt (tagged to one or more vehicles), Quote and QuoteLine, Supplier.
+- Money: Document/Receipt (tagged to one or more vehicles), Quote (with its creator, required) and QuoteLine, Supplier. Quote visibility follows 5.6.
 - Lookups: Department, Location, VehicleType, FluidType, ReceiptCategory, each with English and Hebrew names.
 - Users: User, Role (viewer / editor / admin), permission flags (including "view start codes"), Session, AuditLog.
 - Any record can carry file attachments, such as an inspection's invoice or certificate.

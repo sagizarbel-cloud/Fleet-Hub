@@ -147,6 +147,11 @@ SPEC: 5.5, 5.6, 5.7.
 Acceptance criteria:
 - Receipt uploads (multi-file, camera on mobile, size/type limits), serial tags, grid/table views, totals, export; receipts show in each vehicle's Documents tab.
 - Quotes with line items, status flow, multi-vehicle assignment picker, side-by-side comparison, export.
+- Quote visibility (SPEC 5.6), enforced in the API queries:
+  - Any role, viewer included, can create a quote; `Quote.createdById` is required.
+  - Non-admins get only their own quotes from every route that returns quotes or quote counts: list, detail, a vehicle's Quotes tab and count, comparison, search, Excel export and the vehicle timeline's QUOTE_LINKED events. Admins get all.
+  - Non-admins can edit or delete only their own quotes; another user's quote id returns 404 on read, edit and delete.
+  - API tests cover each of these routes with two non-admin users and one admin.
 - Equipment catalog with assignment history; assign from vehicle page and by drag onto a tile.
 
 Prompt:
