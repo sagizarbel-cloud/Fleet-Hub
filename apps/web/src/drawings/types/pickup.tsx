@@ -1,11 +1,11 @@
 import { box, wheel } from '../iso';
-import type { VehicleDrawingDef } from '../model';
+import { byPart, type VehicleDrawingSource } from '../model';
 
-export const pickup: VehicleDrawingDef = {
+export const pickup: VehicleDrawingSource = {
   top: {
     width: 120,
     height: 220,
-    parts: {
+    layers: byPart({
       wheels: (
         <>
           <rect x="7" y="38" width="14" height="32" rx="4" />
@@ -36,12 +36,12 @@ export const pickup: VehicleDrawingDef = {
           <path d="M31 126 H89" />
         </>
       ),
-    },
+    }),
   },
   side: {
     width: 270,
     height: 140,
-    parts: {
+    layers: byPart({
       body: (
         <>
           <path d="M18 104 V72 Q18 68 22 68 H118 L122 34 Q123 30 128 30 H176 Q181 30 184 34 L206 62 L244 66 Q252 67 252 76 V100 Q252 104 248 104 H234 A26 26 0 0 0 182 104 H88 A26 26 0 0 0 36 104 Z" />
@@ -66,7 +66,7 @@ export const pickup: VehicleDrawingDef = {
           <circle cx="208" cy="110" r="7" />
         </>
       ),
-    },
+    }),
   },
   // x and z follow the side profile (z = 130 − its y); y runs across the width.
   iso: [

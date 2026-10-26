@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { VehicleStatus } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
-import { PAINT_ORDER, type ViewDrawing } from './model';
+import type { ViewDrawing } from './model';
 import { drawingFor } from './registry';
 import { IsoDrawing } from './iso';
 import './drawings.css';
@@ -25,12 +25,12 @@ interface Props {
   className?: string;
 }
 
-function Parts({ drawing, only }: { drawing: ViewDrawing; only?: (typeof PAINT_ORDER)[number] }) {
+export function Layers({ drawing }: { drawing: ViewDrawing }) {
   return (
     <>
-      {PAINT_ORDER.filter((p) => drawing.parts[p] && (!only || p === only)).map((p) => (
-        <g key={p} data-part={p} className="vd-part">
-          {drawing.parts[p]}
+      {drawing.layers.map(({ part, node }, i) => (
+        <g key={i} data-part={part} className="vd-part">
+          {node}
         </g>
       ))}
     </>
@@ -85,7 +85,7 @@ export function VehicleVisual({ type, view, status, size, draw = false, classNam
         style={{ '--vd-unit': drawing.width / size } as CSSProperties}
         aria-hidden
       >
-        <Parts drawing={drawing} />
+        <Layers drawing={drawing} />
       </svg>
     </div>
   );

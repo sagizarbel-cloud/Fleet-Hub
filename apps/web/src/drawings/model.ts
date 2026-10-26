@@ -8,8 +8,15 @@ export interface ViewDrawing {
   /** viewBox width and height, in drawing units. */
   width: number;
   height: number;
-  /** Parts in paint order (first is lowest). */
-  parts: Partial<Record<PartName, ReactNode>>;
+  /** Layers in paint order (first is lowest); each belongs to a named part. */
+  layers: readonly { part: PartName; node: ReactNode }[];
+}
+
+/** How a type is defined: 3D solids, with optional hand-drawn top and side views. */
+export interface VehicleDrawingSource {
+  iso: readonly Solid[];
+  top?: ViewDrawing;
+  side?: ViewDrawing;
 }
 
 export interface VehicleDrawingDef {
@@ -31,3 +38,8 @@ export const PAINT_ORDER: PartName[] = [
   'bucket',
   'cab',
 ];
+
+/** Hand-drawn views list one group per part; this puts them in the standard paint order. */
+export function byPart(parts: Partial<Record<PartName, ReactNode>>): ViewDrawing['layers'] {
+  return PAINT_ORDER.filter((p) => parts[p]).map((part) => ({ part, node: parts[part] }));
+}

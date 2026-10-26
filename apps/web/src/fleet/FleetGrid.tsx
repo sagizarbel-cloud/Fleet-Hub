@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ChevronDown, CircleCheck, CircleX, Plus, TriangleAlert } from 'lucide-react';
 import { VEHICLE_STATUSES, VEHICLE_TYPE_CODES, type VehicleStatus } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
+import { drawingFor } from '@/drawings/registry';
 import { VehicleVisual } from '@/drawings/VehicleVisual';
 import { cn } from '@/lib/cn';
 import { fade } from '@/lib/motion';
@@ -17,7 +18,13 @@ const STATUS_ICON: Record<VehicleStatus, { icon: typeof CircleCheck; tone: strin
   AMBER: { icon: TriangleAlert, tone: 'text-warn' },
   RED: { icon: CircleX, tone: 'text-bad' },
 };
-export const TILE_DRAWING_PX = 44;
+// Top-view drawings fit a box of this size, so long machines (an excavator's arm) stay in the grid.
+const TILE_BOX = { width: 48, height: 84 };
+
+function tileSize(type: string) {
+  const { top } = drawingFor(type);
+  return Math.min(TILE_BOX.width, (TILE_BOX.height * top.width) / top.height);
+}
 const COLLAPSED_KEY = 'fh.grid.collapsed';
 
 function loadCollapsed(): string[] {
@@ -126,8 +133,15 @@ function TileButton({
           linked && 'border-accent/70 ring-accent/40 ring-2',
         )}
       >
-        <div data-tile-visual={tile.serial} style={{ opacity: carried ? 0 : 1 }}>
-          <VehicleVisual type={tile.type} view="top" status={tile.status} size={TILE_DRAWING_PX} />
+        <div className="grid place-items-center" style={{ height: TILE_BOX.height }}>
+          <div data-tile-visual={tile.serial} style={{ opacity: carried ? 0 : 1 }}>
+            <VehicleVisual
+              type={tile.type}
+              view="top"
+              status={tile.status}
+              size={tileSize(tile.type)}
+            />
+          </div>
         </div>
         <span className="flex items-center gap-1 text-xs">
           <Icon aria-hidden className={cn('size-3.5', tone)} />

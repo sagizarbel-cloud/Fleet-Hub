@@ -3,9 +3,8 @@ import { motion } from 'motion/react';
 import type { VehicleStatus } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
 import { IsoDrawing } from './iso';
-import { PAINT_ORDER, type PartName, type ViewDrawing } from './model';
 import { drawingFor } from './registry';
-import { STATUS_VAR } from './VehicleVisual';
+import { Layers, STATUS_VAR } from './VehicleVisual';
 import './drawings.css';
 
 /** Which pose the hero is in: flat top-down (as in the grid), isometric, or side profile. */
@@ -25,14 +24,6 @@ const TILT = { duration: 0.4, ease: EASE };
 // Rotating the top view (front up) by 135° points the front down-right, as in the isometric
 // drawing; tipping it back by 54.74° gives the true isometric 30° ground lines.
 const ISO_TILT = { rotateX: 54.74, rotateZ: 135 };
-
-function Part({ drawing, part }: { drawing: ViewDrawing; part: PartName }) {
-  return (
-    <g data-part={part} className="vd-part">
-      {drawing.parts[part]}
-    </g>
-  );
-}
 
 /**
  * The vehicle on the detail stage. One element moves through every pose: the flat top view
@@ -90,9 +81,7 @@ export function HeroVisual({ type, status, pose, size, className }: Props) {
           }}
           aria-hidden
         >
-          {PAINT_ORDER.filter((p) => top.parts[p]).map((p) => (
-            <Part key={p} drawing={top} part={p} />
-          ))}
+          <Layers drawing={top} />
         </motion.svg>
       </div>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -129,9 +118,7 @@ export function HeroVisual({ type, status, pose, size, className }: Props) {
             transition={{ duration: 0.2 }}
             aria-hidden
           >
-            {PAINT_ORDER.filter((p) => side.parts[p]).map((p) => (
-              <Part key={p} drawing={side} part={p} />
-            ))}
+            <Layers drawing={side} />
           </motion.svg>
         </div>
       )}

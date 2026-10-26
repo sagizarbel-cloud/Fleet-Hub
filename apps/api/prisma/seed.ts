@@ -69,6 +69,7 @@ const vehicleTypes: {
   { code: 'truck', nameEn: 'Truck', nameHe: 'משאית', category: 'ROAD' },
   { code: 'pickup', nameEn: 'Pickup', nameHe: 'טנדר', category: 'ROAD' },
   { code: 'van', nameEn: 'Van', nameHe: 'מסחרית', category: 'ROAD' },
+  { code: 'trailer', nameEn: 'Equipment trailer', nameHe: 'נגרר ציוד', category: 'ROAD' },
   { code: 'other', nameEn: 'Other', nameHe: 'אחר', category: 'EQUIPMENT' },
 ];
 
@@ -221,6 +222,14 @@ const fleet: {
     type: 'van',
     make: 'Ford',
     model: 'Transit',
+    dept: 'logistics',
+    plan: 'green',
+  },
+  {
+    serial: 'TL-971',
+    type: 'trailer',
+    make: 'Humbaur',
+    model: 'HS 653',
     dept: 'logistics',
     plan: 'green',
   },
@@ -392,7 +401,12 @@ async function main() {
 
     // Fuel log, roughly weekly, with usage climbing over six months
     let usage = startUsage;
-    for (let d = 180; d > 0; d -= faker.number.int({ min: 5, max: 10 })) {
+    // Trailers have no engine: no fuel log.
+    for (
+      let d = 180;
+      plan.type !== 'trailer' && d > 0;
+      d -= faker.number.int({ min: 5, max: 10 })
+    ) {
       usage += road
         ? faker.number.int({ min: 400, max: 1_400 })
         : faker.number.int({ min: 25, max: 60 });
