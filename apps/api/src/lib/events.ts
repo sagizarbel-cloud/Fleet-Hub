@@ -27,7 +27,8 @@ function decodeCursor(cursor: string) {
 
 /** One page of the event log, newest first, hiding QUOTE_LINKED events for quotes the user can't see. */
 export async function listEvents(app: FastifyInstance, user: SessionUser, q: EventsQuery) {
-  const and: Prisma.EventWhereInput[] = [];
+  // Entries of deleted records stay hidden until Undo.
+  const and: Prisma.EventWhereInput[] = [{ hiddenAt: null }];
 
   if (q.types) and.push({ type: { in: q.types } });
   if (q.vehicle) and.push({ vehicle: { serial: q.vehicle } });

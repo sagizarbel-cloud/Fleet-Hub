@@ -12,6 +12,9 @@ import {
 } from '@prisma/client';
 import { deriveStatus, type VehicleTypeCode } from '@fleet-hub/shared';
 import { encryptStartCode } from '@fleet-hub/shared/crypto';
+import { rm } from 'node:fs/promises';
+import sharp from 'sharp';
+import { resolveStored, storeUpload } from '../src/lib/uploads';
 
 if (process.env.NODE_ENV === 'production') {
   throw new Error('Refusing to seed a production database.');
@@ -280,7 +283,52 @@ function fakePlate(): string {
 
 const money = (min: number, max: number) => new Prisma.Decimal(faker.number.int({ min, max }));
 
+/** Vehicles whose fuel log shows one sudden drop in economy, about three weeks ago. */
+const DROP_VEHICLES = new Set(['PU-901', 'EX-103']);
+const uploadDir = process.env.UPLOAD_DIR ?? './uploads';
+
+/** A plain fake receipt image: no real vendor, amount or plate. */
+async function fakeReceiptPng(title: string, lines: string[]) {
+  const text = [title, ...lines]
+    .map((l, i) => `<text x="32" y="${70 + i * 44}" font-size="${i ? 24 : 34}">${l}</text>`)
+    .join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800"><rect width="600" height="800" fill="#f4f1ea"/><g font-family="monospace" fill="#222">${text}</g><text x="32" y="760" font-size="20" fill="#a8181a" font-family="monospace">SAMPLE - NOT A REAL DOCUMENT</text></svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+/** A one-page PDF with a few lines of text, with a correct cross-reference table. */
+function fakePdf(lines: string[]) {
+  const content = lines
+    .map((l, i) => `BT /F1 ${i ? 14 : 20} Tf 60 ${760 - i * 30} Td (${l}) Tj ET`)
+    .join('\n');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let out = '%PDF-1.4\n';
+  const offsets: number[] = [];
+  objects.forEach((o, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  out += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 async function wipe() {
+  // Remove the files of the attachments about to be wiped, so uploads/ doesn't fill with orphans.
+  const files = await db.attachment.findMany({ select: { storagePath: true, thumbPath: true } });
+  for (const f of files) {
+    for (const rel of [f.storagePath, f.thumbPath]) {
+      if (rel) await rm(resolveStored(uploadDir, rel), { force: true }).catch(() => undefined);
+    }
+  }
   const tables = await db.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
   if (tables.length) {
@@ -400,20 +448,30 @@ async function main() {
     vehicleIds[plan.serial] = vehicle.id;
     event('VEHICLE_CREATED', vehicle.id, daysAgo(182));
 
-    // Fuel log, roughly weekly, with usage climbing over six months
+    // Fuel log, roughly weekly, with usage climbing over six months. Litres follow a steady
+    // economy with a little noise; a few vehicles get one sudden drop to show the flag.
     let usage = startUsage;
+    const economy = road
+      ? faker.number.float({ min: 7.5, max: 11, fractionDigits: 1 }) // km per litre
+      : faker.number.float({ min: 12, max: 24, fractionDigits: 1 }); // litres per hour
+    const dropAt = DROP_VEHICLES.has(plan.serial) ? 24 : -1;
+    let first = true;
     // Trailers have no engine: no fuel log.
     for (
       let d = 180;
       plan.type !== 'trailer' && d > 0;
       d -= faker.number.int({ min: 5, max: 10 })
     ) {
-      usage += road
+      const step = road
         ? faker.number.int({ min: 400, max: 1_400 })
         : faker.number.int({ min: 25, max: 60 });
-      const liters = road
-        ? faker.number.int({ min: 45, max: 180 })
-        : faker.number.int({ min: 60, max: 260 });
+      usage += step;
+      const noise = faker.number.float({ min: 0.93, max: 1.07 });
+      const worse = dropAt >= 0 && d <= dropAt && d > dropAt - 10 ? 1.45 : 1;
+      const liters = first
+        ? faker.number.int({ min: 40, max: 120 })
+        : Math.round((road ? step / economy : step * economy) * noise * worse * 10) / 10;
+      first = false;
       const entry = await db.fuelEntry.create({
         data: {
           vehicleId: vehicle.id,
@@ -742,10 +800,58 @@ async function main() {
 
   await db.event.createMany({ data: events });
 
+  // A few fake attachments: an invoice photo on recent services, a certificate on annual tests.
+  let attachments = 0;
+  for (const serial of ['EX-101', 'WL-401', 'PU-901', 'TK-801']) {
+    const vehicleId = vehicleIds[serial]!;
+    const service = await db.serviceRecord.findFirst({
+      where: { vehicleId },
+      orderBy: { date: 'desc' },
+    });
+    const test = await db.inspection.findFirst({
+      where: { vehicleId, kind: 'ANNUAL_TEST' },
+      orderBy: { date: 'desc' },
+    });
+    const files: { ownerType: string; ownerId: string; fileName: string; buf: Buffer }[] = [];
+    if (service) {
+      files.push({
+        ownerType: 'ServiceRecord',
+        ownerId: service.id,
+        fileName: `invoice-${serial}.png`,
+        buf: await fakeReceiptPng('INVOICE (SAMPLE)', [
+          `Vehicle ${serial}`,
+          service.date.toISOString().slice(0, 10),
+          service.description.slice(0, 32),
+          `Total ${service.cost?.toNumber() ?? 0} ILS`,
+        ]),
+      });
+    }
+    if (test) {
+      files.push({
+        ownerType: 'Inspection',
+        ownerId: test.id,
+        fileName: `annual-test-${serial}.pdf`,
+        buf: fakePdf([
+          'Annual test certificate (SAMPLE)',
+          `Vehicle ${serial}`,
+          `Valid until ${test.validUntil.toISOString().slice(0, 10)}`,
+          'Not a real document',
+        ]),
+      });
+    }
+    for (const f of files) {
+      const stored = await storeUpload(uploadDir, f.buf);
+      await db.attachment.create({
+        data: { ownerType: f.ownerType, ownerId: f.ownerId, fileName: f.fileName, ...stored },
+      });
+      attachments++;
+    }
+  }
+
   const counts = await db.vehicle.groupBy({ by: ['status'], _count: true });
   const summary = Object.fromEntries(counts.map((c) => [c.status, c._count]));
   console.log(
-    `Seeded ${fleet.length} vehicles (${JSON.stringify(summary)}), ${events.length} events.`,
+    `Seeded ${fleet.length} vehicles (${JSON.stringify(summary)}), ${events.length} events, ${attachments} attachments.`,
   );
   console.log(
     'Users: admin@fleethub.test, editor@fleethub.test, viewer@fleethub.test (password from SEED_PASSWORD).',
