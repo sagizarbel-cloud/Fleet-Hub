@@ -2,7 +2,7 @@
 
 ## Status
 
-- Current phase: 2 — Vehicle drawings, dashboard and the selection transition (not started)
+- Current phase: 2 — Vehicle drawings, dashboard and the selection transition (in progress: dashboard, transition and pickup drawing done; the other 10 drawings wait for Sagi's OK on the pickup style)
 - Last completed phase: 1 — Foundation
 
 ## Phase log
@@ -40,6 +40,12 @@
 - Price quotes (2026-10-26, from Sagi): every user, viewers included, can add quotes. Levels: standard (creator + admins, default), public (everyone), admins only (sensitive). Only admins change the level; admins see all. Enforced server-side in Phase 6 (SPEC 5.6). Defaults to confirm with Sagi: new quotes start standard; a creator loses sight of their quote once it's admins-only; public quotes are read-only for non-creators.
 - Pinned to well-established majors (TypeScript 5.9, Vite 7, Vitest 3, ESLint 9, Prisma 6): newer majors exist but are fresh; upgrade deliberately later.
 - Login rate limit keyed by IP + email: 20–30 users may share one office IP, so a per-IP limit would lock out everyone at once.
+- Phase 2 (2026-10-26, from Sagi): ripple uses fade + shrink (no blur); phones stack KPIs, then the grid, then the timeline; SVG stroke animation (draw-in) is allowed and will be revisited.
+- Quote visibility field added in Phase 2 (`Quote.visibility`, default STANDARD) so the timeline already hides QUOTE_LINKED events for quotes a user can't see. `Quote.createdById` stays optional until Phase 6 adds the quote screens.
+- Second visual style (top photo crossfading to a side photo) comes with uploads in Phase 7, using Sagi's own or dealer-permitted photos only, never manufacturer-site photos. `HeroVisual` is the slot that will take the photos; vehicles without photos keep the drawing.
+- Transition budget measured in the page on the production build: about 1.15 s from click until every animation has finished (the e2e test checks stage-mount to settled ≤ 1.1 s on the dev server).
+- `packages/shared` is marked side-effect free, so the web bundle only takes the enums it uses (zod stays on the server for now): dashboard JS is 234 KB gzipped.
+- The Side | Isometric toggle on the vehicle page is in Phase 2 (it decides the last step of the transition); the rest of the vehicle page is Phase 3.
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 
 ## Later
@@ -49,4 +55,5 @@
 - Auto-fill receipt date, vendor and total from the photo (SPEC 5.5)
 - Installable PWA (home-screen icon on phones)
 - Email delivery for password resets (SMTP)
+- Clicking a timeline event opens the vehicle and highlights the event if it is in the vehicle's latest 60 events; Phase 3 should page back to older ones.
 - Upgrade to newer majors (TypeScript 7, Vite 8, Prisma 7+, ESLint 10) once they settle
