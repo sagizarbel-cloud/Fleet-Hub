@@ -2,7 +2,7 @@
 
 ## Status
 
-- Current phase: 2 — Vehicle drawings, dashboard and the selection transition (in progress: dashboard, transition and pickup drawing done; the other 10 drawings wait for Sagi's OK on the pickup style)
+- Current phase: 2 — Vehicle drawings, dashboard and the selection transition (built; all types drawn, waiting for Sagi's review in the PR)
 - Last completed phase: 1 — Foundation
 
 ## Phase log
@@ -46,7 +46,7 @@
 - Transition budget measured in the page on the production build: about 1.15 s from click until every animation has finished (the e2e test checks stage-mount to settled ≤ 1.1 s on the dev server).
 - `packages/shared` is marked side-effect free, so the web bundle only takes the enums it uses (zod stays on the server for now): dashboard JS is 234 KB gzipped.
 - Isometric view (2026-10-26, Sagi: the CSS-tilted flat layers didn't look good): each type now also has a small 3D model (boxes, extruded profiles, wheels) projected to an isometric SVG with shaded faces. The transition still tilts the flat top view with CSS 3D (SPEC 5.2 step 3) and hands over to the 3D drawing at the end of the tilt. Pickup side profile shortened.
-- Drawings (2026-10-26, Sagi): the real fleet is pickups, 30-tonne class excavators, 20-tonne class wheel loaders and one equipment trailer, and no backhoe. These were drawn first, and `trailer` was added as a vehicle type (SPEC A4, glossary נגרר ציוד). Types are modelled once in 3D (metres); their top and side views are generated from the model, except the pickup's, which are hand-drawn. Excavator top views use the arm folded so grid tiles stay readable; the isometric and side views show it extended.
+- Drawings (2026-10-26, Sagi): the real fleet is pickups, 30-tonne class excavators, 20-tonne class wheel loaders and one equipment trailer, and no backhoe. These were drawn first, and `trailer` (an enclosed, caravan-like box trailer) was added as a vehicle type (SPEC A4, glossary נגרר ציוד). Types are modelled once in 3D (metres); their top and side views are generated from the model, except the pickup's, which are hand-drawn. Excavator top views use the arm folded so grid tiles stay readable; the isometric and side views show it extended.
 - The Side | Isometric toggle on the vehicle page is in Phase 2 (it decides the last step of the transition); the rest of the vehicle page is Phase 3.
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 
