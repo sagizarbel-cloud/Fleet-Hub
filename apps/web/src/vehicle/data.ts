@@ -32,8 +32,12 @@ export interface VehicleDetail {
   safetyCheckExpiry: string | null;
   status: VehicleStatus;
   statusOverride: VehicleStatus | null;
+  statusOverrideReason: string | null;
   hasStartCode: boolean;
   purchaseDate: string | null;
+  purchasePrice: number | null;
+  supplier: string | null;
+  warrantyTerms: string | null;
   warrantyExpiry: string | null;
   type: string;
   category: VehicleCategory;

@@ -32,6 +32,17 @@ if (!argonPkg.optionalDependencies?.['@node-rs/argon2-linux-arm64-gnu']) {
   console.log(`ok  @node-rs/argon2 ${argonPkg.version} lists a linux-arm64-gnu prebuilt`);
 }
 
+// 3. sharp (photo thumbnails) ships a prebuilt linux-arm64 binary.
+// sharp's exports hide package.json, so read it next to the resolved entry point.
+const sharpDir = path.dirname(require.resolve('sharp')).replace(/[\\/](lib|dist)$/, '');
+const sharpPkg = JSON.parse(readFileSync(path.join(sharpDir, 'package.json'), 'utf8'));
+const sharpNeeds = ['@img/sharp-linux-arm64', '@img/sharp-libvips-linux-arm64'];
+if (!sharpNeeds.every((p) => sharpPkg.optionalDependencies?.[p])) {
+  failures.push('sharp: no @img/sharp-linux-arm64 prebuilt listed.');
+} else {
+  console.log(`ok  sharp ${sharpPkg.version} lists a linux-arm64 prebuilt`);
+}
+
 if (failures.length) {
   console.error(failures.join('\n'));
   process.exit(1);

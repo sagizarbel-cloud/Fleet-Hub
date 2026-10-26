@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
@@ -18,11 +18,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { EventType } from '@fleet-hub/shared';
-import { useEvents } from '@/fleet/data';
 import { useDateFormat } from '@/fleet/FleetGrid';
-import { EventList } from '@/fleet/Timeline';
 import { cn } from '@/lib/cn';
 import type { VehicleDetail } from './data';
+import { UndoProvider } from './records/Undo';
+
+const PanelBody = lazy(() => import('./records/PanelBody'));
 
 export const RECORD_KEYS = [
   'service',
@@ -99,43 +100,9 @@ function useSummary(v: VehicleDetail | undefined) {
   };
 }
 
-function PanelBody({ recordKey, vehicle }: { recordKey: RecordKey; vehicle: VehicleDetail }) {
-  const { t } = useTranslation();
-  const formatDate = useDateFormat();
-  const types = RECORDS[recordKey].types;
-  const events = useEvents({ vehicle: vehicle.serial, types: types.length ? types : ['SERVICE'] });
-
-  if (recordKey === 'ownership') {
-    const rows = [
-      ['purchaseDate', vehicle.purchaseDate],
-      ['warrantyExpiry', vehicle.warrantyExpiry],
-    ] as const;
-    return (
-      <dl className="grid gap-3 sm:grid-cols-2">
-        {rows.map(([key, value]) => (
-          <div key={key}>
-            <dt className="text-muted text-xs">{t(`vehicle.ownership.${key}`)}</dt>
-            <dd className="text-sm">{value ? formatDate(value) : t('dashboard.notSet')}</dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-  if (events.isPending)
-    return <Loader2 aria-hidden className="text-muted mx-auto my-6 size-5 animate-spin" />;
-  const pages = events.data?.pages.slice(0, 1) ?? [];
-  if (pages.every((p) => p.items.length === 0))
-    return <p className="text-muted py-6 text-center text-sm">{t('vehicle.records.empty')}</p>;
-  return (
-    <div className="max-h-80 overflow-y-auto">
-      <EventList pages={pages} linkable={false} showSerial={false} />
-    </div>
-  );
-}
-
 /**
  * The record cards (SPEC 5.3). A card expands, as one shared element, into its panel; the
- * panel is in the URL (?panel=…) so Back closes it. Phase 4 turns panels into full tables.
+ * panel is in the URL (?panel=…) so Back closes it. Deleting in a panel offers Undo for 30 s.
  */
 export function Records({
   serial,
@@ -178,6 +145,8 @@ export function Records({
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
+      // A form open over the panel takes Esc first.
+      if (document.querySelector('[aria-modal="true"]')) return;
       e.preventDefault();
       close();
     };
@@ -187,87 +156,94 @@ export function Records({
   });
 
   return (
-    <LayoutGroup id={`records-${serial}`}>
-      <AnimatePresence initial={false}>
-        {open && vehicle && (
-          <motion.section
-            key={open}
-            layoutId={`record-${open}`}
-            transition={{ layout }}
-            aria-labelledby="record-panel-title"
-            className="glass mb-2 overflow-hidden p-3"
-            data-testid="record-panel"
-            data-panel-key={open}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2, delay: reduced ? 0 : 0.15 }}
+    <UndoProvider reduced={reduced}>
+      <LayoutGroup id={`records-${serial}`}>
+        <AnimatePresence initial={false}>
+          {open && vehicle && (
+            <motion.section
+              key={open}
+              layoutId={`record-${open}`}
+              transition={{ layout }}
+              aria-labelledby="record-panel-title"
+              className="glass mb-2 overflow-hidden p-3"
+              data-testid="record-panel"
+              data-panel-key={open}
+              exit={{ opacity: 0 }}
             >
-              <div className="mb-3 flex items-center gap-2">
-                {(() => {
-                  const Icon = RECORDS[open].icon;
-                  return <Icon aria-hidden className="text-accent-ink size-4" />;
-                })()}
-                <h2 id="record-panel-title" className="me-auto text-sm font-semibold">
-                  {t(`vehicle.records.${open}`)}
-                </h2>
-                <button
-                  type="button"
-                  onClick={close}
-                  aria-label={t('vehicle.records.close')}
-                  title={t('vehicle.records.close')}
-                  className="text-muted hover:text-text grid size-8 place-items-center rounded-lg"
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2, delay: reduced ? 0 : 0.15 }}
+              >
+                <div className="mb-3 flex items-center gap-2">
+                  {(() => {
+                    const Icon = RECORDS[open].icon;
+                    return <Icon aria-hidden className="text-accent-ink size-4" />;
+                  })()}
+                  <h2 id="record-panel-title" className="me-auto text-sm font-semibold">
+                    {t(`vehicle.records.${open}`)}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={close}
+                    aria-label={t('vehicle.records.close')}
+                    title={t('vehicle.records.close')}
+                    className="text-muted hover:text-text grid size-8 place-items-center rounded-lg"
+                  >
+                    <X aria-hidden className="size-4" />
+                  </button>
+                </div>
+                <Suspense
+                  fallback={
+                    <Loader2 aria-hidden className="text-muted mx-auto my-8 size-5 animate-spin" />
+                  }
                 >
-                  <X aria-hidden className="size-4" />
-                </button>
-              </div>
-              <PanelBody recordKey={open} vehicle={vehicle} />
-              <p className="text-muted mt-3 text-xs">{t('vehicle.records.preview')}</p>
-            </motion.div>
-          </motion.section>
-        )}
-      </AnimatePresence>
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-5" data-testid="record-cards">
-        {RECORD_KEYS.map((key, i) => {
-          const Icon = RECORDS[key].icon;
-          const s = summary(key);
-          return (
-            <motion.li key={key} data-panel {...motionFor(i)} className="min-h-[3.75rem]">
-              {/* The open card's place stays, outlined, so the grid doesn't jump. */}
-              {open === key && (
-                <div
-                  aria-hidden
-                  className="border-border-strong h-full rounded-[var(--radius-panel)] border border-dashed"
-                />
-              )}
-              {open !== key && (
-                <motion.button
-                  layoutId={`record-${key}`}
-                  transition={{ layout }}
-                  type="button"
-                  onClick={() => show(key)}
-                  data-record={key}
-                  className="glass hover:border-border-strong flex h-full w-full items-start gap-2 p-3 text-start"
-                >
-                  <Icon aria-hidden className="text-accent-ink mt-0.5 size-4 shrink-0" />
-                  <span className="min-w-0">
-                    <span className="block truncate text-xs font-medium">
-                      {t(`vehicle.records.${key}`)}
+                  <PanelBody recordKey={open} vehicle={vehicle} reduced={reduced} />
+                </Suspense>
+              </motion.div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-5" data-testid="record-cards">
+          {RECORD_KEYS.map((key, i) => {
+            const Icon = RECORDS[key].icon;
+            const s = summary(key);
+            return (
+              <motion.li key={key} data-panel {...motionFor(i)} className="min-h-[3.75rem]">
+                {/* The open card's place stays, outlined, so the grid doesn't jump. */}
+                {open === key && (
+                  <div
+                    aria-hidden
+                    className="border-border-strong h-full rounded-[var(--radius-panel)] border border-dashed"
+                  />
+                )}
+                {open !== key && (
+                  <motion.button
+                    layoutId={`record-${key}`}
+                    transition={{ layout }}
+                    type="button"
+                    onClick={() => show(key)}
+                    data-record={key}
+                    className="glass hover:border-border-strong flex h-full w-full items-start gap-2 p-3 text-start"
+                  >
+                    <Icon aria-hidden className="text-accent-ink mt-0.5 size-4 shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-medium">
+                        {t(`vehicle.records.${key}`)}
+                      </span>
+                      <span
+                        className={cn('text-muted block truncate text-xs', s.warn && 'text-warn')}
+                      >
+                        {s.text}
+                      </span>
                     </span>
-                    <span
-                      className={cn('text-muted block truncate text-xs', s.warn && 'text-warn')}
-                    >
-                      {s.text}
-                    </span>
-                  </span>
-                </motion.button>
-              )}
-            </motion.li>
-          );
-        })}
-      </ul>
-    </LayoutGroup>
+                  </motion.button>
+                )}
+              </motion.li>
+            );
+          })}
+        </ul>
+      </LayoutGroup>
+    </UndoProvider>
   );
 }

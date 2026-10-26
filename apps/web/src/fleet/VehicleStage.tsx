@@ -5,7 +5,6 @@ import { motion, useAnimate } from 'motion/react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import type { DetailView } from '@fleet-hub/shared';
 import { DETAIL_VIEWS } from '@fleet-hub/shared';
-import { StatusBadge } from '@/components/StatusBadge';
 import { HeroVisual, type HeroPose } from '@/drawings/HeroVisual';
 import { cn } from '@/lib/cn';
 import { prefersReducedMotion } from '@/lib/motion';
@@ -15,6 +14,7 @@ import { usePreferences, useSavePreferences, useVehicle } from '@/vehicle/data';
 import { CopyId, StartCodeChip } from '@/vehicle/Identity';
 import { ItemsTable } from '@/vehicle/ItemsTable';
 import { Records } from '@/vehicle/Records';
+import { StatusControl } from '@/vehicle/StatusControl';
 import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
 import { VitalsBar } from '@/vehicle/VitalsBar';
 import { lookupName, useLookups, type Tile } from './data';
@@ -316,7 +316,7 @@ export function VehicleStage({
                       {tile.make} {tile.model}
                     </h1>
                   </div>
-                  <StatusBadge status={vehicle?.status ?? tile.status} />
+                  <StatusControl vehicle={vehicle} fallback={tile.status} />
                   <VehicleNav serial={serial} tiles={tiles} />
                 </>
               )}

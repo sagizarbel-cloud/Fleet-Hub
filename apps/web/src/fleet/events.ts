@@ -7,20 +7,31 @@ import {
   FilePlus2,
   Fuel,
   Package,
+  Pencil,
+  Trash2,
+  Undo2,
   ReceiptText,
   StickyNote,
   TriangleAlert,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
-import type { EventType } from '@fleet-hub/shared';
+import { RECORD_KINDS, type EventType } from '@fleet-hub/shared';
 import { lookupName, type FleetEvent, type Lookups } from './data';
 
 /** Timeline filter chips. Each chip covers related event types. */
 export const EVENT_GROUPS = {
   status: {
     icon: CircleDot,
-    types: ['VEHICLE_CREATED', 'VEHICLE_UPDATED', 'STATUS_CHANGED', 'STATUS_OVERRIDDEN'],
+    types: [
+      'VEHICLE_CREATED',
+      'VEHICLE_UPDATED',
+      'STATUS_CHANGED',
+      'STATUS_OVERRIDDEN',
+      'RECORD_EDITED',
+      'RECORD_DELETED',
+      'RECORD_RESTORED',
+    ],
   },
   service: { icon: Wrench, types: ['SERVICE'] },
   malfunctions: {
@@ -42,10 +53,17 @@ const GROUP_OF = Object.fromEntries(
   EVENT_GROUP_KEYS.flatMap((g) => EVENT_GROUPS[g].types.map((type) => [type, g])),
 ) as Record<EventType, EventGroup>;
 
+const OWN_ICON: Partial<Record<EventType, LucideIcon>> = {
+  QUOTE_LINKED: FilePlus2,
+  RECORD_EDITED: Pencil,
+  RECORD_DELETED: Trash2,
+  RECORD_RESTORED: Undo2,
+};
+
 export const EVENT_ICON = Object.fromEntries(
   Object.entries(GROUP_OF).map(([type, g]) => [
     type,
-    type === 'QUOTE_LINKED' ? FilePlus2 : EVENT_GROUPS[g].icon,
+    OWN_ICON[type as EventType] ?? EVENT_GROUPS[g].icon,
   ]),
 ) as Record<EventType, LucideIcon>;
 
@@ -78,8 +96,25 @@ export function describeEvent(
 
   switch (e.type) {
     case 'STATUS_CHANGED':
+      return t('events.STATUS_CHANGED', { to: status(p.to) });
     case 'STATUS_OVERRIDDEN':
-      return t(`events.${e.type}`, { to: status(p.to) });
+      return p.cleared
+        ? t('events.STATUS_OVERRIDE_CLEARED', { to: status(p.to) })
+        : str(p.reason)
+          ? t('events.STATUS_OVERRIDDEN_REASON', { to: status(p.to), reason: str(p.reason) })
+          : t('events.STATUS_OVERRIDDEN', { to: status(p.to) });
+    case 'RECORD_EDITED':
+    case 'RECORD_DELETED':
+    case 'RECORD_RESTORED': {
+      // "Edited: Refueled 60 L", built from the record's own event template.
+      const of = str(p.of) as EventType;
+      const kind = RECORD_KINDS.find((k) => k === p.kind);
+      const detail = of && of !== e.type ? describeEvent(t, { ...e, type: of }, lookups, lang) : '';
+      return t(`events.${e.type}`, {
+        record: kind ? t(`vehicle.records.one.${kind}`) : '',
+        detail,
+      });
+    }
     case 'SERVICE':
     case 'MALFUNCTION_UPDATED':
     case 'MALFUNCTION_RESOLVED':
