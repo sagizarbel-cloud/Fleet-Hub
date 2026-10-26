@@ -6,8 +6,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserMenu } from '@/components/UserMenu';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/cn';
-import { AREA_ROUTES, AREAS } from './nav';
+import { ScrollableNav } from './ScrollableNav';
 
 export function TopBar({ user }: { user: SessionUser }) {
   const { t } = useTranslation();
@@ -53,32 +52,7 @@ export function TopBar({ user }: { user: SessionUser }) {
         </div>
       </div>
 
-      <nav aria-label={t('a11y.mainNav')} className="border-border border-t">
-        <ul className="flex gap-1 overflow-x-auto px-2 py-1.5 [scrollbar-width:none] sm:px-3">
-          {AREAS.map((area) => {
-            const { path, icon: Icon } = AREA_ROUTES[area];
-            return (
-              <li key={area} className="shrink-0">
-                <NavLink
-                  to={path}
-                  end={path === '/'}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
-                      isActive
-                        ? 'bg-accent/15 text-accent'
-                        : 'text-muted hover:text-text hover:bg-border',
-                    )
-                  }
-                >
-                  <Icon aria-hidden className="size-4" />
-                  {t(`nav.${area}`)}
-                </NavLink>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      <ScrollableNav />
     </header>
   );
 }

@@ -54,3 +54,18 @@ test('signing out returns to the login page', async ({ browser }) => {
   await expect(page).toHaveURL(/\/login/);
   await context.close();
 });
+
+test('on a phone the area tabs scroll, with a cue, and every area is reachable', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const more = page.getByTestId('nav-more-end');
+  await expect(more).toHaveCSS('opacity', '1');
+  const settings = page.getByRole('link', { name: 'Settings' });
+  await settings.scrollIntoViewIfNeeded();
+  await settings.click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(settings).toBeInViewport();
+  await expect(more).toHaveCSS('opacity', '0');
+});
