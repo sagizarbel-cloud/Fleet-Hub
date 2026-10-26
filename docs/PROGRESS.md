@@ -2,12 +2,19 @@
 
 ## Status
 
-- Current phase: 2 — Vehicle drawings, dashboard and the selection transition (built; all types drawn, waiting for Sagi's review in the PR)
-- Last completed phase: 1 — Foundation
+- Current phase: 3 — Vehicle detail (built; waiting for Sagi's review in the PR)
+- Last completed phase: 2 — Vehicle drawings, dashboard and the selection transition
 
 ## Phase log
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
+
+### Phase 3 — 2026-10-26
+
+- Shipped: industrial colours (black/grey dark, medium grey light, machine yellow and red accents). Vehicle page: Serial / VIN / License in mono numerals with click to copy; pinned vitals with a "Customize vitals" picker (add, remove, reorder, reset) saved per user; masked start code with a permission-checked, rate-limited, audited reveal that hides itself after 30 s; Side | Isometric choice saved per user; four callout lines on the side drawing (numbered dots plus a list on phones); activity sidebar with filters, scroll paging and paging back to a linked older event; assigned items table with Assign / Remove (editors and admins, each writes Events); ten record cards with counts that open into panels (?panel=, Back and Esc close); Prev / Next buttons and arrow keys (mirrored in Hebrew) and jump-to-vehicle search.
+- API: `GET /api/vehicles/:serial`, `POST /api/vehicles/:serial/start-code/reveal`, `GET|PUT /api/me/preferences`, `GET /api/items/unassigned`, `POST /api/items/:id/assign|remove`; dashboard tiles carry the plate for the jump search.
+- Tests: 40 api tests (start code absent from page, list, dashboard, events and logs; 403 with no audit for admins without the permission; one audit row per reveal; preferences follow the user to a new session; item moves write Events on both vehicles; fuel economy maths), 26 Playwright tests (copy, reveal, viewer denied, vitals persist, callouts, panel Back/Esc, prev/next in EN and HE, jump, paging back to an old event). Screenshots in `docs/screenshots/phase-3/`.
+- Deferred: record tables, forms and export (Phase 4); setting a start code and the status override (Phase 7).
 
 ### Phase 1 — 2026-10-25
 
@@ -48,6 +55,12 @@
 - Isometric view (2026-10-26, Sagi: the CSS-tilted flat layers didn't look good): each type now also has a small 3D model (boxes, extruded profiles, wheels) projected to an isometric SVG with shaded faces. The transition still tilts the flat top view with CSS 3D (SPEC 5.2 step 3) and hands over to the 3D drawing at the end of the tilt. Pickup side profile shortened.
 - Drawings (2026-10-26, Sagi): the real fleet is pickups, 30-tonne class excavators, 20-tonne class wheel loaders and one equipment trailer, and no backhoe. These were drawn first, and `trailer` (an enclosed, caravan-like box trailer) was added as a vehicle type (SPEC A4, glossary נגרר ציוד). Types are modelled once in 3D (metres); their top and side views are generated from the model, except the pickup's, which are hand-drawn. Excavator top views use the arm folded so grid tiles stay readable; the isometric and side views show it extended.
 - The Side | Isometric toggle on the vehicle page is in Phase 2 (it decides the last step of the transition); the rest of the vehicle page is Phase 3.
+- Colours (2026-10-26, from Sagi): dark theme black and dark grey; light theme a medium-dark grey page with light grey panels; accents machine yellow and red. "Has issues" moved from amber to orange so it never reads as the yellow accent; red stays for "Inoperable". Yellow is too light for text on light grey, so accent text uses a deep ochre (`--fh-accent-ink`).
+- Callouts (2026-10-26, from Sagi): engine hours (odometer on road vehicles), VIN, last location, last fuel. The list is one array in `apps/web/src/vehicle/callouts.ts`; any vehicle value can be a callout. A callout with no value (fuel on a trailer) is left out.
+- Drawing names (2026-10-26, Sagi saw a compressor drawing under "Backhoe loader"): each drawing now names the type it shows (`represents`), and the registry files it under that name only, so a drawing can't appear under another type. The compressor got its own type (`compressor`, מדחס נייד). Types without a drawing of their own (the backhoe loader) show the generic "other" drawing, a plain crate. The `/drawings` page labels each drawing with the type name users see. The seed has no backhoes any more: two Caterpillar 966 / 330 class machines replace them, and OT-991 became the compressor CP-991.
+- Prev / Next order comes from the dashboard tiles already in memory (grid order: type, then serial), so no neighbours endpoint was needed. Navigating replaces the history entry, so Back still leaves the vehicle pages in one step.
+- Record panels show the latest events of that kind until Phase 4 brings the full tables.
+- Admins need the separate "view start codes" permission to reveal a code; the admin role alone isn't enough.
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 
 ## Later
@@ -57,5 +70,4 @@
 - Auto-fill receipt date, vendor and total from the photo (SPEC 5.5)
 - Installable PWA (home-screen icon on phones)
 - Email delivery for password resets (SMTP)
-- Clicking a timeline event opens the vehicle and highlights the event if it is in the vehicle's latest 60 events; Phase 3 should page back to older ones.
 - Upgrade to newer majors (TypeScript 7, Vite 8, Prisma 7+, ESLint 10) once they settle

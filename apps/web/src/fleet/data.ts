@@ -17,6 +17,7 @@ export interface EventPage {
 }
 export interface Tile {
   serial: string;
+  licenseNo: string | null;
   status: VehicleStatus;
   make: string;
   model: string;

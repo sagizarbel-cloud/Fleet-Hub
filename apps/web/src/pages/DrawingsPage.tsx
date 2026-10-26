@@ -4,10 +4,12 @@ import { VEHICLE_STATUSES, VEHICLE_TYPE_CODES } from '@fleet-hub/shared';
 import { VehicleVisual } from '@/drawings/VehicleVisual';
 import { DRAWINGS } from '@/drawings/registry';
 import { Button } from '@/components/ui/button';
+import { lookupName, useLookups } from '@/fleet/data';
 
 /** Hidden review page (no nav link): every drawn type, in every view and status. */
 export function DrawingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { data: lookups } = useLookups();
   const [round, setRound] = useState(0);
   const types = VEHICLE_TYPE_CODES.filter((code) => DRAWINGS[code]);
 
@@ -25,8 +27,15 @@ export function DrawingsPage() {
       </div>
       {types.map((type) => (
         <div key={type} className="glass space-y-4 p-5" data-testid={`drawing-${type}`}>
-          <h2 className="num text-muted text-sm">
-            <bdi dir="ltr">{type}</bdi>
+          {/* Each drawing is labelled with the type name users see, so a mismatch shows at once. */}
+          <h2 className="text-sm font-semibold">
+            {lookupName(
+              lookups?.vehicleTypes.find((v) => v.code === type),
+              i18n.language,
+            ) ?? type}{' '}
+            <bdi dir="ltr" className="num text-muted font-normal">
+              {type}
+            </bdi>
           </h2>
           <div className="grid gap-6 lg:grid-cols-[auto_auto_1fr]">
             <div className="flex items-end gap-4">

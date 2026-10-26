@@ -5,6 +5,7 @@ import type { VehicleDrawingSource } from '../model';
 
 /** Three-axle tipper truck: cab over the front axle, steel body behind. */
 export const truck: VehicleDrawingSource = {
+  represents: 'truck',
   iso: metres([
     ...[2.6, -1.6, -2.9].map((x) => wheel('wheels', x, 0.5, 0.5, [0, 0.4])),
     box('body', [-3.8, 3.2], [0.4, 2.1], [0.6, 1.0]),
@@ -49,6 +50,7 @@ export const truck: VehicleDrawingSource = {
 
 /** Panel van: one long body with a sloped nose, sliding-door line and front side window. */
 export const van: VehicleDrawingSource = {
+  represents: 'van',
   iso: metres([
     wheel('wheels', -1.6, 0.36, 0.36, [0, 0.25]),
     wheel('wheels', 1.8, 0.36, 0.36, [0, 0.25]),

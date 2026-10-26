@@ -38,11 +38,13 @@ export function EventRow({
   onOpen,
   highlighted,
   linkable = true,
+  showSerial = true,
 }: {
   event: FleetEvent;
   onOpen?: () => void;
   highlighted?: boolean;
   linkable?: boolean;
+  showSerial?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const { data: lookups } = useLookups();
@@ -81,9 +83,11 @@ export function EventRow({
         )}
       >
         <Icon aria-hidden className="text-muted size-4 shrink-0" />
-        <span className="num border-border-strong shrink-0 rounded-md border px-1.5 py-px text-xs">
-          <bdi dir="ltr">{event.vehicle.serial}</bdi>
-        </span>
+        {showSerial && (
+          <span className="num border-border-strong shrink-0 rounded-md border px-1.5 py-px text-xs">
+            <bdi dir="ltr">{event.vehicle.serial}</bdi>
+          </span>
+        )}
         <span className="min-w-0 flex-1 truncate" title={text}>
           {text}
         </span>
@@ -101,11 +105,13 @@ export function EventList({
   onOpen,
   highlightId,
   linkable,
+  showSerial,
 }: {
   pages: EventPage[];
   onOpen?: (e: FleetEvent) => void;
   highlightId?: string | null;
   linkable?: boolean;
+  showSerial?: boolean;
 }) {
   const dayLabel = useDayLabel();
   const days = useMemo(() => {
@@ -134,6 +140,7 @@ export function EventList({
                 onOpen={onOpen ? () => onOpen(e) : undefined}
                 highlighted={e.id === highlightId}
                 linkable={linkable}
+                showSerial={showSerial}
               />
             ))}
           </ul>
@@ -238,7 +245,7 @@ export function Chip({
       className={cn(
         'inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs transition-colors',
         pressed
-          ? 'border-accent/60 bg-accent/15 text-accent'
+          ? 'border-accent bg-accent text-accent-contrast'
           : 'border-border text-muted hover:text-text hover:border-border-strong',
       )}
     >

@@ -310,7 +310,7 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
         {filtered && (
           <button
             type="button"
-            className="text-accent text-xs hover:underline"
+            className="text-accent-ink text-xs hover:underline"
             onClick={() => {
               setStatuses([]);
               setType('');

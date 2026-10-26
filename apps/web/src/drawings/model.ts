@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { VehicleTypeCode } from '@fleet-hub/shared';
 import type { Solid } from './iso';
 
 /** Named part groups, so each part can tint and animate on its own (SPEC A4). */
@@ -14,6 +15,8 @@ export interface ViewDrawing {
 
 /** How a type is defined: 3D solids, with optional hand-drawn top and side views. */
 export interface VehicleDrawingSource {
+  /** The type this drawing shows. The registry files each drawing under this name only. */
+  represents: VehicleTypeCode;
   iso: readonly Solid[];
   top?: ViewDrawing;
   side?: ViewDrawing;

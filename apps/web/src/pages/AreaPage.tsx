@@ -17,7 +17,7 @@ export function AreaPage({ area }: { area: Exclude<Area, 'dashboard'> }) {
       aria-labelledby="area-title"
       className="glass flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8 text-center"
     >
-      <div className="bg-accent/10 text-accent grid size-14 place-items-center rounded-2xl">
+      <div className="bg-accent/15 text-accent-ink grid size-14 place-items-center rounded-2xl">
         <Icon aria-hidden className="size-7" />
       </div>
       <h1 id="area-title" className="text-2xl font-semibold tracking-tight">

@@ -2,6 +2,7 @@ import { box, wheel } from '../iso';
 import { byPart, type VehicleDrawingSource } from '../model';
 
 export const pickup: VehicleDrawingSource = {
+  represents: 'pickup',
   top: {
     width: 120,
     height: 220,

@@ -15,7 +15,10 @@ export const ORIGIN = 'http://localhost:5173';
 export const PASSWORD = 'correct horse battery staple';
 
 /** Builds the app against the test database. `configure` runs before ready, e.g. to add test-only routes. */
-export async function makeApp(configure?: (app: Awaited<ReturnType<typeof buildApp>>) => void) {
+export async function makeApp(
+  configure?: (app: Awaited<ReturnType<typeof buildApp>>) => void,
+  opts: Parameters<typeof buildApp>[1] = {},
+) {
   const env = loadEnv({
     ...process.env,
     NODE_ENV: 'test',
@@ -25,7 +28,7 @@ export async function makeApp(configure?: (app: Awaited<ReturnType<typeof buildA
     SESSION_SECRET: process.env.SESSION_SECRET || randomBytes(32).toString('base64'),
     FLEET_CODE_KEY: process.env.FLEET_CODE_KEY || randomBytes(32).toString('base64'),
   });
-  const app = await buildApp(env);
+  const app = await buildApp(env, opts);
   configure?.(app);
   await app.ready();
   return app;

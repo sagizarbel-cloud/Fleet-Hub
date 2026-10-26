@@ -22,8 +22,9 @@ export function FleetStage() {
   const { t, i18n } = useTranslation();
   const routeSerial = useMatch('/vehicles/:serial')?.params.serial ?? null;
   const location = useLocation();
-  const fromDashboard =
-    (location.state as { fromDashboard?: boolean } | null)?.fromDashboard === true;
+  const state = location.state as { fromDashboard?: boolean; slide?: 1 | -1 } | null;
+  const fromDashboard = state?.fromDashboard === true;
+  const slideFrom = state?.slide ?? null;
   const dashboard = useDashboard();
   useLookups();
 
@@ -128,6 +129,8 @@ export function FleetStage() {
             key={active}
             serial={active}
             tile={dashboard.data?.tiles.find((v) => v.serial === active)}
+            tiles={dashboard.data?.tiles ?? []}
+            slide={phase === 'open' ? slideFrom : null}
             loading={dashboard.isPending}
             returning={phase === 'returning'}
             fromDashboard={fromDashboard || phase === 'returning'}

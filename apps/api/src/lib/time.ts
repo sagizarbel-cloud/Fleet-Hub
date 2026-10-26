@@ -11,8 +11,8 @@ function offsetMinutes(date: Date, zone: string): number {
   return (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
 }
 
-/** The instant the current month began in `zone`. */
-export function startOfMonth(now: Date, zone = FLEET_TZ): Date {
+/** The instant the current month (or year) began in `zone`. */
+function startOf(unit: 'month' | 'year', now: Date, zone: string): Date {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: zone,
     year: 'numeric',
@@ -20,8 +20,12 @@ export function startOfMonth(now: Date, zone = FLEET_TZ): Date {
   })
     .formatToParts(now)
     .reduce<Record<string, string>>((acc, p) => ((acc[p.type] = p.value), acc), {});
-  const localMidnight = Date.UTC(Number(parts.year), Number(parts.month) - 1, 1);
+  const month = unit === 'year' ? 0 : Number(parts.month) - 1;
+  const localMidnight = Date.UTC(Number(parts.year), month, 1);
   // Midnight local = midnight UTC minus the zone offset in force at that moment.
   const guess = new Date(localMidnight - offsetMinutes(new Date(localMidnight), zone) * 60_000);
   return new Date(localMidnight - offsetMinutes(guess, zone) * 60_000);
 }
+
+export const startOfMonth = (now: Date, zone = FLEET_TZ) => startOf('month', now, zone);
+export const startOfYear = (now: Date, zone = FLEET_TZ) => startOf('year', now, zone);
