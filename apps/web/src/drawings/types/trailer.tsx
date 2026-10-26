@@ -5,6 +5,7 @@ import type { VehicleDrawingSource } from '../model';
 const W = 2.1;
 
 export const trailer: VehicleDrawingSource = {
+  represents: 'trailer',
   iso: metres([
     wheel('wheels', -0.55, 0.33, 0.33, [-0.2, 0.02]),
     wheel('wheels', 0.35, 0.33, 0.33, [-0.2, 0.02]),

@@ -158,6 +158,7 @@ const crawler = (folded: boolean) =>
   ]);
 
 export const trackedExcavator: VehicleDrawingSource = {
+  represents: 'tracked_excavator',
   iso: crawler(false),
   top: topView(crawler(true)),
 };
@@ -184,6 +185,7 @@ const wheeled = (folded: boolean) =>
   ]);
 
 export const wheeledExcavator: VehicleDrawingSource = {
+  represents: 'wheeled_excavator',
   iso: wheeled(false),
   top: topView(wheeled(true)),
 };

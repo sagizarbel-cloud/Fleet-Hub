@@ -5,6 +5,7 @@ import type { VehicleDrawingSource } from '../model';
 // +x is the front. Articulated frame: tall engine hood at the rear, cab in the middle,
 // lift arms and bucket in front, carried just above the ground.
 export const wheelLoader: VehicleDrawingSource = {
+  represents: 'wheel_loader',
   iso: metres([
     wheel('wheels', -1.75, 0.87, 0.87, [0, 0.7]),
     wheel('wheels', 1.7, 0.87, 0.87, [0, 0.7]),

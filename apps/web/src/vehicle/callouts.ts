@@ -42,6 +42,7 @@ const BY_TYPE: Record<string, Partial<Anchors>> = {
   pickup: { engine: [0.86, 0.55], tank: [0.3, 0.6], body: [0.58, 0.62], ground: [0.74, 0.88] },
   truck: { engine: [0.88, 0.7], tank: [0.6, 0.76], body: [0.4, 0.45], ground: [0.14, 0.88] },
   van: { engine: [0.9, 0.7], tank: [0.3, 0.7], body: [0.5, 0.45], ground: [0.78, 0.88] },
+  compressor: { engine: [0.3, 0.45], tank: [0.6, 0.5], body: [0.42, 0.6], ground: [0.38, 0.92] },
   trailer: { engine: [0.38, 0.88], tank: [0.62, 0.4], body: [0.27, 0.55], ground: [0.55, 0.9] },
 };
 

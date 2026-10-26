@@ -5,6 +5,7 @@ import type { VehicleDrawingSource } from '../model';
 
 /** Skid-steer loader: compact body, cab between the lift arms, bucket on the ground. */
 export const skidSteer: VehicleDrawingSource = {
+  represents: 'skid_steer',
   iso: metres([
     wheel('wheels', -0.55, 0.38, 0.38, [0, 0.3]),
     wheel('wheels', 0.55, 0.38, 0.38, [0, 0.3]),
@@ -67,6 +68,7 @@ export const skidSteer: VehicleDrawingSource = {
 
 /** Farm tractor: big rear wheels, small front wheels, long hood, cab over the rear axle. */
 export const tractor: VehicleDrawingSource = {
+  represents: 'tractor',
   iso: metres([
     wheel('wheels', -1.0, 0.8, 0.8, [0, 0.5]),
     wheel('wheels', 1.3, 0.5, 0.5, [0.3, 0.6]),
@@ -111,6 +113,7 @@ export const tractor: VehicleDrawingSource = {
 
 /** Counterbalance forklift: weight at the rear, overhead guard, mast and forks in front. */
 export const forklift: VehicleDrawingSource = {
+  represents: 'forklift',
   iso: metres([
     wheel('wheels', -0.9, 0.28, 0.28, [0, 0.2]),
     wheel('wheels', 0.5, 0.33, 0.33, [0, 0.22]),
@@ -141,8 +144,9 @@ export const forklift: VehicleDrawingSource = {
   ]),
 };
 
-/** Mobile compressor, standing in for any other equipment: housing on one axle with a drawbar. */
-export const other: VehicleDrawingSource = {
+/** Mobile compressor: housing on one axle with a drawbar. */
+export const compressor: VehicleDrawingSource = {
+  represents: 'compressor',
   iso: metres([
     wheel('wheels', -0.2, 0.36, 0.36, [-0.22, 0]),
     {
@@ -183,5 +187,40 @@ export const other: VehicleDrawingSource = {
       y: [0.65, 0.95],
     },
     wheel('wheels', -0.2, 0.36, 0.36, [1.6, 1.82]),
+  ]),
+};
+
+/**
+ * Generic equipment, for "other" and for any type without a drawing of its own: a plain crate
+ * on skids, so it never looks like a specific machine it isn't.
+ */
+export const other: VehicleDrawingSource = {
+  represents: 'other',
+  iso: metres([
+    box('body', [-1.1, -0.9], [0.1, 1.5], [0, 0.18]),
+    box('body', [0.9, 1.1], [0.1, 1.5], [0, 0.18]),
+    box(
+      'body',
+      [-1.2, 1.2],
+      [0, 1.6],
+      [0.18, 1.5],
+      [
+        ...[0.6, 1.05].map(
+          (z) =>
+            [
+              [-1.2, 1.6, z],
+              [1.2, 1.6, z],
+            ] as const,
+        ),
+        [
+          [-0.4, 1.6, 0.18],
+          [-0.4, 1.6, 1.5],
+        ],
+        [
+          [0.4, 1.6, 0.18],
+          [0.4, 1.6, 1.5],
+        ],
+      ],
+    ),
   ]),
 };
