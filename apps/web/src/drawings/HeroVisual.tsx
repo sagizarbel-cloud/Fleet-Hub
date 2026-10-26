@@ -19,7 +19,7 @@ interface Props {
   className?: string;
 }
 
-const TILT = { duration: 0.45, ease: [0.22, 1, 0.36, 1] } as const;
+const TILT = { duration: 0.4, ease: [0.22, 1, 0.36, 1] } as const;
 
 function Part({ drawing, part }: { drawing: ViewDrawing; part: PartName }) {
   return (
@@ -111,7 +111,16 @@ export function HeroVisual({ type, status, pose, size, className }: Props) {
             ref={sideRef}
             viewBox={`0 0 ${side.width} ${side.height}`}
             className="vd-draw relative block h-auto shrink-0 overflow-visible"
-            style={{ width: sideWidth, '--vd-unit': side.width / sideWidth } as CSSProperties}
+            // Draws faster than on the review page, so the whole transition fits in 1.2 s.
+            style={
+              {
+                width: sideWidth,
+                '--vd-unit': side.width / sideWidth,
+                '--vd-draw-duration': '0.45s',
+                '--vd-fill-delay': '0.25s',
+                '--vd-fill-duration': '0.2s',
+              } as CSSProperties
+            }
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}

@@ -7,6 +7,6 @@ setup('sign in as admin', async ({ page }) => {
   await page.fill('input[name=email]', ADMIN.email);
   await page.fill('input[name=password]', ADMIN.password);
   await page.click('button[type=submit]');
-  await page.waitForSelector('#area-title');
+  await page.waitForSelector('[data-testid=fleet-grid]');
   await page.context().storageState({ path: STORAGE_STATE });
 });

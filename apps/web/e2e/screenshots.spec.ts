@@ -1,8 +1,8 @@
 import { test } from '@playwright/test';
-import { SIGNED_OUT } from './helpers';
 
-// Saves the Phase 1 screenshots for the PR: login + dashboard, EN and HE, desktop and phone.
-const OUT = '../../docs/screenshots/phase-1';
+// Saves the current phase's screenshots for the PR: the dashboard and the transition's end
+// state, EN and HE, desktop and phone. Earlier phases' screenshots stay in their own folders.
+const OUT = '../../docs/screenshots/phase-2';
 const SIZES = { desktop: { width: 1440, height: 900 }, phone: { width: 390, height: 844 } };
 
 test.skip(!process.env.SCREENSHOTS, 'set SCREENSHOTS=1 to refresh docs/screenshots');
@@ -10,22 +10,29 @@ test.skip(!process.env.SCREENSHOTS, 'set SCREENSHOTS=1 to refresh docs/screensho
 for (const [sizeName, viewport] of Object.entries(SIZES)) {
   for (const lang of ['en', 'he'] as const) {
     test(`${lang} ${sizeName}`, async ({ browser }) => {
-      for (const [name, state, path] of [
-        ['login', SIGNED_OUT, '/login'],
-        ['dashboard', undefined, '/'],
-      ] as const) {
-        const context = await browser.newContext({
-          viewport,
-          ...(state ? { storageState: state } : {}),
-        });
-        await context.addInitScript((l) => localStorage.setItem('fh.lang', l), lang);
-        const page = await context.newPage();
-        await page.goto(path);
-        await page.waitForSelector(name === 'login' ? '#login-title' : '#area-title');
-        await page.waitForTimeout(400);
-        await page.screenshot({ path: `${OUT}/${name}-${lang}-${sizeName}.png` });
-        await context.close();
+      const context = await browser.newContext({
+        viewport,
+        storageState: 'test-results/.auth/admin.json',
+      });
+      await context.addInitScript((l) => localStorage.setItem('fh.lang', l), lang);
+      const page = await context.newPage();
+      await page.goto('/');
+      await page.waitForSelector('[data-tile]');
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `${OUT}/dashboard-${lang}-${sizeName}.png` });
+      if (sizeName === 'desktop') {
+        await page.locator('[data-event-id]').nth(1).hover();
+        await page.waitForTimeout(500);
+        await page.screenshot({ path: `${OUT}/dashboard-link-${lang}-${sizeName}.png` });
       }
+      const tile = page.locator('[data-tile]').nth(4);
+      await tile.scrollIntoViewIfNeeded();
+      await tile.click();
+      await page.waitForSelector('[data-pose=side]');
+      await page.waitForTimeout(1200);
+      await page.screenshot({ path: `${OUT}/vehicle-${lang}-${sizeName}.png` });
+      await context.close();
     });
   }
 }

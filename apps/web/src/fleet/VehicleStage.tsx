@@ -42,7 +42,7 @@ const RECORDS = [
 ] as const;
 
 // Timeline of the transition, in seconds (SPEC 5.2: all of it within 1.2 s).
-const T = { fly: 0.5, tilt: 0.45, toSide: 0.78, panels: 0.5, flatten: 0.4, flyBack: 0.45 };
+const T = { fly: 0.45, toIso: 0.32, toSide: 0.52, panels: 0.35, flatten: 0.35, flyBack: 0.45 };
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 function savedView(): DetailView {
@@ -145,7 +145,7 @@ export function VehicleStage({
       } else {
         void animate(hero, { opacity: [0, 1], scale: [0.9, 1] }, { duration: 0.3, ease: EASE });
       }
-      later(T.fly - 0.05, () => setPose('iso'));
+      later(T.toIso, () => setPose('iso'));
       if (view === 'side') later(T.toSide, () => setPose('side'));
     }
     backRef.current?.focus({ preventScroll: true });
@@ -189,6 +189,21 @@ export function VehicleStage({
     return () => window.removeEventListener('keydown', onKey);
   }, [back]);
 
+  // Opened from a timeline event: bring that event into view in the activity list.
+  const loaded = !!events.data;
+  useEffect(() => {
+    if (!highlightId || !loaded) return;
+    const id = window.setTimeout(
+      () => {
+        scope.current
+          ?.querySelector(`aside [data-event-id="${CSS.escape(highlightId)}"]`)
+          ?.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+      },
+      T.panels * 1000 + 400,
+    );
+    return () => clearTimeout(id);
+  }, [highlightId, loaded, reduced, scope]);
+
   useEffect(() => {
     document.title = `${serial} · ${t('app.name')}`;
   }, [serial, t]);
@@ -226,13 +241,13 @@ export function VehicleStage({
             y: from === 'top' ? -24 : from === 'bottom' ? 32 : 0,
           },
           animate: { opacity: 1, x: 0, y: 0 },
-          transition: { duration: 0.4, ease: EASE, delay },
+          transition: { duration: 0.35, ease: EASE, delay },
         };
 
   const headerMotion = panel('top', T.panels);
   const toggleMotion = panel('bottom', T.panels);
   const asideMotion = panel('side', T.panels + 0.05);
-  const recordMotion = (i: number) => panel('bottom', T.panels + 0.1 + i * 0.03);
+  const recordMotion = (i: number) => panel('bottom', T.panels + 0.05 + i * 0.02);
 
   const typeName =
     tile &&
