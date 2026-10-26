@@ -10,6 +10,8 @@ import { authRoutes } from './routes/auth';
 import { dashboardRoutes } from './routes/dashboard';
 import { eventRoutes } from './routes/events';
 import { lookupRoutes } from './routes/lookups';
+import { itemRoutes } from './routes/items';
+import { meRoutes } from './routes/me';
 import { vehicleRoutes } from './routes/vehicles';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -66,7 +68,9 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
     secureCookies: env.NODE_ENV === 'production',
   });
   await app.register(lookupRoutes, { prefix: '/api/lookups' });
-  await app.register(vehicleRoutes, { prefix: '/api/vehicles' });
+  await app.register(vehicleRoutes, { prefix: '/api/vehicles', codeKey: env.FLEET_CODE_KEY });
+  await app.register(itemRoutes, { prefix: '/api/items' });
+  await app.register(meRoutes, { prefix: '/api/me' });
   await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
   await app.register(eventRoutes, { prefix: '/api/events' });
 

@@ -1,12 +1,14 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Prisma } from '@prisma/client';
-import { listQuery } from '@fleet-hub/shared';
-import { parse } from '../lib/http';
-import { requireUser } from '../plugins/auth';
+import { listQuery, serialParam } from '@fleet-hub/shared';
+import { decryptStartCode } from '@fleet-hub/shared/crypto';
+import { HttpError, parse } from '../lib/http';
+import { vehicleDetail } from '../lib/vehicle-detail';
+import { requireStartCodeView, requireUser } from '../plugins/auth';
 
 /**
  * Fields a vehicle list may return. Never add startCodeEnc here: start codes are
- * only revealed by the permission-checked endpoint (Phase 3).
+ * only revealed by the permission-checked endpoint below.
  */
 export const vehicleListSelect = {
   id: true,
@@ -28,7 +30,7 @@ export const vehicleListSelect = {
   location: { select: { code: true } },
 } satisfies Prisma.VehicleSelect;
 
-export const vehicleRoutes: FastifyPluginAsync = async (app) => {
+export const vehicleRoutes: FastifyPluginAsync<{ codeKey: string }> = async (app, opts) => {
   app.get('/', { preHandler: requireUser }, async (req) => {
     const { cursor, limit } = parse(listQuery, req.query);
     const rows = await app.db.vehicle.findMany({
@@ -41,4 +43,49 @@ export const vehicleRoutes: FastifyPluginAsync = async (app) => {
     const items = hasMore ? rows.slice(0, limit) : rows;
     return { items, nextCursor: hasMore ? items.at(-1)!.serial : null };
   });
+
+  app.get('/:serial', { preHandler: requireUser }, async (req) => {
+    const { serial } = parse(serialParam, req.params);
+    return vehicleDetail(app, req.user!, serial);
+  });
+
+  /**
+   * The only place a start code leaves the database: permission-checked, rate-limited,
+   * never cached, and every reveal is written to the audit log.
+   */
+  app.post(
+    '/:serial/start-code/reveal',
+    {
+      preHandler: requireStartCodeView,
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '1 minute',
+          keyGenerator: (req) => req.user?.id ?? req.ip,
+        },
+      },
+    },
+    async (req, reply) => {
+      const { serial } = parse(serialParam, req.params);
+      const vehicle = await app.db.vehicle.findUnique({
+        where: { serial },
+        select: { id: true, hasStartCode: true, startCodeEnc: true },
+      });
+      if (!vehicle) throw new HttpError(404, 'not_found');
+      if (!vehicle.hasStartCode || !vehicle.startCodeEnc) throw new HttpError(404, 'no_start_code');
+      const code = decryptStartCode(vehicle.startCodeEnc, opts.codeKey);
+      await app.db.auditLog.create({
+        data: {
+          userId: req.user!.id,
+          action: 'startCode.reveal',
+          targetType: 'Vehicle',
+          targetId: vehicle.id,
+          meta: { serial },
+          ip: req.ip,
+        },
+      });
+      void reply.header('cache-control', 'no-store');
+      return { code };
+    },
+  );
 };

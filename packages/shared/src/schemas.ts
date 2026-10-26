@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ROLES } from './enums';
+import { DETAIL_VIEWS, VITAL_KEYS } from './vitals';
 
 export const loginBody = z.object({
   email: z.email().max(254),
@@ -29,3 +30,18 @@ export const listQuery = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 export type ListQuery = z.infer<typeof listQuery>;
+
+export const preferencesBody = z.object({
+  pinnedVitals: z
+    .array(z.enum(VITAL_KEYS))
+    .max(VITAL_KEYS.length)
+    .refine((keys) => new Set(keys).size === keys.length, 'duplicate')
+    .optional(),
+  detailView: z.enum(DETAIL_VIEWS).optional(),
+});
+export type PreferencesBody = z.infer<typeof preferencesBody>;
+
+export const serialParam = z.object({ serial: z.string().min(1).max(40) });
+export const idParam = z.object({ id: z.string().min(1).max(40) });
+
+export const assignItemBody = z.object({ vehicle: z.string().min(1).max(40) });
