@@ -1,8 +1,8 @@
 import { test } from '@playwright/test';
 
-// Saves the current phase's screenshots for the PR: the dashboard and the transition's end
-// state, EN and HE, desktop and phone. Earlier phases' screenshots stay in their own folders.
-const OUT = '../../docs/screenshots/phase-2';
+// Saves the current phase's screenshots for the PR: the dashboard, the vehicle page and a
+// record panel, EN and HE, desktop and phone. Earlier phases' screenshots stay in their own folders.
+const OUT = '../../docs/screenshots/phase-3';
 const SIZES = { desktop: { width: 1440, height: 900 }, phone: { width: 390, height: 844 } };
 
 test.skip(!process.env.SCREENSHOTS, 'set SCREENSHOTS=1 to refresh docs/screenshots');
@@ -26,12 +26,20 @@ for (const [sizeName, viewport] of Object.entries(SIZES)) {
         await page.waitForTimeout(500);
         await page.screenshot({ path: `${OUT}/dashboard-link-${lang}-${sizeName}.png` });
       }
-      const tile = page.locator('[data-tile]').nth(4);
+      const tile = page.locator('[data-tile="PU-901"]');
       await tile.scrollIntoViewIfNeeded();
       await tile.click();
       await page.waitForSelector('[data-pose=side]');
       await page.waitForTimeout(1200);
       await page.screenshot({ path: `${OUT}/vehicle-${lang}-${sizeName}.png` });
+      if (sizeName === 'phone') {
+        await page.getByTestId('vehicle-stage').evaluate((el) => el.scrollTo(0, 640));
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: `${OUT}/vehicle-lower-${lang}-${sizeName}.png` });
+      }
+      await page.locator('[data-record=malfunctions]').click();
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${OUT}/record-panel-${lang}-${sizeName}.png` });
       await context.close();
     });
   }
