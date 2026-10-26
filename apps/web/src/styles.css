@@ -84,6 +84,8 @@
 
 @layer base {
   html {
+    /* Room for the scrollbar is always kept, so locking scroll never shifts the layout. */
+    scrollbar-gutter: stable;
     background: var(--fh-bg);
     color: var(--fh-text);
     font-family: var(--font-sans);
@@ -135,5 +137,19 @@
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Dashboard: history (about 40%) beside the fleet grid; on phones KPIs, then the grid, then the timeline. */
+.dash-layout {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'kpi' 'grid' 'timeline';
+}
+@media (min-width: 64rem) {
+  .dash-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas: 'kpi grid' 'timeline grid';
+    align-items: start;
   }
 }

@@ -1,11 +1,9 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { VEHICLE_STATUSES } from '@fleet-hub/shared';
-import { StatusBadge } from '@/components/StatusBadge';
 import { AREA_ROUTES, type Area } from '@/layout/nav';
 
 /** Empty state for an area that later phases fill in. */
-export function AreaPage({ area }: { area: Area }) {
+export function AreaPage({ area }: { area: Exclude<Area, 'dashboard'> }) {
   const { t } = useTranslation();
   const Icon = AREA_ROUTES[area].icon;
   const title = t(`nav.${area}`);
@@ -26,16 +24,6 @@ export function AreaPage({ area }: { area: Area }) {
         {title}
       </h1>
       <p className="text-muted max-w-md">{t(`areas.${area}`)}</p>
-      {area === 'dashboard' && (
-        <div className="mt-4 flex flex-col items-center gap-2">
-          <span className="text-muted text-xs">{t('status.legend')}</span>
-          <div className="flex flex-wrap justify-center gap-2">
-            {VEHICLE_STATUSES.map((s) => (
-              <StatusBadge key={s} status={s} />
-            ))}
-          </div>
-        </div>
-      )}
     </section>
   );
 }

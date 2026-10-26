@@ -39,7 +39,7 @@ Dark "control room" meets technical blueprint: calm and precise, with motion doi
 Animated SVG line drawings are the centerpiece of the UI.
 
 - Build an SVG library in a technical-sketch style: 2 px rounded strokes, simple geometric shapes, consistent scale.
-- Types: tracked excavator, wheeled excavator, backhoe loader, wheel loader, skid-steer, tractor, forklift, truck, pickup, van/car, and a generic "other".
+- Types: tracked excavator, wheeled excavator, backhoe loader, wheel loader, skid-steer, tractor, forklift, truck, pickup, van/car, equipment trailer, and a generic "other".
 - Each type gets a top-down drawing (fleet grid) and a side profile (detail view). Split every drawing into named groups (body, cab, wheels/tracks, boom/arm, bucket/bed) so parts tint and animate separately.
 - Isometric view: tilt the top-down drawing with CSS 3D (rotateX about 55–60°, rotateZ −45°) and lift its part layers to different heights with translateZ, for a layered, pseudo-3D blueprint look.
 - Status tint: stroke in the status color, a light (about 15%) status fill and a soft glow beneath. Red vehicles pulse gently.
@@ -262,6 +262,7 @@ Use these Hebrew terms consistently across the UI, messages and exports.
 | Excavator / Tracked excavator / Wheeled excavator / Backhoe loader | מחפר / מחפר זחלי / מחפר גלגלי / מחפרון |
 | Wheel loader / Skid-steer / Tractor / Forklift | שופל / בובקט / טרקטור / מלגזה |
 | Truck / Pickup / Van / Car | משאית / טנדר / מסחרית / רכב פרטי |
+| Equipment trailer | נגרר ציוד |
 | Hydraulic breaker / Concrete crusher | פטיש חציבה / מרסק בטון |
 | Generator / Bucket / Equipment box | גנרטור / כף / ארגז ציוד |
 

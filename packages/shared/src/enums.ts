@@ -14,7 +14,7 @@ export type VehicleStatus = (typeof VEHICLE_STATUSES)[number];
 export const VEHICLE_CATEGORIES = ['ROAD', 'EQUIPMENT'] as const;
 export type VehicleCategory = (typeof VEHICLE_CATEGORIES)[number];
 
-/** Codes of the 11 vehicle types in SPEC A4. Display names live in the VehicleType lookup. */
+/** Codes of the vehicle types: the 11 in SPEC A4 plus an equipment trailer (2026-10-26). Display names live in the VehicleType lookup. */
 export const VEHICLE_TYPE_CODES = [
   'tracked_excavator',
   'wheeled_excavator',
@@ -26,6 +26,7 @@ export const VEHICLE_TYPE_CODES = [
   'truck',
   'pickup',
   'van',
+  'trailer',
   'other',
 ] as const;
 export type VehicleTypeCode = (typeof VEHICLE_TYPE_CODES)[number];

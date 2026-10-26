@@ -1,0 +1,80 @@
+/* Vehicle drawings: 2 px rounded strokes in the status color, ~15% status fill, soft glow. */
+
+.vd {
+  --vd-fill: color-mix(in srgb, var(--vd-color) 15%, transparent);
+}
+.vd svg * {
+  stroke: var(--vd-color);
+  /* 2 px on screen: --vd-unit is viewBox units per pixel, set per svg. */
+  stroke-width: calc(2 * var(--vd-unit, 1));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: var(--vd-fill);
+}
+
+.vd-glow {
+  position: absolute;
+  inset: 12% 8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--vd-color) 38%, transparent),
+    transparent
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+.vd-red .vd-glow {
+  animation: vd-pulse 2.4s ease-in-out infinite;
+}
+@keyframes vd-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* Side profile draws itself, then the fill fades in. */
+.vd-draw * {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  fill-opacity: 0;
+  animation:
+    vd-stroke var(--vd-draw-duration, 0.9s) cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    vd-fill var(--vd-fill-duration, 0.3s) ease-out var(--vd-fill-delay, 0.7s) forwards;
+}
+@keyframes vd-stroke {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes vd-fill {
+  to {
+    fill-opacity: 1;
+  }
+}
+
+/* Isometric solids: faces shaded by how they face the light (top brightest). */
+.vd svg .vd-front {
+  fill: color-mix(in srgb, var(--vd-color) 14%, var(--fh-bg));
+}
+.vd svg .vd-side {
+  fill: color-mix(in srgb, var(--vd-color) 9%, var(--fh-bg));
+}
+.vd svg .vd-top {
+  fill: color-mix(in srgb, var(--vd-color) 24%, var(--fh-bg));
+}
+.vd svg .vd-decal {
+  fill: none;
+}
+.vd svg .vd-ground {
+  stroke: none;
+  fill: color-mix(in srgb, var(--vd-color) 10%, transparent);
+}
+/* Solids in generated top and side views hide what is behind them. */
+.vd svg .vd-solid {
+  fill: color-mix(in srgb, var(--vd-color) 15%, var(--fh-bg));
+}

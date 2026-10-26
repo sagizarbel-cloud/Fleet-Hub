@@ -69,6 +69,7 @@ const vehicleTypes: {
   { code: 'truck', nameEn: 'Truck', nameHe: 'משאית', category: 'ROAD' },
   { code: 'pickup', nameEn: 'Pickup', nameHe: 'טנדר', category: 'ROAD' },
   { code: 'van', nameEn: 'Van', nameHe: 'מסחרית', category: 'ROAD' },
+  { code: 'trailer', nameEn: 'Equipment trailer', nameHe: 'נגרר ציוד', category: 'ROAD' },
   { code: 'other', nameEn: 'Other', nameHe: 'אחר', category: 'EQUIPMENT' },
 ];
 
@@ -225,6 +226,14 @@ const fleet: {
     plan: 'green',
   },
   {
+    serial: 'TL-971',
+    type: 'trailer',
+    make: 'Humbaur',
+    model: 'HS 653',
+    dept: 'logistics',
+    plan: 'green',
+  },
+  {
     serial: 'OT-991',
     type: 'other',
     make: 'Atlas Copco',
@@ -284,7 +293,7 @@ async function main() {
 
   // Users
   const password = await hash(process.env.SEED_PASSWORD ?? 'fleethub-dev');
-  const [admin, editor] = await Promise.all(
+  const [admin, editor, viewer] = await Promise.all(
     [
       { email: 'admin@fleethub.test', role: 'ADMIN' as const, canViewStartCodes: true },
       { email: 'editor@fleethub.test', role: 'EDITOR' as const, canViewStartCodes: false },
@@ -294,6 +303,7 @@ async function main() {
     ),
   );
   const userIds = [admin!.id, editor!.id];
+  const quoteAuthors = [admin!.id, editor!.id, viewer!.id];
 
   // Lookups
   await db.department.createMany({ data: departments.map((d, i) => ({ ...d, sortOrder: i })) });
@@ -391,7 +401,12 @@ async function main() {
 
     // Fuel log, roughly weekly, with usage climbing over six months
     let usage = startUsage;
-    for (let d = 180; d > 0; d -= faker.number.int({ min: 5, max: 10 })) {
+    // Trailers have no engine: no fuel log.
+    for (
+      let d = 180;
+      plan.type !== 'trailer' && d > 0;
+      d -= faker.number.int({ min: 5, max: 10 })
+    ) {
       usage += road
         ? faker.number.int({ min: 400, max: 1_400 })
         : faker.number.int({ min: 25, max: 60 });
@@ -685,6 +700,9 @@ async function main() {
         date,
         validUntil: new Date(date.getTime() + 30 * DAY),
         status: quoteStatuses[i]!,
+        // Mix of creators and visibility levels so the quote rules have something to filter.
+        createdById: quoteAuthors[i % quoteAuthors.length]!,
+        visibility: (['STANDARD', 'PUBLIC', 'STANDARD', 'ADMINS', 'PUBLIC'] as const)[i]!,
         lines: {
           create: Array.from({ length: faker.number.int({ min: 2, max: 5 }) }, (_, n) => ({
             item: faker.helpers.arrayElement([

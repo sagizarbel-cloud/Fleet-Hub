@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router';
 import { Plus, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -10,9 +11,21 @@ import { ScrollableNav } from './ScrollableNav';
 
 export function TopBar({ user }: { user: SessionUser }) {
   const { t } = useTranslation();
+  const ref = useRef<HTMLElement>(null);
+
+  // Full-screen layers (the vehicle stage) start just below the sticky bar.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      document.documentElement.style.setProperty('--fh-header-h', `${el.offsetHeight + 16}px`);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <header className="glass sticky top-2 z-40 mx-2 mt-2 rounded-xl sm:mx-4 sm:mt-3">
+    <header ref={ref} className="glass sticky top-2 z-40 mx-2 mt-2 rounded-xl sm:mx-4 sm:mt-3">
       <div className="flex h-14 items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <NavLink to="/" className="flex shrink-0 items-center gap-2 font-semibold tracking-tight">
           <img src="/favicon.svg" alt="" className="size-7" />
