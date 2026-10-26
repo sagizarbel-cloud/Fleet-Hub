@@ -2,12 +2,21 @@
 
 ## Status
 
-- Current phase: 4 — Records, forms and exports (built; waiting for Sagi's review in the PR)
-- Last completed phase: 3 — Vehicle detail
+- Current phase: 5 — Fleet table (built; waiting for Sagi's review in the PR)
+- Last completed phase: 4 — Records, forms and exports
 
 ## Phase log
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
+
+### Phase 5 — 2026-10-26
+
+- Shipped: the fleet table (`/fleet`). Every vehicle on one virtualized row with a sticky first column (status icon, small top-down drawing, serial; mirrored in Hebrew) and eight column groups (identity, status & readiness, usage, maintenance, compliance, ownership & warranty, equipment, costs), each with a dropdown to collapse it to one column or pick its columns, plus a Columns menu for all of them. Rows open in place to show the latest services, open malfunctions and assigned items. Search, status / type / department / location filters, "due within 30 days" and "open malfunctions", multi-column sort (Shift-click) and group by type or department with collapsible groups. Expiries and the next service show a countdown, orange within 30 days and red when overdue. Costs cover the last 12 months and the last 3 months (maintenance = services + repairs, fuel, total). Clicking a row flies into the vehicle with the dashboard's transition; Back returns to the table with its filters and scroll position. Saved views are shared: anyone can save one and everyone can pick it; its creator or an admin renames, updates or deletes it; each user stars the view the table opens with. Excel: the current view (these rows and columns, usage split into km and hours columns) or the whole fleet as one workbook (Vehicles, one sheet per record type, assigned items), in the active language, right to left in Hebrew. Phones show the same table with a narrower sticky column, groups collapsed to one column and the filters in a sheet.
+- API: `GET /api/fleet/table` (every vehicle with its computed columns, never a start code or its flag), `GET /api/fleet/records/:kind` (every record of a kind across the fleet, for the workbook), `GET|POST /api/fleet/views`, `PUT|DELETE /api/fleet/views/:id`, `fleetViewId` in `/api/me/preferences`.
+- Database (additive migration `phase5_saved_views`): `SavedView` table, `UserPreference.fleetViewId`. New package: `@tanstack/react-virtual` (web). The table, its model and the workbook code load only when the fleet table opens.
+- Seed: two shared views ("Due within 30 days", "Machines by department").
+- Tests: 75 api tests (7 new: no start code or flag in the table or the fleet-wide export; 12- and 3-month costs, counts, latest service and fill-up, 30-day economy; fleet-wide records with serials; view permissions for creator, other users and admins; settings validation; default view per user, cleared when the view is deleted), 6 new web tests (search, filters, due soon, natural sort with empty values last, grouping in Hebrew, collapsed groups, settings in the URL incl. Hebrew and tampered links, Excel columns in Hebrew), 45 Playwright tests (11 new: search / filters / reload / grouping, sort and column groups, opened row, row → vehicle → Back keeps filters and focus, saving, defaulting and deleting a view, both exports read back incl. Hebrew right to left, a 500-vehicle fleet draws under 60 rows and scrolls to the last, viewer sees others' views but can't delete them, no start codes in the table API). Screenshots in `docs/screenshots/phase-5/`.
+- Deferred: receipts in the cost columns (Phase 6), editing in the table and bulk actions (Later).
 
 ### Phase 4 — 2026-10-26
 
@@ -76,6 +85,12 @@
 - Excel file names are ASCII (`PU-901 fuel 2026-10-26.xlsx`): Chromium dropped Hebrew download names in testing. The sheet itself is in the active language.
 - The admin status override moved up from Phase 7 to Phase 4, since A7's override rule is part of the status tests.
 - Record panels, forms, zod, the chart and ExcelJS load only when a panel opens, so the dashboard bundle doesn't grow.
+- Phase 5 (2026-10-26, from Sagi): saved views are shared, everyone can pick any view; its creator or an admin changes or deletes it. Costs in the fleet table cover the last 12 months and the last 3 months.
+- The fleet table loads every vehicle in one request and searches, filters, sorts and groups in the browser: tens of vehicles, so it answers instantly; rows are still virtualized so it stays smooth on phones as the fleet grows.
+- The fleet table joins the dashboard's persistent layout (`FleetStage`), so the fly-in from a row never unmounts; the vehicle page's Back leads to whichever of the two it was opened from.
+- The table's settings live in the URL (`?view=` plus `?s=` for unsaved changes), so Back, reload and shared links keep them. A view's "(changed)" mark shows when the screen differs from the saved view.
+- Maintenance cost in the table = service and repair (malfunction) costs, the same rule as the vehicle page's "maintenance cost this year". Receipts join in Phase 6.
+- Start codes stay out of the fleet table completely, including the "has a start code" flag (SPEC A7).
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 
 ## Later
@@ -88,4 +103,6 @@
 - A "recently deleted" screen to bring back records after the 30 s Undo (they stay in the database)
 - iPhone HEIC photos (the camera button already sends JPEG)
 - Strip location data (EXIF GPS) from uploaded phone photos
+- Edit cells directly in the fleet table, and bulk actions (e.g. move several vehicles at once)
+- Pin a saved view for everyone as the team default (today each user stars their own)
 - Upgrade to newer majors (TypeScript 7, Vite 8, Prisma 7+, ESLint 10) once they settle
