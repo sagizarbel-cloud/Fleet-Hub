@@ -1,3 +1,4 @@
+import { box, wheel } from '../iso';
 import type { VehicleDrawingDef } from '../model';
 
 export const pickup: VehicleDrawingDef = {
@@ -38,34 +39,88 @@ export const pickup: VehicleDrawingDef = {
     },
   },
   side: {
-    width: 300,
+    width: 270,
     height: 140,
     parts: {
       body: (
         <>
-          <path d="M18 104 V72 Q18 68 22 68 H148 L152 34 Q153 30 158 30 H206 Q211 30 214 34 L236 62 L274 66 Q282 67 282 76 V100 Q282 104 278 104 H264 A26 26 0 0 0 212 104 H88 A26 26 0 0 0 36 104 Z" />
-          <rect x="274" y="72" width="6" height="7" rx="1.5" />
+          <path d="M18 104 V72 Q18 68 22 68 H118 L122 34 Q123 30 128 30 H176 Q181 30 184 34 L206 62 L244 66 Q252 67 252 76 V100 Q252 104 248 104 H234 A26 26 0 0 0 182 104 H88 A26 26 0 0 0 36 104 Z" />
+          <rect x="244" y="72" width="6" height="7" rx="1.5" />
           <rect x="18" y="74" width="4" height="12" rx="1" />
         </>
       ),
-      bed: <path d="M148 68 V100 M22 78 H144" />,
+      bed: <path d="M118 68 V100 M22 78 H114" />,
       cab: (
         <>
-          <path d="M158 37 H204 L224 62 H158 Z" />
-          <path d="M184 37 V62" />
-          <path d="M156 68 V98 M220 68 V98" />
-          <path d="M226 52 L235 50 V57 Z" />
+          <path d="M128 37 H174 L194 62 H128 Z" />
+          <path d="M154 37 V62" />
+          <path d="M126 68 V98 M190 68 V98" />
+          <path d="M196 52 L205 50 V57 Z" />
         </>
       ),
       wheels: (
         <>
           <circle cx="62" cy="110" r="20" />
           <circle cx="62" cy="110" r="7" />
-          <circle cx="238" cy="110" r="20" />
-          <circle cx="238" cy="110" r="7" />
+          <circle cx="208" cy="110" r="20" />
+          <circle cx="208" cy="110" r="7" />
         </>
       ),
     },
   },
-  lift: { wheels: 0, body: 0.04, bed: 0.07, cab: 0.12 },
+  // x and z follow the side profile (z = 130 − its y); y runs across the width.
+  iso: [
+    wheel('wheels', 62, 20, 20, [4, 18]),
+    wheel('wheels', 208, 20, 20, [4, 18]),
+    box('body', [18, 252], [8, 102], [26, 60]),
+    box(
+      'bed',
+      [22, 114],
+      [14, 96],
+      [60, 63],
+      [42, 62, 82].map((x) => [
+        [x, 20, 63],
+        [x, 90, 63],
+      ]),
+    ),
+    {
+      part: 'cab',
+      profile: [
+        [118, 60],
+        [190, 60],
+        [190, 70],
+        [170, 100],
+        [122, 100],
+        [118, 96],
+      ],
+      y: [12, 98],
+      decals: [
+        [
+          [128, 98, 92],
+          [166, 98, 92],
+          [180, 98, 73],
+          [128, 98, 73],
+        ],
+        [
+          [187, 20, 74.5],
+          [172, 20, 97],
+          [172, 90, 97],
+          [187, 90, 74.5],
+        ],
+      ],
+    },
+    {
+      part: 'body',
+      profile: [
+        [190, 60],
+        [252, 60],
+        [252, 63],
+        [242, 68],
+        [190, 70],
+      ],
+      y: [10, 100],
+    },
+    wheel('wheels', 62, 20, 20, [92, 106]),
+    wheel('wheels', 208, 20, 20, [92, 106]),
+  ],
 };

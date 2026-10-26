@@ -2,12 +2,13 @@ import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
 import type { VehicleStatus } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
+import { IsoDrawing } from './iso';
 import { PAINT_ORDER, type PartName, type ViewDrawing } from './model';
 import { drawingFor } from './registry';
 import { STATUS_VAR } from './VehicleVisual';
 import './drawings.css';
 
-/** Which pose the hero is in: flat top-down (as in the grid), tilted isometric, or side profile. */
+/** Which pose the hero is in: flat top-down (as in the grid), isometric, or side profile. */
 export type HeroPose = 'flat' | 'iso' | 'side';
 
 interface Props {
@@ -19,7 +20,11 @@ interface Props {
   className?: string;
 }
 
-const TILT = { duration: 0.4, ease: [0.22, 1, 0.36, 1] } as const;
+const EASE = [0.22, 1, 0.36, 1] as const;
+const TILT = { duration: 0.4, ease: EASE };
+// Rotating the top view (front up) by 135° points the front down-right, as in the isometric
+// drawing; tipping it back by 54.74° gives the true isometric 30° ground lines.
+const ISO_TILT = { rotateX: 54.74, rotateZ: 135 };
 
 function Part({ drawing, part }: { drawing: ViewDrawing; part: PartName }) {
   return (
@@ -30,11 +35,12 @@ function Part({ drawing, part }: { drawing: ViewDrawing; part: PartName }) {
 }
 
 /**
- * The vehicle on the detail stage. One element moves through every pose, so the
- * selection transition can tilt it, turn it into the side profile, and play it back.
+ * The vehicle on the detail stage. One element moves through every pose: the flat top view
+ * tilts toward isometric and hands over to the 3D isometric drawing, which can then turn
+ * into the side profile; Back plays it all in reverse.
  *
- * Later (Phase 7): when a vehicle has a top and side photo, this slot crossfades
- * those instead of the drawings; vehicles without photos keep the drawing.
+ * Later (Phase 7): when a vehicle has a top and side photo, this slot crossfades those
+ * instead of the drawings; vehicles without photos keep the drawing.
  */
 export function HeroVisual({ type, status, pose, size, className }: Props) {
   const def = drawingFor(type);
@@ -44,6 +50,10 @@ export function HeroVisual({ type, status, pose, size, className }: Props) {
   const sideWidth = Math.min(
     size * 1.35,
     (size * 0.9 * side.width) / side.height,
+    typeof window === 'undefined' ? Infinity : window.innerWidth - 40,
+  );
+  const isoWidth = Math.min(
+    size * 1.25,
     typeof window === 'undefined' ? Infinity : window.innerWidth - 40,
   );
   const sideRef = useRef<SVGSVGElement>(null);
@@ -62,48 +72,41 @@ export function HeroVisual({ type, status, pose, size, className }: Props) {
       data-pose={pose}
     >
       <div className="vd-glow" />
-      <motion.div
-        className="vd-iso-stage absolute inset-0"
-        initial={false}
-        animate={{ opacity: pose === 'side' ? 0 : 1 }}
-        transition={{ duration: 0.3 }}
-        style={{ perspective: size * 4 }}
-      >
-        <motion.div
-          className="relative"
-          style={{ width, height: size, transformStyle: 'preserve-3d' }}
+      {/* Flat top view: tilts toward isometric, then fades as the 3D drawing takes over. */}
+      <div className="absolute inset-0 grid place-items-center" style={{ perspective: size * 4 }}>
+        <motion.svg
+          viewBox={`0 0 ${top.width} ${top.height}`}
+          className="relative block overflow-visible"
+          style={{ width, height: size, '--vd-unit': top.width / width } as CSSProperties}
           initial={false}
           animate={
             tilted
-              ? { rotateX: 58, rotateZ: -45, scale: 0.78 }
-              : { rotateX: 0, rotateZ: 0, scale: 1 }
+              ? { ...ISO_TILT, scale: 0.85, opacity: 0 }
+              : { rotateX: 0, rotateZ: 0, scale: 1, opacity: 1 }
           }
-          transition={TILT}
+          transition={{
+            ...TILT,
+            opacity: tilted ? { duration: 0.15, delay: 0.25 } : { duration: 0.15 },
+          }}
+          aria-hidden
         >
-          <svg
-            viewBox={`0 0 ${top.width} ${top.height}`}
-            className="vd-shadow"
-            style={{ '--vd-unit': top.width / width } as CSSProperties}
-            aria-hidden
-          >
-            <rect x="8" y="8" width={top.width - 16} height={top.height - 16} rx="18" />
-          </svg>
           {PAINT_ORDER.filter((p) => top.parts[p]).map((p) => (
-            <motion.svg
-              key={p}
-              viewBox={`0 0 ${top.width} ${top.height}`}
-              className="vd-layer"
-              style={{ '--vd-unit': top.width / width } as CSSProperties}
-              initial={false}
-              animate={{ z: tilted ? (def.lift[p] ?? 0) * width * 1.6 : 0 }}
-              transition={TILT}
-              aria-hidden
-            >
-              <Part drawing={top} part={p} />
-            </motion.svg>
+            <Part key={p} drawing={top} part={p} />
           ))}
+        </motion.svg>
+      </div>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <motion.div
+          className="shrink-0"
+          initial={false}
+          animate={pose === 'iso' ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.96 }}
+          transition={
+            pose === 'iso' ? { duration: 0.2, delay: 0.22, ease: EASE } : { duration: 0.15 }
+          }
+        >
+          <IsoDrawing solids={def.iso} size={isoWidth} className="block h-auto overflow-visible" />
         </motion.div>
-      </motion.div>
+      </div>
       {pose === 'side' && (
         // Flex centers the profile even when it is wider than the square stage.
         <div className="absolute inset-0 flex items-center justify-center">

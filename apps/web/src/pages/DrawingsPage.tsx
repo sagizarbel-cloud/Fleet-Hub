@@ -35,8 +35,8 @@ export function DrawingsPage() {
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <VehicleVisual type={type} view="iso" status="GREEN" size={110} />
-              <VehicleVisual type={type} view="iso" status="RED" size={110} />
+              <VehicleVisual type={type} view="iso" status="GREEN" size={220} />
+              <VehicleVisual type={type} view="iso" status="RED" size={220} />
             </div>
             <div className="flex items-center">
               <VehicleVisual key={round} type={type} view="side" status="AMBER" size={420} draw />

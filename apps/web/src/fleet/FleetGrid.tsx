@@ -215,10 +215,18 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
   return (
     <section
       aria-labelledby="fleet-title"
-      className="glass p-3"
+      className="relative isolate p-3"
       ref={rootRef}
       data-testid="fleet-grid"
     >
+      {/* The panel itself fades after the tiles, so nothing of the grid shows behind the vehicle. */}
+      <motion.div
+        aria-hidden
+        className="glass absolute inset-0 -z-10"
+        initial={false}
+        animate={{ opacity: away ? 0 : 1 }}
+        transition={away ? { duration: 0.2, delay: 0.1 } : fade.fast}
+      />
       <motion.div
         initial={false}
         animate={{ opacity: away ? 0 : 1 }}

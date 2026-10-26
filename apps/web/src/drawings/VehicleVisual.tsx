@@ -3,6 +3,7 @@ import type { VehicleStatus } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
 import { PAINT_ORDER, type ViewDrawing } from './model';
 import { drawingFor } from './registry';
+import { IsoDrawing } from './iso';
 import './drawings.css';
 
 export type VisualView = 'top' | 'side' | 'iso';
@@ -53,43 +54,18 @@ export function VehicleVisual({ type, view, status, size, draw = false, classNam
   }, [draw, type, view]);
 
   if (view === 'iso') {
-    const top = def.top;
-    const height = (size * top.height) / top.width;
-    // The tilted drawing needs a square stage about as wide as its diagonal footprint.
-    const stage = Math.max(size, height) * 1.05;
     return (
       <div
-        className={cn('vd vd-iso-stage relative', status === 'RED' && 'vd-red', className)}
-        style={{ ...style, width: stage, height: stage }}
+        className={cn('vd relative', status === 'RED' && 'vd-red', className)}
+        style={{ ...style, width: size }}
         data-status={status}
       >
         <div className="vd-glow" />
-        <div className="vd-iso" style={{ width: size, height }}>
-          <svg
-            viewBox={`0 0 ${top.width} ${top.height}`}
-            className="vd-shadow"
-            style={{ '--vd-unit': top.width / size } as CSSProperties}
-            aria-hidden
-          >
-            <rect x="8" y="8" width={top.width - 16} height={top.height - 16} rx="18" />
-          </svg>
-          {PAINT_ORDER.filter((p) => top.parts[p]).map((p) => (
-            <svg
-              key={p}
-              viewBox={`0 0 ${top.width} ${top.height}`}
-              className="vd-layer"
-              style={
-                {
-                  transform: `translateZ(${(def.lift[p] ?? 0) * size * 1.6}px)`,
-                  '--vd-unit': top.width / size,
-                } as CSSProperties
-              }
-              aria-hidden
-            >
-              <Parts drawing={top} only={p} />
-            </svg>
-          ))}
-        </div>
+        <IsoDrawing
+          solids={def.iso}
+          size={size}
+          className="relative block h-auto overflow-visible"
+        />
       </div>
     );
   }
