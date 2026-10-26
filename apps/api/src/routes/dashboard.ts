@@ -36,6 +36,7 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
         // Never select startCodeEnc here.
         select: {
           serial: true,
+          licenseNo: true,
           status: true,
           make: true,
           model: true,

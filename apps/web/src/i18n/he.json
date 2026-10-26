@@ -166,9 +166,6 @@
   },
   "vehicle": {
     "back": "חזרה ללוח הבקרה",
-    "serial": "מספר סידורי",
-    "department": "מחלקה",
-    "daysToService": "ימים לטיפול הבא",
     "view": "תצוגת שרטוט",
     "sideView": "מבט צד",
     "isoView": "תצוגה איזומטרית",
@@ -185,7 +182,95 @@
       "ownership": "בעלות / אחריות",
       "documents": "מסמכים / קבלות",
       "quotes": "הצעות מחיר",
-      "notes": "הערות"
+      "notes": "הערות",
+      "open": "פתוחות: {{count}}",
+      "count": "רשומות: {{count}}",
+      "next": "{{kind}} {{when}}",
+      "noWarranty": "לא נרשמה אחריות",
+      "empty": "עדיין לא נרשם דבר.",
+      "close": "סגירה",
+      "preview": "הרשומות האחרונות. הוספה, עריכה וייצוא לאקסל יגיעו בהמשך."
+    },
+    "copy": "לחיצה להעתקה",
+    "copied": "הועתק",
+    "callouts": "נתונים על השרטוט",
+    "loadFailed": "לא ניתן לטעון את פרטי הכלי.",
+    "info": {
+      "serial": "מספר סידורי",
+      "vin": "מספר שילדה",
+      "licenseNo": "מספר רישוי",
+      "status": "סטטוס ורמת כשירות",
+      "usage": "קילומטראז׳ / שעות מנוע",
+      "usage_KM": "קילומטראז׳",
+      "usage_HOURS": "שעות מנוע",
+      "nextService": "טיפול הבא",
+      "annualTest": "טסט שנתי",
+      "insurance": "ביטוח",
+      "safetyCheck": "בדיקת בודק מוסמך",
+      "location": "מיקום נוכחי",
+      "department": "מחלקה",
+      "operator": "מפעיל / נהג",
+      "makeModelYear": "יצרן, דגם, שנה",
+      "openMalfunctions": "תקלות פתוחות",
+      "fuelEconomy": "צריכת דלק, 30 הימים האחרונים",
+      "maintenanceCostYtd": "עלות אחזקה השנה",
+      "purchaseWarranty": "רכישה / אחריות",
+      "lastActivity": "פעילות אחרונה",
+      "lastLocation": "מיקום אחרון",
+      "lastFuel": "תדלוק אחרון",
+      "lastFuelValue": "{{liters}} ל׳ · {{date}}",
+      "purchased": "נרכש {{date}}",
+      "warrantyUntil": "אחריות עד {{date}}"
+    },
+    "units": {
+      "km": "{{value}} ק״מ",
+      "hours": "{{value}} ש׳",
+      "KM_PER_L": "{{value}} ק״מ/ל׳",
+      "L_PER_HOUR": "{{value}} ל׳/ש׳"
+    },
+    "startCode": {
+      "label": "קוד התנעה",
+      "reveal": "הצגה",
+      "hide": "הסתרה",
+      "tooMany": "יותר מדי בקשות. אפשר לנסות שוב בעוד דקה.",
+      "failed": "לא ניתן להציג את הקוד."
+    },
+    "vitals": {
+      "customize": "התאמת נתונים",
+      "hint": "בחרו אילו נתונים להצמיד ובאיזה סדר. נשמר בחשבון שלכם.",
+      "pinned": "נתונים מוצמדים",
+      "more": "נתונים נוספים",
+      "moveUp": "הזזת {{name}} למעלה",
+      "moveDown": "הזזת {{name}} למטה",
+      "reset": "חזרה לברירת המחדל"
+    },
+    "nav": {
+      "prev": "הכלי הקודם",
+      "next": "הכלי הבא",
+      "position": "{{n}}/{{total}}",
+      "jump": "מעבר לכלי",
+      "jumpPlaceholder": "מספר סידורי, רישוי, יצרן או דגם",
+      "noMatch": "אין כלי מתאים."
+    },
+    "items": {
+      "title": "פריטים משויכים",
+      "assign": "שיוך",
+      "choose": "בחירת פריט",
+      "noneFree": "כל הפריטים כבר משויכים לכלים.",
+      "cancel": "ביטול",
+      "failed": "לא ניתן לשמור את השינוי. נסו שוב.",
+      "empty": "אין פריטים משויכים לכלי.",
+      "item": "פריט",
+      "model": "דגם",
+      "spec": "מפרט",
+      "serial": "מספר סידורי",
+      "since": "משויך מאז",
+      "actions": "פעולות",
+      "remove": "הסרה"
+    },
+    "ownership": {
+      "purchaseDate": "תאריך רכישה",
+      "warrantyExpiry": "תום אחריות"
     }
   }
 }

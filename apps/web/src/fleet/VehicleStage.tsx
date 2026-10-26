@@ -2,54 +2,44 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { motion, useAnimate } from 'motion/react';
-import {
-  ArrowLeft,
-  ArrowLeftRight,
-  ClipboardCheck,
-  Droplet,
-  FileText,
-  Fuel,
-  Loader2,
-  ReceiptText,
-  ShieldCheck,
-  StickyNote,
-  TriangleAlert,
-  Wrench,
-} from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import type { DetailView } from '@fleet-hub/shared';
+import { DETAIL_VIEWS } from '@fleet-hub/shared';
 import { StatusBadge } from '@/components/StatusBadge';
 import { HeroVisual, type HeroPose } from '@/drawings/HeroVisual';
 import { cn } from '@/lib/cn';
 import { prefersReducedMotion } from '@/lib/motion';
-import { CountUp } from './CountUp';
-import { lookupName, useEvents, useLookups, type Tile } from './data';
-import { useDateFormat } from './FleetGrid';
-import { EventList } from './Timeline';
+import { Activity } from '@/vehicle/Activity';
+import { CALLOUT_ROOM, CalloutLegend, CalloutOverlay } from '@/vehicle/Callouts';
+import { usePreferences, useSavePreferences, useVehicle } from '@/vehicle/data';
+import { CopyId, StartCodeChip } from '@/vehicle/Identity';
+import { ItemsTable } from '@/vehicle/ItemsTable';
+import { Records } from '@/vehicle/Records';
+import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
+import { VitalsBar } from '@/vehicle/VitalsBar';
+import { lookupName, useLookups, type Tile } from './data';
 
+// The last view is cached here so the transition can pick its final pose at once;
+// the saved preference (per user, on the server) is the source of truth.
 const VIEW_KEY = 'fh.vehicleView';
-const DETAIL_VIEWS = ['side', 'iso'] as const;
-type DetailView = (typeof DETAIL_VIEWS)[number];
-const RECORDS = [
-  ['service', Wrench],
-  ['malfunctions', TriangleAlert],
-  ['fluids', Droplet],
-  ['fuel', Fuel],
-  ['movements', ArrowLeftRight],
-  ['inspections', ClipboardCheck],
-  ['ownership', ShieldCheck],
-  ['documents', ReceiptText],
-  ['quotes', FileText],
-  ['notes', StickyNote],
-] as const;
 
 // Timeline of the transition, in seconds (SPEC 5.2: all of it within 1.2 s).
 const T = { fly: 0.45, toIso: 0.32, toSide: 0.52, panels: 0.35, flatten: 0.35, flyBack: 0.45 };
 const EASE = [0.22, 1, 0.36, 1] as const;
+const SLIDE_PX = 56;
 
-function savedView(): DetailView {
+function cachedView(): DetailView {
   try {
     return localStorage.getItem(VIEW_KEY) === 'iso' ? 'iso' : 'side';
   } catch {
     return 'side';
+  }
+}
+function cacheView(v: DetailView) {
+  try {
+    localStorage.setItem(VIEW_KEY, v);
+  } catch {
+    // Private mode: the server copy still applies.
   }
 }
 
@@ -57,28 +47,46 @@ function heroSize() {
   return Math.round(Math.min(340, Math.max(220, window.innerWidth - 120)));
 }
 
+/** Tracks an element's width. */
+function useWidth<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
+
 interface Props {
   serial: string;
   tile: Tile | undefined;
+  tiles: Tile[];
   loading: boolean;
   returning: boolean;
   /** Fly in from the grid tile (false for a deep link). */
   fromDashboard: boolean;
+  /** Arrived from the neighbouring vehicle with Prev / Next: slide in from that side. */
+  slide: SlideDirection | null;
   onReturnStart: () => void;
   onClosed: () => void;
 }
 
 /**
- * The vehicle's page on the shared stage. Phase 3 fills in the panels; Phase 2 owns
- * the transition: the drawing flies from its tile, tilts, turns to its side profile,
- * the panels arrive, and Back plays it all in reverse.
+ * The vehicle's page on the shared stage (SPEC 5.2, 5.3). The drawing flies from its tile,
+ * tilts, turns to its side profile and the panels arrive; Back plays it all in reverse.
  */
 export function VehicleStage({
   serial,
   tile,
+  tiles,
   loading,
   returning,
   fromDashboard,
+  slide,
   onReturnStart,
   onClosed,
 }: Props) {
@@ -87,18 +95,36 @@ export function VehicleStage({
   const [params] = useSearchParams();
   const highlightId = params.get('event');
   const { data: lookups } = useLookups();
-  const formatDate = useDateFormat();
+  const detail = useVehicle(serial);
+  const vehicle = detail.data;
+  const prefs = usePreferences();
+  const savePrefs = useSavePreferences();
   const [scope, animate] = useAnimate<HTMLDivElement>();
   const heroRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
-  const [view, setView] = useState<DetailView>(savedView);
+  const [heroPanelRef, heroPanelWidth] = useWidth<HTMLDivElement>();
+  const [view, setView] = useState<DetailView>(cachedView);
   const [reduced] = useState(prefersReducedMotion);
-  const [pose, setPose] = useState<HeroPose>(() => (reduced ? view : 'flat'));
+  // A slide (Prev / Next) or reduced motion skips the fly-in and starts in the chosen pose.
+  const [instant] = useState(() => reduced || slide !== null);
+  const [pose, setPose] = useState<HeroPose>(() => (instant ? view : 'flat'));
   const [size] = useState(heroSize);
-  const [now] = useState(Date.now);
+  const [seenPref, setSeenPref] = useState<DetailView | null>(null);
   const timers = useRef<number[]>([]);
   const rtl = i18n.dir() === 'rtl';
-  const events = useEvents({ vehicle: serial });
+
+  // The saved preference arrived and differs from the cached one: follow it.
+  const savedView = prefs.data?.detailView ?? null;
+  if (savedView && savedView !== seenPref) {
+    setSeenPref(savedView);
+    if (savedView !== view) {
+      setView(savedView);
+      if (pose !== 'flat') setPose(savedView);
+    }
+  }
+  useEffect(() => {
+    if (savedView) cacheView(savedView);
+  }, [savedView]);
 
   const later = (seconds: number, fn: () => void) => {
     timers.current.push(window.setTimeout(fn, seconds * 1000));
@@ -131,10 +157,10 @@ export function VehicleStage({
   useLayoutEffect(() => {
     if (!tile) return;
     const hero = heroRef.current!;
-    const start = fromDashboard && !reduced ? offsetToTile() : null;
-    if (reduced) {
-      void animate(hero, { opacity: [0, 1] }, { duration: 0.2 });
+    if (instant) {
+      if (reduced) void animate(hero, { opacity: [0, 1] }, { duration: 0.2 });
     } else {
+      const start = fromDashboard ? offsetToTile() : null;
       if (start) {
         void animate(hero, { ...start, opacity: 1 }, { duration: 0 });
         void animate(
@@ -184,25 +210,10 @@ export function VehicleStage({
   }, [returning, fromDashboard, navigate]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && back();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !e.defaultPrevented && back();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [back]);
-
-  // Opened from a timeline event: bring that event into view in the activity list.
-  const loaded = !!events.data;
-  useEffect(() => {
-    if (!highlightId || !loaded) return;
-    const id = window.setTimeout(
-      () => {
-        scope.current
-          ?.querySelector(`aside [data-event-id="${CSS.escape(highlightId)}"]`)
-          ?.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
-      },
-      T.panels * 1000 + 400,
-    );
-    return () => clearTimeout(id);
-  }, [highlightId, loaded, reduced, scope]);
 
   useEffect(() => {
     document.title = `${serial} · ${t('app.name')}`;
@@ -224,16 +235,17 @@ export function VehicleStage({
   const chooseView = (v: DetailView) => {
     setView(v);
     setPose(v);
-    try {
-      localStorage.setItem(VIEW_KEY, v);
-    } catch {
-      // Private mode: remembered for this visit only.
-    }
+    cacheView(v);
+    savePrefs.mutate({ detailView: v });
   };
 
   const panel = (from: 'top' | 'side' | 'bottom', delay: number) =>
-    reduced
-      ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.2 } }
+    reduced || slide
+      ? {
+          initial: { opacity: reduced ? 0 : 1 },
+          animate: { opacity: 1 },
+          transition: { duration: 0.2 },
+        }
       : {
           initial: {
             opacity: 0,
@@ -248,6 +260,16 @@ export function VehicleStage({
   const toggleMotion = panel('bottom', T.panels);
   const asideMotion = panel('side', T.panels + 0.05);
   const recordMotion = (i: number) => panel('bottom', T.panels + 0.05 + i * 0.02);
+  const lowerMotion = panel('bottom', T.panels + 0.12);
+  // Prev / Next: the whole page slides in from the side it came from.
+  const pageMotion =
+    slide && !reduced
+      ? {
+          initial: { opacity: 0, x: slide * SLIDE_PX * (rtl ? -1 : 1) },
+          animate: { opacity: 1, x: 0 },
+          transition: { duration: 0.28, ease: EASE },
+        }
+      : {};
 
   const typeName =
     tile &&
@@ -255,21 +277,9 @@ export function VehicleStage({
       lookups?.vehicleTypes.find((v) => v.code === tile.type),
       i18n.language,
     );
-  const location =
-    tile &&
-    lookupName(
-      lookups?.locations.find((l) => l.code === tile.location),
-      i18n.language,
-    );
-  const department =
-    tile &&
-    lookupName(
-      lookups?.departments.find((d) => d.code === tile.department),
-      i18n.language,
-    );
-  const daysToService = tile?.nextServiceDate
-    ? Math.ceil((Date.parse(tile.nextServiceDate) - now) / 86_400_000)
-    : null;
+  const compactCallouts = heroPanelWidth < size * 1.35 + CALLOUT_ROOM;
+  const showCallouts = pose === 'side' && !returning && !!vehicle;
+  const notFound = !loading && !tile;
 
   return (
     <div
@@ -281,9 +291,12 @@ export function VehicleStage({
       data-testid="vehicle-stage"
       data-serial={serial}
     >
-      <div className="mx-auto grid max-w-[1600px] gap-4 px-2 pt-2 sm:px-4 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <motion.div
+        {...pageMotion}
+        className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] gap-4 px-2 pt-2 sm:px-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
+      >
         <div className="min-w-0 space-y-4">
-          <motion.header data-panel {...headerMotion} className="glass p-4">
+          <motion.header data-panel {...headerMotion} className="glass relative z-10 p-4">
             <div className="flex flex-wrap items-center gap-3">
               <button
                 ref={backRef}
@@ -303,50 +316,30 @@ export function VehicleStage({
                       {tile.make} {tile.model}
                     </h1>
                   </div>
-                  <StatusBadge status={tile.status} />
+                  <StatusBadge status={vehicle?.status ?? tile.status} />
+                  <VehicleNav serial={serial} tiles={tiles} />
                 </>
               )}
             </div>
             {tile && (
-              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                <div className="col-span-2 sm:col-span-1">
-                  <dt className="text-muted text-xs">{t('vehicle.serial')}</dt>
-                  <dd className="num text-2xl font-medium">
-                    <bdi dir="ltr">{tile.serial}</bdi>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted text-xs">{t('dashboard.location')}</dt>
-                  <dd className="text-sm">{location ?? t('dashboard.notSet')}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted text-xs">{t('vehicle.department')}</dt>
-                  <dd className="text-sm">{department ?? t('dashboard.notSet')}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted text-xs">{t('vehicle.daysToService')}</dt>
-                  <dd
-                    className="num text-xl"
-                    title={tile.nextServiceDate ? formatDate(tile.nextServiceDate) : undefined}
-                  >
-                    {daysToService === null ? (
-                      t('dashboard.notSet')
-                    ) : (
-                      <CountUp value={daysToService} delay={T.panels} />
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted text-xs">{t('dashboard.openIssues')}</dt>
-                  <dd className={cn('num text-xl', tile.openIssues > 0 && 'text-warn')}>
-                    <CountUp value={tile.openIssues} delay={T.panels} />
-                  </dd>
-                </div>
-              </dl>
+              <>
+                <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:items-end">
+                  <div className="col-span-2 sm:col-span-1">
+                    <CopyId label={t('vehicle.info.serial')} value={tile.serial} large />
+                  </div>
+                  <CopyId label={t('vehicle.info.vin')} value={vehicle ? vehicle.vin : null} />
+                  <CopyId
+                    label={t('vehicle.info.licenseNo')}
+                    value={vehicle ? vehicle.licenseNo : null}
+                  />
+                  {vehicle?.hasStartCode && <StartCodeChip serial={serial} />}
+                </dl>
+                <VitalsBar vehicle={vehicle} />
+              </>
             )}
           </motion.header>
 
-          <div className="relative grid place-items-center py-2">
+          <div ref={heroPanelRef} className="relative">
             {/* The stage's panel fades in behind the drawing, so the flight is never clipped. */}
             {tile && (
               <motion.div
@@ -356,96 +349,102 @@ export function VehicleStage({
                 className="glass absolute inset-0"
               />
             )}
-            {tile ? (
-              <div
-                ref={heroRef}
-                style={{ opacity: fromDashboard && !reduced ? 0 : undefined }}
-                data-hero
-              >
-                <HeroVisual
-                  type={tile.type}
-                  status={tile.status}
-                  pose={returning ? 'flat' : pose}
-                  size={size}
-                />
-              </div>
-            ) : loading ? (
-              <Loader2 aria-hidden className="text-muted my-24 size-6 animate-spin" />
-            ) : (
-              <p className="text-muted my-24 text-sm">{t('vehicle.notFound', { serial })}</p>
-            )}
-            {tile && (
-              <motion.div
-                data-panel
-                {...toggleMotion}
-                role="group"
-                aria-label={t('vehicle.view')}
-                className="border-border bg-surface absolute end-2 top-2 flex rounded-lg border p-0.5 text-xs"
-              >
-                {DETAIL_VIEWS.map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    aria-pressed={view === v}
-                    onClick={() => chooseView(v)}
-                    className={cn(
-                      'rounded-md px-2.5 py-1',
-                      view === v ? 'bg-accent text-accent-contrast' : 'text-muted',
-                    )}
-                  >
-                    {t(v === 'side' ? 'vehicle.sideView' : 'vehicle.isoView')}
-                  </button>
-                ))}
-              </motion.div>
-            )}
+            <div className="relative grid place-items-center py-2">
+              {tile ? (
+                <div
+                  ref={heroRef}
+                  style={{ opacity: fromDashboard && !instant ? 0 : undefined }}
+                  data-hero
+                >
+                  <HeroVisual
+                    type={tile.type}
+                    status={vehicle?.status ?? tile.status}
+                    pose={returning ? 'flat' : pose}
+                    size={size}
+                    sideOverlay={
+                      showCallouts
+                        ? (box) => (
+                            <CalloutOverlay
+                              vehicle={vehicle}
+                              width={box.width}
+                              height={box.height}
+                              compact={compactCallouts}
+                              reduced={reduced || !!slide}
+                            />
+                          )
+                        : undefined
+                    }
+                  />
+                </div>
+              ) : loading ? (
+                <Loader2 aria-hidden className="text-muted my-24 size-6 animate-spin" />
+              ) : (
+                <p className="text-muted my-24 text-sm">{t('vehicle.notFound', { serial })}</p>
+              )}
+              {tile && (
+                <motion.div
+                  data-panel
+                  {...toggleMotion}
+                  role="group"
+                  aria-label={t('vehicle.view')}
+                  className="border-border bg-surface absolute end-2 top-2 flex rounded-lg border p-0.5 text-xs"
+                >
+                  {DETAIL_VIEWS.map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={view === v}
+                      onClick={() => chooseView(v)}
+                      className={cn(
+                        'rounded-md px-2.5 py-1',
+                        view === v ? 'bg-accent text-accent-contrast' : 'text-muted',
+                      )}
+                    >
+                      {t(v === 'side' ? 'vehicle.sideView' : 'vehicle.isoView')}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </div>
+            {showCallouts && compactCallouts && <CalloutLegend vehicle={vehicle} />}
           </div>
 
+          {/* Mounted with the other panels so they arrive together; contents fill in as data loads. */}
           {tile && (
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {RECORDS.map(([key, Icon], i) => (
-                <motion.li key={key} data-panel {...recordMotion(i)}>
-                  <button
-                    type="button"
-                    disabled
-                    title={t('topbar.comingSoon')}
-                    className="glass text-muted flex h-full w-full items-center gap-2 p-3 text-start text-xs disabled:cursor-not-allowed"
-                  >
-                    <Icon aria-hidden className="text-accent-ink size-4 shrink-0" />
-                    {t(`vehicle.records.${key}`)}
-                  </button>
-                </motion.li>
-              ))}
-            </ul>
+            <Records serial={serial} vehicle={vehicle} motionFor={recordMotion} reduced={reduced} />
+          )}
+          {tile && (
+            <motion.div data-panel {...lowerMotion}>
+              {vehicle ? (
+                <ItemsTable vehicle={vehicle} />
+              ) : (
+                <div aria-hidden className="glass h-24" />
+              )}
+            </motion.div>
+          )}
+          {tile && detail.isError && (
+            <p role="alert" className="text-bad text-sm">
+              {t('vehicle.loadFailed')}
+            </p>
           )}
         </div>
 
-        {tile && (
+        {tile && !notFound && (
           <motion.aside
             data-panel
             {...asideMotion}
             aria-labelledby="activity-title"
             className="glass flex max-h-[calc(100dvh-10rem)] min-h-0 flex-col p-3 lg:sticky lg:top-0"
           >
-            <h2 id="activity-title" className="mb-2 text-sm font-semibold">
-              {t('vehicle.activity')}
-            </h2>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {events.isPending ? (
-                <Loader2 aria-hidden className="text-muted mx-auto my-8 size-5 animate-spin" />
-              ) : (
-                <EventList
-                  pages={events.data?.pages ?? []}
-                  highlightId={highlightId}
-                  linkable={false}
-                />
-              )}
-              {events.data && events.data.pages[0]?.items.length === 0 && (
-                <p className="text-muted py-8 text-center text-sm">{t('vehicle.noActivity')}</p>
-              )}
-            </div>
+            <Activity
+              serial={serial}
+              highlightId={highlightId}
+              reduced={reduced}
+              revealDelayMs={(T.panels + 0.4) * 1000}
+            />
           </motion.aside>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import type { VehicleStatus } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
@@ -17,6 +17,8 @@ interface Props {
   /** Height of the flat top-down drawing in px; the stage is a square of this size. */
   size: number;
   className?: string;
+  /** Drawn over the side profile (callout lines), given the profile's size in px. */
+  sideOverlay?: (box: { width: number; height: number }) => ReactNode;
 }
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -33,7 +35,7 @@ const ISO_TILT = { rotateX: 54.74, rotateZ: 135 };
  * Later (Phase 7): when a vehicle has a top and side photo, this slot crossfades those
  * instead of the drawings; vehicles without photos keep the drawing.
  */
-export function HeroVisual({ type, status, pose, size, className }: Props) {
+export function HeroVisual({ type, status, pose, size, className, sideOverlay }: Props) {
   const def = drawingFor(type);
   const { top, side } = def;
   const width = (size * top.width) / top.height;
@@ -99,27 +101,30 @@ export function HeroVisual({ type, status, pose, size, className }: Props) {
       {pose === 'side' && (
         // Flex centers the profile even when it is wider than the square stage.
         <div className="absolute inset-0 flex items-center justify-center">
-          <motion.svg
-            ref={sideRef}
-            viewBox={`0 0 ${side.width} ${side.height}`}
-            className="vd-draw relative block h-auto shrink-0 overflow-visible"
-            // Draws faster than on the review page, so the whole transition fits in 1.2 s.
-            style={
-              {
-                width: sideWidth,
-                '--vd-unit': side.width / sideWidth,
-                '--vd-draw-duration': '0.45s',
-                '--vd-fill-delay': '0.25s',
-                '--vd-fill-duration': '0.2s',
-              } as CSSProperties
-            }
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            aria-hidden
-          >
-            <Layers drawing={side} />
-          </motion.svg>
+          <div className="relative shrink-0">
+            <motion.svg
+              ref={sideRef}
+              viewBox={`0 0 ${side.width} ${side.height}`}
+              className="vd-draw relative block h-auto shrink-0 overflow-visible"
+              // Draws faster than on the review page, so the whole transition fits in 1.2 s.
+              style={
+                {
+                  width: sideWidth,
+                  '--vd-unit': side.width / sideWidth,
+                  '--vd-draw-duration': '0.45s',
+                  '--vd-fill-delay': '0.25s',
+                  '--vd-fill-duration': '0.2s',
+                } as CSSProperties
+              }
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              aria-hidden
+            >
+              <Layers drawing={side} />
+            </motion.svg>
+            {sideOverlay?.({ width: sideWidth, height: (sideWidth * side.height) / side.width })}
+          </div>
         </div>
       )}
     </div>

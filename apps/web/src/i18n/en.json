@@ -166,9 +166,6 @@
   },
   "vehicle": {
     "back": "Back to the dashboard",
-    "serial": "Serial No.",
-    "department": "Department",
-    "daysToService": "Days to next service",
     "view": "Drawing view",
     "sideView": "Side view",
     "isoView": "Isometric view",
@@ -185,7 +182,95 @@
       "ownership": "Ownership & warranty",
       "documents": "Documents & receipts",
       "quotes": "Price quotes",
-      "notes": "Notes"
+      "notes": "Notes",
+      "open": "Open: {{count}}",
+      "count": "Records: {{count}}",
+      "next": "{{kind}} {{when}}",
+      "noWarranty": "No warranty recorded",
+      "empty": "Nothing recorded yet.",
+      "close": "Close",
+      "preview": "Latest entries. Adding, editing and Excel export come next."
+    },
+    "copy": "Click to copy",
+    "copied": "Copied",
+    "callouts": "Callouts on the drawing",
+    "loadFailed": "Couldn't load this vehicle's details.",
+    "info": {
+      "serial": "Serial No.",
+      "vin": "VIN / Chassis No.",
+      "licenseNo": "License No.",
+      "status": "Status and readiness",
+      "usage": "Odometer / engine hours",
+      "usage_KM": "Odometer",
+      "usage_HOURS": "Engine hours",
+      "nextService": "Next service",
+      "annualTest": "Annual test",
+      "insurance": "Insurance",
+      "safetyCheck": "Certified-inspector check",
+      "location": "Current location",
+      "department": "Department",
+      "operator": "Operator / driver",
+      "makeModelYear": "Make, model, year",
+      "openMalfunctions": "Open malfunctions",
+      "fuelEconomy": "Fuel economy, last 30 days",
+      "maintenanceCostYtd": "Maintenance cost this year",
+      "purchaseWarranty": "Purchase / warranty",
+      "lastActivity": "Last activity",
+      "lastLocation": "Last location",
+      "lastFuel": "Last fuel",
+      "lastFuelValue": "{{liters}} L · {{date}}",
+      "purchased": "Bought {{date}}",
+      "warrantyUntil": "Warranty until {{date}}"
+    },
+    "units": {
+      "km": "{{value}} km",
+      "hours": "{{value}} h",
+      "KM_PER_L": "{{value}} km/L",
+      "L_PER_HOUR": "{{value}} L/h"
+    },
+    "startCode": {
+      "label": "Start code",
+      "reveal": "Reveal",
+      "hide": "Hide",
+      "tooMany": "Too many reveals. Try again in a minute.",
+      "failed": "Couldn't reveal the code."
+    },
+    "vitals": {
+      "customize": "Customize vitals",
+      "hint": "Pick the vitals to pin and their order. Saved to your account.",
+      "pinned": "Pinned vitals",
+      "more": "More vitals",
+      "moveUp": "Move {{name}} up",
+      "moveDown": "Move {{name}} down",
+      "reset": "Back to the defaults"
+    },
+    "nav": {
+      "prev": "Previous vehicle",
+      "next": "Next vehicle",
+      "position": "{{n}}/{{total}}",
+      "jump": "Jump to vehicle",
+      "jumpPlaceholder": "Serial, plate, make or model",
+      "noMatch": "No vehicle matches."
+    },
+    "items": {
+      "title": "Assigned items",
+      "assign": "Assign",
+      "choose": "Choose an item",
+      "noneFree": "Every item is already on a vehicle.",
+      "cancel": "Cancel",
+      "failed": "Couldn't save the change. Try again.",
+      "empty": "No items on this vehicle.",
+      "item": "Item",
+      "model": "Model",
+      "spec": "Spec",
+      "serial": "Serial",
+      "since": "Assigned since",
+      "actions": "Actions",
+      "remove": "Remove"
+    },
+    "ownership": {
+      "purchaseDate": "Purchase date",
+      "warrantyExpiry": "Warranty expiry"
     }
   }
 }
