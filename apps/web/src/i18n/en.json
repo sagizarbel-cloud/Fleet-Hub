@@ -59,7 +59,6 @@
     "RED": "Inoperable"
   },
   "areas": {
-    "dashboard": "Recent activity and the fleet grid will appear here.",
     "fleetTable": "Every vehicle and every field, in one table, will appear here.",
     "receipts": "Receipts and invoices tagged by vehicle will appear here.",
     "quotes": "Price quotes for parts and tools will appear here.",
@@ -85,5 +84,108 @@
   "drawings": {
     "title": "Vehicle drawings",
     "replay": "Replay"
+  },
+  "dashboard": {
+    "recentActivity": "Recent activity",
+    "fleet": "Fleet",
+    "kpi": {
+      "vehicles": "Vehicles by status",
+      "due": "Due within 30 days",
+      "dueService": "Services",
+      "dueAnnualTest": "Annual tests",
+      "dueInsurance": "Insurance",
+      "openMalfunctions": "Open malfunctions",
+      "spendThisMonth": "Spend this month"
+    },
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "loadMore": "Show older events",
+    "noEvents": "No events match this filter.",
+    "allEvents": "All",
+    "eventFilters": "Filter events by type",
+    "group": {
+      "status": "Vehicle and status",
+      "service": "Services",
+      "malfunctions": "Malfunctions",
+      "fluids": "Fluids",
+      "fuel": "Fuel",
+      "movements": "Location changes",
+      "inspections": "Inspections",
+      "items": "Items",
+      "documents": "Receipts and quotes",
+      "notes": "Notes"
+    },
+    "filters": {
+      "label": "Filter the fleet",
+      "status": "Status",
+      "type": "Type",
+      "department": "Department",
+      "all": "All",
+      "clear": "Clear filters"
+    },
+    "addVehicle": "Add vehicle",
+    "noVehicles": "No vehicles match these filters.",
+    "sectionCount": "{{count}} vehicles",
+    "location": "Current location",
+    "nextService": "Next service",
+    "openIssues": "Open issues",
+    "notSet": "Not set",
+    "error": "Couldn't load the dashboard.",
+    "retry": "Try again",
+    "openVehicle": "Open {{serial}}"
+  },
+  "events": {
+    "VEHICLE_CREATED": "Vehicle added to the fleet",
+    "VEHICLE_UPDATED": "Vehicle details updated",
+    "STATUS_CHANGED": "Status changed to {{to}}",
+    "STATUS_OVERRIDDEN": "Status set manually to {{to}}",
+    "SERVICE": "Service: {{description}}",
+    "MALFUNCTION_REPORTED": "Malfunction reported ({{severity}}): {{description}}",
+    "MALFUNCTION_UPDATED": "Malfunction updated: {{description}}",
+    "MALFUNCTION_RESOLVED": "Malfunction resolved: {{description}}",
+    "FLUID_ADDED": "Added {{liters}} L of {{fluid}}",
+    "FUEL_ADDED": "Refueled {{liters}} L",
+    "MOVEMENT": "Location change: {{from}} → {{to}}",
+    "INSPECTION": "{{kind}} updated",
+    "ITEM_ASSIGNED": "Item assigned: {{item}}",
+    "ITEM_REMOVED": "Item removed: {{item}}",
+    "DOCUMENT_ADDED": "Receipt added: {{category}}, {{amount}}",
+    "QUOTE_LINKED": "Price quote from {{supplier}}",
+    "NOTE_ADDED": "Note added"
+  },
+  "severity": {
+    "LOW": "low",
+    "MEDIUM": "medium",
+    "HIGH": "high",
+    "CRITICAL": "critical"
+  },
+  "inspection": {
+    "ANNUAL_TEST": "Annual test",
+    "INSURANCE": "Insurance",
+    "SAFETY_CHECK": "Certified-inspector check"
+  },
+  "vehicle": {
+    "back": "Back to the dashboard",
+    "serial": "Serial No.",
+    "department": "Department",
+    "daysToService": "Days to next service",
+    "view": "Drawing view",
+    "sideView": "Side view",
+    "isoView": "Isometric view",
+    "activity": "Activity",
+    "noActivity": "No activity yet.",
+    "notFound": "No vehicle with serial number {{serial}}.",
+    "records": {
+      "service": "Service history",
+      "malfunctions": "Malfunctions & accidents",
+      "fluids": "Fluid additions",
+      "fuel": "Fuel economy",
+      "movements": "Location changes",
+      "inspections": "Inspections & compliance",
+      "ownership": "Ownership & warranty",
+      "documents": "Documents & receipts",
+      "quotes": "Price quotes",
+      "notes": "Notes"
+    }
   }
 }

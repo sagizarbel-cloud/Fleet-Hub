@@ -59,7 +59,6 @@
     "RED": "מושבת"
   },
   "areas": {
-    "dashboard": "הפעילות האחרונה ורשת הכלים יופיעו כאן.",
     "fleetTable": "כל הכלים וכל השדות, בטבלה אחת, יופיעו כאן.",
     "receipts": "קבלות וחשבוניות לפי כלי יופיעו כאן.",
     "quotes": "הצעות מחיר לחלקי חילוף וכלים יופיעו כאן.",
@@ -85,5 +84,108 @@
   "drawings": {
     "title": "שרטוטי כלים",
     "replay": "הפעלה חוזרת"
+  },
+  "dashboard": {
+    "recentActivity": "פעילות אחרונה",
+    "fleet": "צי רכב",
+    "kpi": {
+      "vehicles": "כלים לפי סטטוס",
+      "due": "לטיפול ב־30 הימים הקרובים",
+      "dueService": "טיפולים",
+      "dueAnnualTest": "טסטים שנתיים",
+      "dueInsurance": "ביטוח",
+      "openMalfunctions": "תקלות פתוחות",
+      "spendThisMonth": "הוצאות החודש"
+    },
+    "today": "היום",
+    "yesterday": "אתמול",
+    "loadMore": "הצגת אירועים קודמים",
+    "noEvents": "אין אירועים שתואמים לסינון.",
+    "allEvents": "הכול",
+    "eventFilters": "סינון אירועים לפי סוג",
+    "group": {
+      "status": "כלי וסטטוס",
+      "service": "טיפולים",
+      "malfunctions": "תקלות",
+      "fluids": "נוזלים",
+      "fuel": "דלק",
+      "movements": "שינויי מיקום",
+      "inspections": "בדיקות",
+      "items": "פריטים",
+      "documents": "קבלות והצעות מחיר",
+      "notes": "הערות"
+    },
+    "filters": {
+      "label": "סינון הצי",
+      "status": "סטטוס",
+      "type": "סוג",
+      "department": "מחלקה",
+      "all": "הכול",
+      "clear": "ניקוי סינון"
+    },
+    "addVehicle": "הוספת כלי",
+    "noVehicles": "אין כלים שתואמים לסינון.",
+    "sectionCount": "{{count}} כלים",
+    "location": "מיקום נוכחי",
+    "nextService": "טיפול הבא",
+    "openIssues": "תקלות פתוחות",
+    "notSet": "לא הוגדר",
+    "error": "לא ניתן לטעון את לוח הבקרה.",
+    "retry": "ניסיון חוזר",
+    "openVehicle": "פתיחת {{serial}}"
+  },
+  "events": {
+    "VEHICLE_CREATED": "הכלי נוסף לצי",
+    "VEHICLE_UPDATED": "פרטי הכלי עודכנו",
+    "STATUS_CHANGED": "הסטטוס שונה ל{{to}}",
+    "STATUS_OVERRIDDEN": "הסטטוס נקבע ידנית ל{{to}}",
+    "SERVICE": "טיפול: {{description}}",
+    "MALFUNCTION_REPORTED": "דווחה תקלה (חומרה {{severity}}): {{description}}",
+    "MALFUNCTION_UPDATED": "תקלה עודכנה: {{description}}",
+    "MALFUNCTION_RESOLVED": "תקלה טופלה: {{description}}",
+    "FLUID_ADDED": "מילוי נוזלים: {{liters}} ל׳ {{fluid}}",
+    "FUEL_ADDED": "תדלוק: {{liters}} ל׳",
+    "MOVEMENT": "שינוי מיקום: {{from}} ← {{to}}",
+    "INSPECTION": "עדכון {{kind}}",
+    "ITEM_ASSIGNED": "פריט שויך: {{item}}",
+    "ITEM_REMOVED": "פריט הוסר: {{item}}",
+    "DOCUMENT_ADDED": "נוספה קבלה: {{category}}, {{amount}}",
+    "QUOTE_LINKED": "הצעת מחיר מאת {{supplier}}",
+    "NOTE_ADDED": "נוספה הערה"
+  },
+  "severity": {
+    "LOW": "נמוכה",
+    "MEDIUM": "בינונית",
+    "HIGH": "גבוהה",
+    "CRITICAL": "קריטית"
+  },
+  "inspection": {
+    "ANNUAL_TEST": "טסט שנתי",
+    "INSURANCE": "ביטוח",
+    "SAFETY_CHECK": "בדיקת בודק מוסמך"
+  },
+  "vehicle": {
+    "back": "חזרה ללוח הבקרה",
+    "serial": "מספר סידורי",
+    "department": "מחלקה",
+    "daysToService": "ימים לטיפול הבא",
+    "view": "תצוגת שרטוט",
+    "sideView": "מבט צד",
+    "isoView": "תצוגה איזומטרית",
+    "activity": "פעילות",
+    "noActivity": "אין פעילות עדיין.",
+    "notFound": "לא נמצא כלי עם מספר סידורי {{serial}}.",
+    "records": {
+      "service": "היסטוריית טיפולים",
+      "malfunctions": "תקלות / תאונות",
+      "fluids": "מילוי נוזלים",
+      "fuel": "צריכת דלק",
+      "movements": "שינויי מיקום",
+      "inspections": "בדיקות ועמידה בדרישות",
+      "ownership": "בעלות / אחריות",
+      "documents": "מסמכים / קבלות",
+      "quotes": "הצעות מחיר",
+      "notes": "הערות"
+    }
   }
 }

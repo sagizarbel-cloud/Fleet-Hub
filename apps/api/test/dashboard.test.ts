@@ -207,3 +207,14 @@ describe('events', () => {
     expect(await quoteIds(viewer)).toEqual([quotes.viewerStd, quotes.pub].sort());
   });
 });
+
+describe('dashboard recent events', () => {
+  it('include the first timeline page, with quote visibility applied', async () => {
+    const res = (await get('/api/dashboard', viewer)).json();
+    expect(res.recent.items.length).toBeGreaterThan(0);
+    const page = (await get('/api/events', viewer)).json();
+    expect(res.recent.items.map((e: { id: string }) => e.id)).toEqual(
+      page.items.map((e: { id: string }) => e.id),
+    );
+  });
+});

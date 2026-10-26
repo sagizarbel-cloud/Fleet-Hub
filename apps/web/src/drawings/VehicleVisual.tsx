@@ -7,7 +7,7 @@ import './drawings.css';
 
 export type VisualView = 'top' | 'side' | 'iso';
 
-const STATUS_VAR: Record<VehicleStatus, string> = {
+export const STATUS_VAR: Record<VehicleStatus, string> = {
   GREEN: 'var(--fh-ok)',
   AMBER: 'var(--fh-warn)',
   RED: 'var(--fh-bad)',
