@@ -2,12 +2,21 @@
 
 ## Status
 
-- Current phase: 3 — Vehicle detail (built; waiting for Sagi's review in the PR)
-- Last completed phase: 2 — Vehicle drawings, dashboard and the selection transition
+- Current phase: 4 — Records, forms and exports (built; waiting for Sagi's review in the PR)
+- Last completed phase: 3 — Vehicle detail
 
 ## Phase log
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
+
+### Phase 4 — 2026-10-26
+
+- Shipped: the ten record panels are working. Service, malfunctions, fluids, fuel, movements, inspections and notes each have a sortable, filterable table (stacked cards on phones), add / edit forms in a side sheet (full screen on phones) checked with the shared zod rules, delete with a 30 s Undo bar, and photo / PDF attachments with camera capture on phones. Ownership & warranty is one form with attachments; documents and quotes list and export (adding them is Phase 6). Fuel panel: economy chart per fill-up (km/L or L per engine hour) with sudden drops marked and filterable. Every panel exports to Excel in the active language (Hebrew sheets right to left). Admins can set the status by hand with a reason and go back to automatic.
+- API: `GET|POST /api/vehicles/:serial/records/:kind`, `PUT|DELETE /…/:id`, `POST /…/:id/restore`, `GET /api/vehicles/:serial/fuel-economy`, `GET|PUT /api/vehicles/:serial/ownership`, `PUT /api/vehicles/:serial/status-override`, `GET /api/vehicles/:serial/documents|quotes`, `POST /api/attachments`, `GET /api/attachments/:id` (and `/thumb`), `DELETE /api/attachments/:id`, `POST /api/attachments/:id/restore`. Every record write saves the record, its Event, the vehicle's vitals (usage, location, next service, expiries) and its status in one transaction; an hourly sweep (and one at start-up) catches tests and insurance that expire on their own.
+- Database (additive migration `phase4_record_events`): event types RECORD_EDITED / RECORD_DELETED / RECORD_RESTORED, `Event.hiddenAt`, `Attachment.deletedAt`. New packages: `@fastify/multipart`, `sharp` (api); `recharts`, `exceljs`, `@tanstack/react-table` v8 (web, loaded only when a panel opens or Export is pressed).
+- Seed: fill-ups follow a steady economy with a little noise, sized to about one tank; PU-901 and EX-103 each have one planted sudden drop; 8 fake attachments (a sample invoice image and a sample certificate PDF, marked as not real).
+- Tests: 68 api tests (28 new: every A7 status rule, the override, the hourly sweep; add / list / edit / delete / Undo with their events for all seven kinds; viewer and note permissions; validation by field; vitals side effects; sort, filter, search, paging; fuel drop flag; ownership; quote visibility on the vehicle; no start code in any record, export or ownership response; uploads by content type, size limit, signed-out refusal, path escape), 6 new shared tests (economy and drop maths), 5 new web tests (form bodies, Excel headers, units, RTL), 36 Playwright tests (10 new: add with a photo / edit / delete / Undo, red after a critical malfunction, fuel chart drop, Excel export read back in EN and HE, override, ownership, viewer limits). `pnpm check:arm64` now also checks sharp. Screenshots in `docs/screenshots/phase-4/`.
+- Deferred: adding receipts and quotes (Phase 6), the fleet-wide multi-sheet export (Phase 5), a screen to bring back records deleted more than 30 s ago (Later).
 
 ### Phase 3 — 2026-10-26
 
@@ -61,6 +70,12 @@
 - Prev / Next order comes from the dashboard tiles already in memory (grid order: type, then serial), so no neighbours endpoint was needed. Navigating replaces the history entry, so Back still leaves the vehicle pages in one step.
 - Record panels show the latest events of that kind until Phase 4 brings the full tables.
 - Admins need the separate "view start codes" permission to reveal a code; the admin role alone isn't enough.
+- Phase 4 (2026-10-26, from Sagi): viewers may add notes and edit or delete their own; every other record needs an editor. Undo lasts 30 seconds. A sudden fuel drop is a fill-up at least 25% worse than the median of the five before it (needs three earlier fill-ups); the numbers are constants in `packages/shared/src/fuel.ts`.
+- Deleting a record only marks it deleted and hides its timeline entries (`Event.hiddenAt`); the timeline logs the delete and any restore. Editing a record also updates its own timeline entry so it never shows old values.
+- Attachments are recognised by their first bytes (JPEG, PNG, WebP, PDF), up to `UPLOAD_MAX_MB` (20 MB); photos get a 320 px WebP thumbnail. Uploading follows the same rule as editing the record. Receipts (documents) are read-only here until Phase 6.
+- Excel file names are ASCII (`PU-901 fuel 2026-10-26.xlsx`): Chromium dropped Hebrew download names in testing. The sheet itself is in the active language.
+- The admin status override moved up from Phase 7 to Phase 4, since A7's override rule is part of the status tests.
+- Record panels, forms, zod, the chart and ExcelJS load only when a panel opens, so the dashboard bundle doesn't grow.
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 
 ## Later
@@ -70,4 +85,7 @@
 - Auto-fill receipt date, vendor and total from the photo (SPEC 5.5)
 - Installable PWA (home-screen icon on phones)
 - Email delivery for password resets (SMTP)
+- A "recently deleted" screen to bring back records after the 30 s Undo (they stay in the database)
+- iPhone HEIC photos (the camera button already sends JPEG)
+- Strip location data (EXIF GPS) from uploaded phone photos
 - Upgrade to newer majors (TypeScript 7, Vite 8, Prisma 7+, ESLint 10) once they settle

@@ -56,5 +56,8 @@ export const EVENT_TYPES = [
   'DOCUMENT_ADDED',
   'QUOTE_LINKED',
   'NOTE_ADDED',
+  'RECORD_EDITED',
+  'RECORD_DELETED',
+  'RECORD_RESTORED',
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];

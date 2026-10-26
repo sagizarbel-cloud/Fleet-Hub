@@ -151,7 +151,12 @@
     "ITEM_REMOVED": "פריט הוסר: {{item}}",
     "DOCUMENT_ADDED": "נוספה קבלה: {{category}}, {{amount}}",
     "QUOTE_LINKED": "הצעת מחיר מאת {{supplier}}",
-    "NOTE_ADDED": "נוספה הערה"
+    "NOTE_ADDED": "נוספה הערה",
+    "STATUS_OVERRIDDEN_REASON": "הסטטוס נקבע ידנית ל{{to}}: {{reason}}",
+    "STATUS_OVERRIDE_CLEARED": "הקביעה הידנית בוטלה, הסטטוס כעת {{to}}",
+    "RECORD_EDITED": "עריכת {{record}}: {{detail}}",
+    "RECORD_DELETED": "מחיקת {{record}}: {{detail}}",
+    "RECORD_RESTORED": "שחזור {{record}}: {{detail}}"
   },
   "severity": {
     "LOW": "נמוכה",
@@ -189,7 +194,15 @@
       "noWarranty": "לא נרשמה אחריות",
       "empty": "עדיין לא נרשם דבר.",
       "close": "סגירה",
-      "preview": "הרשומות האחרונות. הוספה, עריכה וייצוא לאקסל יגיעו בהמשך."
+      "one": {
+        "service": "טיפול",
+        "malfunctions": "תקלה",
+        "fluids": "מילוי נוזלים",
+        "fuel": "תדלוק",
+        "movements": "שינוי מיקום",
+        "inspections": "בדיקה",
+        "notes": "הערה"
+      }
     },
     "copy": "לחיצה להעתקה",
     "copied": "הועתק",
@@ -271,6 +284,157 @@
     "ownership": {
       "purchaseDate": "תאריך רכישה",
       "warrantyExpiry": "תום אחריות"
+    },
+    "override": {
+      "title": "קביעת סטטוס ידנית",
+      "manual": "ידני",
+      "currentAuto": "הסטטוס נקבע לפי התקלות, הטסט השנתי והביטוח.",
+      "currentManual": "נקבע ידנית: {{reason}}",
+      "choose": "סטטוס",
+      "reason": "סיבה (חובה)",
+      "set": "קביעת סטטוס",
+      "clear": "חזרה לקביעה אוטומטית"
+    }
+  },
+  "malfunctionState": {
+    "OPEN": "פתוחה",
+    "IN_PROGRESS": "בטיפול",
+    "RESOLVED": "טופלה"
+  },
+  "records": {
+    "add": "הוספה",
+    "addTitle": "הוספת {{record}}",
+    "editTitle": "עריכת {{record}}",
+    "edit": "עריכה",
+    "delete": "מחיקה",
+    "actions": "פעולות",
+    "save": "שמירה",
+    "cancel": "ביטול",
+    "close": "סגירה",
+    "choose": "בחירה…",
+    "added": "נוסף",
+    "saved": "נשמר",
+    "deleted": "מחיקת {{record}} בוצעה",
+    "undo": "ביטול פעולה",
+    "dismiss": "סגירת ההודעה",
+    "undoFailed": "לא ניתן לבטל. נסו שוב.",
+    "search": "חיפוש",
+    "from": "מתאריך",
+    "to": "עד תאריך",
+    "filterAll": "{{name}}: הכול",
+    "noMatch": "אין רשומות שתואמות לסינון.",
+    "showing": "מוצגות {{shown}} מתוך {{total}}",
+    "more": "הצגת עוד",
+    "export": "ייצוא לאקסל",
+    "exportedOn": "יוצא בתאריך {{date}}",
+    "files": "קבצים",
+    "attach": "צירוף קבצים",
+    "takePhoto": "צילום",
+    "fileLimits": "תמונות (JPEG,‏ PNG,‏ WebP) או PDF, עד {{mb}} MB לקובץ.",
+    "fileTooBig": "הקובץ {{name}} גדול מ־{{mb}} MB ולא נוסף.",
+    "removeFile": "הסרת {{name}}",
+    "fileRemoved": "הקובץ {{name}} הוסר",
+    "kb": "{{value}} KB",
+    "yes": "כן",
+    "no": "לא",
+    "dropFlag": "ירידה חדה",
+    "accidentFlag": "תאונה",
+    "liters": "{{value}} ל׳",
+    "addLater": "הוספה ועריכה של אלה יגיעו עם מסכי הקבלות והצעות המחיר.",
+    "col": {
+      "date": "תאריך",
+      "reading": "קילומטראז׳ / שעות מנוע",
+      "description": "תיאור",
+      "vendor": "ספק שירות",
+      "cost": "עלות",
+      "reportedAt": "דווחה",
+      "severity": "חומרה",
+      "state": "מצב",
+      "accident": "תאונה",
+      "downtime": "זמן השבתה",
+      "resolvedAt": "טופלה",
+      "fluid": "נוזל",
+      "liters": "ליטרים",
+      "notes": "הערות",
+      "economy": "צריכה",
+      "drop": "ירידה חדה",
+      "from": "ממיקום",
+      "to": "למיקום",
+      "inspectionKind": "בדיקה",
+      "validUntil": "בתוקף עד",
+      "passed": "עבר",
+      "inspector": "בודק",
+      "note": "הערה",
+      "createdBy": "נוסף על ידי",
+      "documentKind": "סוג",
+      "category": "קטגוריה",
+      "amount": "סכום",
+      "supplier": "ספק",
+      "quoteStatus": "סטטוס",
+      "lines": "שורות",
+      "total": "סה״כ",
+      "purchasePrice": "מחיר רכישה",
+      "warrantyTerms": "תנאי אחריות"
+    },
+    "field": {
+      "nextServiceDate": "תאריך הטיפול הבא (לא חובה)",
+      "nextServiceReading": "הטיפול הבא ב־{{unit}} (לא חובה)",
+      "readingHint": "הקריאה בתדלוק הזה; לפיה מחושבת הצריכה.",
+      "resolvedHint": "ריק = היום."
+    },
+    "filter": {
+      "accidents": "תאונות בלבד",
+      "drops": "ירידות חדות בלבד",
+      "location": "מיקום",
+      "mine": "שלי בלבד"
+    },
+    "error": {
+      "required": "שדה חובה.",
+      "invalid": "יש לבדוק את הערך.",
+      "tooSmall": "קטן מדי.",
+      "tooBig": "גדול מדי.",
+      "future": "לא יכול להיות בעתיד.",
+      "before_reported": "לא יכול להיות לפני תאריך הדיווח.",
+      "before_date": "חייב להיות אחרי תאריך הבדיקה.",
+      "same": "חייב להיות שונה מהמיקום הקודם.",
+      "save": "השמירה נכשלה. נסו שוב.",
+      "forbidden": "אין לך הרשאה לשנות את זה.",
+      "delete": "המחיקה נכשלה. נסו שוב.",
+      "load": "לא ניתן לטעון את הרשומות.",
+      "export": "לא ניתן ליצור את קובץ האקסל. נסו שוב.",
+      "upload": "נשמר, אבל הקבצים לא הועלו. נסו שוב.",
+      "fileTooBig": "נשמר, אבל אחד הקבצים גדול מדי.",
+      "fileType": "נשמר, אבל אחד הקבצים אינו תמונה או PDF."
+    },
+    "unit": {
+      "km": "ק״מ",
+      "hours": "ש׳",
+      "kmPerL": "ק״מ/ל׳",
+      "lPerHour": "ל׳/ש׳",
+      "liters": "ל׳",
+      "ils": "₪"
+    },
+    "chart": {
+      "titleKm": "צריכת דלק לכל תדלוק, ק״מ לליטר",
+      "titleHours": "צריכת דלק לכל תדלוק, ליטר לשעת מנוע",
+      "dropsFound": "ירידות חדות: {{count}}",
+      "noDrops": "אין ירידות חדות",
+      "notEnough": "לגרף נדרשים שני תדלוקים עם קריאת מונה.",
+      "usual": "בדרך כלל: {{value}}",
+      "drop": "ירידה חדה",
+      "dropLabel": "‎−{{pct}}%"
+    },
+    "documentKind": {
+      "RECEIPT": "קבלה",
+      "INVOICE": "חשבונית",
+      "OTHER": "אחר"
+    },
+    "quoteStatus": {
+      "REQUESTED": "התבקשה",
+      "RECEIVED": "התקבלה",
+      "APPROVED": "אושרה",
+      "ORDERED": "הוזמנה",
+      "REJECTED": "נדחתה"
     }
   }
 }

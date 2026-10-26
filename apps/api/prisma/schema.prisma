@@ -52,6 +52,9 @@ enum EventType {
   DOCUMENT_ADDED
   QUOTE_LINKED
   NOTE_ADDED
+  RECORD_EDITED
+  RECORD_DELETED
+  RECORD_RESTORED
 }
 
 enum MalfunctionSeverity {
@@ -242,6 +245,8 @@ model Event {
   params     Json      @default("{}")
   sourceType String?
   sourceId   String?
+  /// Set while the source record is deleted, so its entries drop out of timelines until Undo.
+  hiddenAt   DateTime?
   createdAt  DateTime  @default(now())
 
   @@index([vehicleId, occurredAt])
@@ -385,7 +390,8 @@ model Attachment {
   storagePath  String
   thumbPath    String?
   uploadedById String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
 
   @@index([ownerType, ownerId])
 }

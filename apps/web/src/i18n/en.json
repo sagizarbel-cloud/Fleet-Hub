@@ -151,7 +151,12 @@
     "ITEM_REMOVED": "Item removed: {{item}}",
     "DOCUMENT_ADDED": "Receipt added: {{category}}, {{amount}}",
     "QUOTE_LINKED": "Price quote from {{supplier}}",
-    "NOTE_ADDED": "Note added"
+    "NOTE_ADDED": "Note added",
+    "STATUS_OVERRIDDEN_REASON": "Status set manually to {{to}}: {{reason}}",
+    "STATUS_OVERRIDE_CLEARED": "Manual status cleared, now {{to}}",
+    "RECORD_EDITED": "{{record}} edited: {{detail}}",
+    "RECORD_DELETED": "{{record}} deleted: {{detail}}",
+    "RECORD_RESTORED": "{{record}} restored: {{detail}}"
   },
   "severity": {
     "LOW": "low",
@@ -189,7 +194,15 @@
       "noWarranty": "No warranty recorded",
       "empty": "Nothing recorded yet.",
       "close": "Close",
-      "preview": "Latest entries. Adding, editing and Excel export come next."
+      "one": {
+        "service": "Service",
+        "malfunctions": "Malfunction",
+        "fluids": "Fluid addition",
+        "fuel": "Fill-up",
+        "movements": "Location change",
+        "inspections": "Inspection",
+        "notes": "Note"
+      }
     },
     "copy": "Click to copy",
     "copied": "Copied",
@@ -271,6 +284,157 @@
     "ownership": {
       "purchaseDate": "Purchase date",
       "warrantyExpiry": "Warranty expiry"
+    },
+    "override": {
+      "title": "Set the status by hand",
+      "manual": "Manual",
+      "currentAuto": "The status is worked out from malfunctions, the annual test and insurance.",
+      "currentManual": "Set by hand: {{reason}}",
+      "choose": "Status",
+      "reason": "Reason (required)",
+      "set": "Set status",
+      "clear": "Back to automatic"
+    }
+  },
+  "malfunctionState": {
+    "OPEN": "Open",
+    "IN_PROGRESS": "In progress",
+    "RESOLVED": "Resolved"
+  },
+  "records": {
+    "add": "Add",
+    "addTitle": "Add {{record}}",
+    "editTitle": "Edit {{record}}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "actions": "Actions",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "choose": "Choose…",
+    "added": "Added",
+    "saved": "Saved",
+    "deleted": "{{record}} deleted",
+    "undo": "Undo",
+    "dismiss": "Dismiss",
+    "undoFailed": "Couldn't undo. Try again.",
+    "search": "Search",
+    "from": "From",
+    "to": "To",
+    "filterAll": "{{name}}: all",
+    "noMatch": "No records match these filters.",
+    "showing": "Showing {{shown}} of {{total}}",
+    "more": "Show more",
+    "export": "Export to Excel",
+    "exportedOn": "Exported {{date}}",
+    "files": "Files",
+    "attach": "Attach files",
+    "takePhoto": "Take photo",
+    "fileLimits": "Photos (JPEG, PNG, WebP) or PDF, up to {{mb}} MB each.",
+    "fileTooBig": "{{name}} is over {{mb}} MB and wasn't added.",
+    "removeFile": "Remove {{name}}",
+    "fileRemoved": "{{name}} removed",
+    "kb": "{{value}} KB",
+    "yes": "Yes",
+    "no": "No",
+    "dropFlag": "Sudden drop",
+    "accidentFlag": "Accident",
+    "liters": "{{value}} L",
+    "addLater": "Adding and editing these comes with the receipts and quotes screens.",
+    "col": {
+      "date": "Date",
+      "reading": "Odometer / engine hours",
+      "description": "Description",
+      "vendor": "Vendor",
+      "cost": "Cost",
+      "reportedAt": "Reported",
+      "severity": "Severity",
+      "state": "State",
+      "accident": "Accident",
+      "downtime": "Downtime",
+      "resolvedAt": "Resolved",
+      "fluid": "Fluid",
+      "liters": "Litres",
+      "notes": "Notes",
+      "economy": "Economy",
+      "drop": "Sudden drop",
+      "from": "From",
+      "to": "To",
+      "inspectionKind": "Inspection",
+      "validUntil": "Valid until",
+      "passed": "Passed",
+      "inspector": "Inspector",
+      "note": "Note",
+      "createdBy": "Added by",
+      "documentKind": "Type",
+      "category": "Category",
+      "amount": "Amount",
+      "supplier": "Supplier",
+      "quoteStatus": "Status",
+      "lines": "Lines",
+      "total": "Total",
+      "purchasePrice": "Purchase price",
+      "warrantyTerms": "Warranty terms"
+    },
+    "field": {
+      "nextServiceDate": "Next service date (optional)",
+      "nextServiceReading": "Next service at, {{unit}} (optional)",
+      "readingHint": "The reading at this fill-up; it's what economy is worked out from.",
+      "resolvedHint": "Leave empty for today."
+    },
+    "filter": {
+      "accidents": "Accidents only",
+      "drops": "Sudden drops only",
+      "location": "Location",
+      "mine": "Mine only"
+    },
+    "error": {
+      "required": "Required.",
+      "invalid": "Check this value.",
+      "tooSmall": "Too small.",
+      "tooBig": "Too large.",
+      "future": "Can't be in the future.",
+      "before_reported": "Can't be before the report date.",
+      "before_date": "Must be after the inspection date.",
+      "same": "Must differ from the starting location.",
+      "save": "Couldn't save. Try again.",
+      "forbidden": "You don't have permission to change this.",
+      "delete": "Couldn't delete. Try again.",
+      "load": "Couldn't load these records.",
+      "export": "Couldn't create the Excel file. Try again.",
+      "upload": "Saved, but the files didn't upload. Try again.",
+      "fileTooBig": "Saved, but a file is too large.",
+      "fileType": "Saved, but a file isn't a photo or PDF."
+    },
+    "unit": {
+      "km": "km",
+      "hours": "h",
+      "kmPerL": "km/L",
+      "lPerHour": "L/h",
+      "liters": "L",
+      "ils": "₪"
+    },
+    "chart": {
+      "titleKm": "Fuel economy per fill-up, km/L",
+      "titleHours": "Fuel use per fill-up, L per engine hour",
+      "dropsFound": "Sudden drops: {{count}}",
+      "noDrops": "No sudden drops",
+      "notEnough": "Two fill-ups with readings are needed for the chart.",
+      "usual": "Usual: {{value}}",
+      "drop": "Sudden drop",
+      "dropLabel": "−{{pct}}%"
+    },
+    "documentKind": {
+      "RECEIPT": "Receipt",
+      "INVOICE": "Invoice",
+      "OTHER": "Other"
+    },
+    "quoteStatus": {
+      "REQUESTED": "Requested",
+      "RECEIVED": "Received",
+      "APPROVED": "Approved",
+      "ORDERED": "Ordered",
+      "REJECTED": "Rejected"
     }
   }
 }

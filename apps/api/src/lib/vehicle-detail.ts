@@ -29,9 +29,13 @@ const detailSelect = {
   safetyCheckExpiry: true,
   status: true,
   statusOverride: true,
+  statusOverrideReason: true,
   hasStartCode: true,
   purchaseDate: true,
+  purchasePrice: true,
+  warrantyTerms: true,
   warrantyExpiry: true,
+  supplier: { select: { name: true } },
   type: { select: { code: true, category: true, usageUnit: true } },
   department: { select: { code: true } },
   location: { select: { code: true } },
@@ -127,7 +131,7 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
       select: { date: true, toLocation: { select: { code: true } } },
     }),
     app.db.event.findFirst({
-      where: { vehicleId },
+      where: { vehicleId, hiddenAt: null },
       orderBy: { occurredAt: 'desc' },
       select: { occurredAt: true },
     }),
@@ -151,12 +155,14 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
     }),
   ]);
 
-  const { id: _id, type, department, location, ...fields } = vehicle;
+  const { id: _id, type, department, location, supplier, purchasePrice, ...fields } = vehicle;
   const costYtd =
     (serviceCost._sum.cost?.toNumber() ?? 0) + (malfunctionCost._sum.cost?.toNumber() ?? 0);
 
   return {
     ...fields,
+    purchasePrice: purchasePrice?.toNumber() ?? null,
+    supplier: supplier?.name ?? null,
     type: type.code,
     category: type.category,
     usageUnit: type.usageUnit,

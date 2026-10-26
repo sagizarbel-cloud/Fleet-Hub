@@ -19,8 +19,10 @@ export function gridOrder(tiles: Tile[]) {
 
 function isTyping(target: EventTarget | null) {
   return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))
+    (target instanceof HTMLElement &&
+      (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))) ||
+    // A form sheet is open over the page.
+    !!document.querySelector('[aria-modal="true"]')
   );
 }
 

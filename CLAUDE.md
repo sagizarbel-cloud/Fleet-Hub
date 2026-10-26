@@ -25,7 +25,7 @@ Bilingual (English/Hebrew, RTL) fleet-management web app, self-hosted on our own
 - `pnpm lint` · `pnpm format` · `pnpm typecheck` · `pnpm test` (Vitest; api tests use `DATABASE_URL_TEST`) · `pnpm e2e` (Playwright, against `pnpm dev` and the seeded dev DB)
 - `pnpm db:migrate` · `pnpm db:seed` (wipes and reloads the fake fleet) · `pnpm db:reset`
 - `pnpm i18n:check` (fails on any key without a Hebrew value; also the hidden `/i18n-check` page)
-- `pnpm check:arm64` (static: arm64 Prisma engine + argon2 prebuilt) · `pnpm docker:arm64` (full: installs and loads the api in a linux/arm64 container; needs an ARM host or QEMU)
+- `pnpm check:arm64` (static: arm64 Prisma engine + argon2 and sharp prebuilts) · `pnpm docker:arm64` (full: installs and loads the api in a linux/arm64 container; needs an ARM host or QEMU)
 - Seed logins: `admin@`, `editor@`, `viewer@fleethub.test`, password `SEED_PASSWORD` from `.env`
 - Screenshots: `SCREENSHOTS=1 pnpm --filter @fleet-hub/web exec playwright test screenshots` → `docs/screenshots/`
 
