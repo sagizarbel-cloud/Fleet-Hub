@@ -7,6 +7,8 @@ import { HttpError } from './lib/http';
 import { authPlugin } from './plugins/auth';
 import { dbPlugin } from './plugins/db';
 import { authRoutes } from './routes/auth';
+import { dashboardRoutes } from './routes/dashboard';
+import { eventRoutes } from './routes/events';
 import { lookupRoutes } from './routes/lookups';
 import { vehicleRoutes } from './routes/vehicles';
 
@@ -65,6 +67,8 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
   });
   await app.register(lookupRoutes, { prefix: '/api/lookups' });
   await app.register(vehicleRoutes, { prefix: '/api/vehicles' });
+  await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
+  await app.register(eventRoutes, { prefix: '/api/events' });
 
   return app;
 }

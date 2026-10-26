@@ -284,7 +284,7 @@ async function main() {
 
   // Users
   const password = await hash(process.env.SEED_PASSWORD ?? 'fleethub-dev');
-  const [admin, editor] = await Promise.all(
+  const [admin, editor, viewer] = await Promise.all(
     [
       { email: 'admin@fleethub.test', role: 'ADMIN' as const, canViewStartCodes: true },
       { email: 'editor@fleethub.test', role: 'EDITOR' as const, canViewStartCodes: false },
@@ -294,6 +294,7 @@ async function main() {
     ),
   );
   const userIds = [admin!.id, editor!.id];
+  const quoteAuthors = [admin!.id, editor!.id, viewer!.id];
 
   // Lookups
   await db.department.createMany({ data: departments.map((d, i) => ({ ...d, sortOrder: i })) });
@@ -685,6 +686,9 @@ async function main() {
         date,
         validUntil: new Date(date.getTime() + 30 * DAY),
         status: quoteStatuses[i]!,
+        // Mix of creators and visibility levels so the quote rules have something to filter.
+        createdById: quoteAuthors[i % quoteAuthors.length]!,
+        visibility: (['STANDARD', 'PUBLIC', 'STANDARD', 'ADMINS', 'PUBLIC'] as const)[i]!,
         lines: {
           create: Array.from({ length: faker.number.int({ min: 2, max: 5 }) }, (_, n) => ({
             item: faker.helpers.arrayElement([
