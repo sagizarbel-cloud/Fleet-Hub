@@ -81,5 +81,9 @@
     "key": "Key",
     "english": "English",
     "hebrew": "Hebrew"
+  },
+  "drawings": {
+    "title": "Vehicle drawings",
+    "replay": "Replay"
   }
 }

@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import { AppShell } from '@/layout/AppShell';
 import { AREA_ROUTES, AREAS } from '@/layout/nav';
 import { AreaPage } from '@/pages/AreaPage';
+import { DrawingsPage } from '@/pages/DrawingsPage';
 import { I18nCheckPage } from '@/pages/I18nCheckPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
           : { path: AREA_ROUTES[area].path, element: <AreaPage area={area} /> },
       ),
       { path: '/i18n-check', element: <I18nCheckPage /> },
+      { path: '/drawings', element: <DrawingsPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
