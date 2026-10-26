@@ -347,6 +347,15 @@ export function VehicleStage({
           </motion.header>
 
           <div className="relative grid place-items-center py-2">
+            {/* The stage's panel fades in behind the drawing, so the flight is never clipped. */}
+            {tile && (
+              <motion.div
+                data-panel
+                {...toggleMotion}
+                aria-hidden
+                className="glass absolute inset-0"
+              />
+            )}
             {tile ? (
               <div
                 ref={heroRef}
@@ -371,7 +380,7 @@ export function VehicleStage({
                 {...toggleMotion}
                 role="group"
                 aria-label={t('vehicle.view')}
-                className="border-border bg-surface absolute end-0 top-2 flex rounded-lg border p-0.5 text-xs"
+                className="border-border bg-surface absolute end-2 top-2 flex rounded-lg border p-0.5 text-xs"
               >
                 {DETAIL_VIEWS.map((v) => (
                   <button

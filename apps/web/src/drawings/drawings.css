@@ -59,13 +59,13 @@
 
 /* Isometric solids: faces shaded by how they face the light (top brightest). */
 .vd svg .vd-front {
-  fill: color-mix(in srgb, var(--vd-color) 14%, var(--fh-bg));
+  fill: color-mix(in srgb, var(--vd-color) 14%, var(--fh-surface-strong));
 }
 .vd svg .vd-side {
-  fill: color-mix(in srgb, var(--vd-color) 9%, var(--fh-bg));
+  fill: color-mix(in srgb, var(--vd-color) 9%, var(--fh-surface-strong));
 }
 .vd svg .vd-top {
-  fill: color-mix(in srgb, var(--vd-color) 24%, var(--fh-bg));
+  fill: color-mix(in srgb, var(--vd-color) 24%, var(--fh-surface-strong));
 }
 .vd svg .vd-decal {
   fill: none;
@@ -76,5 +76,5 @@
 }
 /* Solids in generated top and side views hide what is behind them. */
 .vd svg .vd-solid {
-  fill: color-mix(in srgb, var(--vd-color) 15%, var(--fh-bg));
+  fill: color-mix(in srgb, var(--vd-color) 15%, var(--fh-surface-strong));
 }
