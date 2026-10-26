@@ -87,6 +87,13 @@ enum QuoteStatus {
   REJECTED
 }
 
+/// Who can see a quote (SPEC 5.6). Only admins change it.
+enum QuoteVisibility {
+  STANDARD // creator + admins (default)
+  PUBLIC // every signed-in user
+  ADMINS // admins only
+}
+
 enum LineCondition {
   IN_STOCK
   NEW
@@ -214,7 +221,7 @@ model Vehicle {
   inspections     Inspection[]
   notes           Note[]
   itemAssignments ItemAssignment[]
-  currentItems    Item[]           @relation("CurrentVehicle")
+  currentItems    Item[]            @relation("CurrentVehicle")
   documents       DocumentVehicle[]
   quotes          QuoteVehicle[]
 
@@ -417,12 +424,12 @@ model ItemAssignment {
 // ---------- Money ----------
 
 model Supplier {
-  id        String     @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   phone     String?
   email     String?
   notes     String?
-  createdAt DateTime   @default(now())
+  createdAt DateTime  @default(now())
   vehicles  Vehicle[]
   quotes    Quote[]
 }
@@ -458,21 +465,23 @@ model DocumentVehicle {
 }
 
 model Quote {
-  id          String         @id @default(cuid())
+  id          String          @id @default(cuid())
   supplierId  String
-  supplier    Supplier       @relation(fields: [supplierId], references: [id])
+  supplier    Supplier        @relation(fields: [supplierId], references: [id])
   date        DateTime
   validUntil  DateTime?
-  status      QuoteStatus    @default(REQUESTED)
+  status      QuoteStatus     @default(REQUESTED)
+  visibility  QuoteVisibility @default(STANDARD)
   notes       String?
   createdById String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   deletedAt   DateTime?
   lines       QuoteLine[]
   vehicles    QuoteVehicle[]
 
   @@index([date])
+  @@index([visibility, createdById])
 }
 
 model QuoteLine {
