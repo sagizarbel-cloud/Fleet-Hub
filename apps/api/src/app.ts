@@ -8,6 +8,7 @@ import { authPlugin } from './plugins/auth';
 import { dbPlugin } from './plugins/db';
 import { attachmentRoutes } from './routes/attachments';
 import { authRoutes } from './routes/auth';
+import { fleetRoutes } from './routes/fleet';
 import { dashboardRoutes } from './routes/dashboard';
 import { eventRoutes } from './routes/events';
 import { lookupRoutes } from './routes/lookups';
@@ -80,6 +81,7 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
   await app.register(itemRoutes, { prefix: '/api/items' });
   await app.register(meRoutes, { prefix: '/api/me' });
   await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
+  await app.register(fleetRoutes, { prefix: '/api/fleet' });
   await app.register(eventRoutes, { prefix: '/api/events' });
 
   return app;

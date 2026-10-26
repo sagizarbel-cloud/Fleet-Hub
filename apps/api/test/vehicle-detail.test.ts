@@ -190,6 +190,7 @@ describe('preferences', () => {
     expect((await get('/api/me/preferences', first)).json()).toEqual({
       pinnedVitals: ['status', 'usage', 'nextService', 'annualTest', 'location', 'department'],
       detailView: 'side',
+      fleetViewId: null,
     });
     const put = await app.inject({
       method: 'PUT',
@@ -202,6 +203,7 @@ describe('preferences', () => {
     expect((await get('/api/me/preferences', second)).json()).toEqual({
       pinnedVitals: ['fuelEconomy', 'status'],
       detailView: 'iso',
+      fleetViewId: null,
     });
   });
 

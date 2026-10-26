@@ -4,3 +4,4 @@ export * from './schemas';
 export * from './vitals';
 export * from './records';
 export * from './fuel';
+export * from './fleet';

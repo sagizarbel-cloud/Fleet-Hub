@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { MALFUNCTION_SEVERITIES, MALFUNCTION_STATES, ROLES, VEHICLE_STATUSES } from './enums';
 import { INSPECTION_KINDS, RECORD_KINDS, SORT_DIRS, type RecordKind } from './records';
 import { DETAIL_VIEWS, VITAL_KEYS } from './vitals';
+import { ALL_FLEET_COLUMNS, FLEET_GROUP_BY, FLEET_GROUPS } from './fleet';
 
 export const loginBody = z.object({
   email: z.email().max(254),
@@ -39,6 +40,8 @@ export const preferencesBody = z.object({
     .refine((keys) => new Set(keys).size === keys.length, 'duplicate')
     .optional(),
   detailView: z.enum(DETAIL_VIEWS).optional(),
+  /** The saved view the fleet table opens with; null for the built-in one. */
+  fleetViewId: z.string().min(1).max(40).nullable().optional(),
 });
 export type PreferencesBody = z.infer<typeof preferencesBody>;
 
@@ -206,3 +209,38 @@ export const attachmentQuery = z.object({
   ownerType: z.enum(ATTACHMENT_OWNERS),
   ownerId: z.string().min(1).max(40),
 });
+
+const unique = <T extends z.ZodType>(item: T, max: number) =>
+  z
+    .array(item)
+    .max(max)
+    .refine((list) => new Set(list).size === list.length, 'duplicate');
+const codes = unique(code, 50);
+
+export const fleetViewSettings = z.object({
+  columns: unique(z.enum(ALL_FLEET_COLUMNS as [string, ...string[]]), ALL_FLEET_COLUMNS.length),
+  collapsed: unique(z.enum(FLEET_GROUPS), FLEET_GROUPS.length),
+  sort: z
+    .array(
+      z.object({
+        id: z.enum(['serial', ...ALL_FLEET_COLUMNS] as [string, ...string[]]),
+        desc: z.boolean(),
+      }),
+    )
+    .max(3),
+  groupBy: z.enum(FLEET_GROUP_BY),
+  q: z.string().trim().max(100),
+  status: unique(z.enum(VEHICLE_STATUSES), VEHICLE_STATUSES.length),
+  types: codes,
+  departments: codes,
+  locations: codes,
+  due: z.boolean(),
+  issues: z.boolean(),
+});
+
+export const fleetViewBody = z.object({
+  name: text(60),
+  settings: fleetViewSettings,
+});
+export type FleetViewBody = z.infer<typeof fleetViewBody>;
+export const fleetViewParams = z.object({ id: z.string().min(1).max(40) });
