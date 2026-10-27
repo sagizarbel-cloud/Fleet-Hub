@@ -33,7 +33,7 @@ Every vehicle-changing write runs in one DB transaction: record + Event + recomp
 - Email + password, argon2id hashes. Server-side sessions in Postgres, `httpOnly; Secure; SameSite=Lax` cookie, 30-day sliding expiry so phone users stay logged in.
 - Roles viewer / editor / admin + `startCode:view` permission, checked on every route; zod validation on every input.
 - Login rate limit, Origin check on writes (CSRF), security headers via `@fastify/helmet`.
-- **Password reset without email:** an admin clicks "Reset password" on a user and gets a one-time link (valid 24 h, single use) to send by WhatsApp. Users can change their own password. Email delivery (`SMTP_*` in `.env`) can be added later without changing the token flow.
+- **Password reset without email:** an admin clicks "Reset password" on a user and gets a one-time link (valid 24 h, single use) to send by WhatsApp. Users can change their own password. Turning a user off ends their sessions; users are never deleted. The link page is `/reset/:token`; only a hash of the token is stored. Email delivery (`SMTP_*` in `.env`) can be added later without changing the token flow.
 - Start codes: AES-256-GCM with `FLEET_CODE_KEY`, audited reveal, never in lists, exports, search or logs.
 
 ## Performance
@@ -46,7 +46,11 @@ Every vehicle-changing write runs in one DB transaction: record + Event + recomp
 
 ## Excel import
 
-Admin-only **Import** page (Phase 7): upload .xlsx → pick sheet → map columns to fields (mapping saved for reuse) → dry-run preview with per-row errors → commit. Vehicles first, then history records; each imported record writes an Event marked "imported". Built on ExcelJS. Needs sample sheets from Sagi (real headers, blanked values).
+Admin-only **Import** page (`/settings/import`): upload .xlsx → pick sheet → pick a target (vehicles, the seven record types or equipment) → match columns to fields (guessed from English or Hebrew headers; the matching is saved per header set in `ImportMapping`) → dry run with per-row results → import.
+
+- The browser reads the workbook with ExcelJS and sends rows as JSON (`POST /api/import/:target/preview` and `/commit`, at most 5,000 rows); the file itself is never uploaded or stored.
+- Rows match by serial (vehicles and records); equipment by its serial, or by name and model when it has none. A re-import only writes the cells the sheet fills, and a value equal to the stored one is not a change, so importing the same sheet twice changes nothing.
+- Each commit is one `ImportRun`; the events it writes point to it and show an "Imported" badge on the timeline. Vehicles first, then history records.
 
 ## Deployment
 

@@ -2,12 +2,20 @@
 
 ## Status
 
-- Current phase: 6 — Receipts, quotes and equipment (built; waiting for Sagi's review in the PR)
-- Last completed phase: 5 — Fleet table
+- Current phase: 7 — Add / edit vehicle, settings, users and Excel import (built; waiting for Sagi's review in the PR)
+- Last completed phase: 6 — Receipts, quotes and equipment
 
 ## Phase log
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
+
+### Phase 7 — 2026-10-27
+
+- Shipped: Add / edit vehicle as a six-step sheet (type picked from the drawings, identity with VIN, plate and start code checks, assignment, compliance dates, ownership & warranty, photo or drawing); editors open it from Add in the top bar or the pencil on the vehicle page; a new tile springs into the grid. Photo style on the vehicle page only: a top photo with the side photo fading in over it, or an uploaded SVG drawing in place of the built-in one; vehicles without pictures keep the drawing. Settings (`/settings`): my language, theme (saved to the account and followed on every device), default vitals and password; lists in both languages (departments, locations, vehicle types, fluid types, receipt categories) with add, rename, hide, reorder and delete when unused, for editors and admins; users (admins): add, role, start-code permission, turn off (never deleted) and a one-time reset link (24 h) to copy or send on WhatsApp, opening `/reset/:token`. Excel import (admins, `/settings/import`): pick a sheet and a target (vehicles, the seven record types or equipment), match columns (guessed from English or Hebrew headers, remembered per header set), dry run with per-row results, then import; a re-import fills only the cells the sheet has; imported events carry an "Imported" badge.
+- API: `/api/settings/lookups`, `/api/users` (+ reset link), `/api/auth/password` and `/api/auth/reset/:token`, `/api/vehicles` add / edit and picture routes, `/api/import` (mapping, preview, commit). Vehicle edits write one VEHICLE_UPDATED event naming the fields; a picture change right after an edit joins the same event. SVG uploads are cleaned with DOMPurify (via jsdom) on the server.
+- Database (migration `phase7_vehicles_import`, additive): `Vehicle.topPhotoId` / `sidePhotoId`, `Event.importRunId`, tables `ImportRun` and `ImportMapping`. New packages: `dompurify` and `jsdom` (api, approved by Sagi for SVG).
+- Tests: 123 api tests (30 new: lists, users and reset links, password change, vehicle add / edit / pictures / SVG cleaning, import dry run, commit, re-import and saved matching), 20 web unit tests (sheet reader), 59 Playwright tests (6 new: stepper, edit with photos, lists, users and reset link, import, viewer settings). Language switches in e2e now wait for the account save. Screenshots in `docs/screenshots/phase-7/`.
+- Deferred: trying the import on Sagi's own sheets (waiting for his blanked samples).
 
 ### Phase 6 — 2026-10-27
 
@@ -101,6 +109,8 @@
 - The table's settings live in the URL (`?view=` plus `?s=` for unsaved changes), so Back, reload and shared links keep them. A view's "(changed)" mark shows when the screen differs from the saved view.
 - Maintenance cost in the table = service and repair (malfunction) costs, the same rule as the vehicle page's "maintenance cost this year". Receipts join in Phase 6.
 - Phase 6 (2026-10-27, from Sagi): new quotes start Standard; creators keep seeing their quote when an admin makes it Admins only, but it is then locked (only admins edit or delete it); public quotes are read-only for non-creators; viewers can add receipts as suggestions that editors and admins approve; unlinked receipts count in the cost columns. Approving or ordering a quote needs an editor or admin.
+- Phase 7 (2026-10-27, from Sagi): a re-import updates only the cells the sheet fills; the import covers vehicles, the seven record types and equipment (not receipts or quotes); the photo style shows on the vehicle page only; SVG drawings allowed, cleaned with DOMPurify; users are turned off, never deleted; editors can edit the lists too.
+- The account's language and theme win over the device's, so a phone and a PC look the same; "follow this device" is the default until a user picks one.
 - Tile drop (2026-10-27, Sagi): the tilted, turning top view still looked flat, so a tile only grows about 10% and glows while a file or item is over it. (The 3D isometric drawings only model the side facing the viewer, so they can't spin a full turn either.)
 - Start codes stay out of the fleet table completely, including the "has a start code" flag (SPEC A7).
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
@@ -117,4 +127,7 @@
 - Strip location data (EXIF GPS) from uploaded phone photos
 - Edit cells directly in the fleet table, and bulk actions (e.g. move several vehicles at once)
 - Pin a saved view for everyone as the team default (today each user stars their own)
+- Compress photos and receipts, and auto-edit them to look scanned (crop, straighten, contrast), to save space (Sagi, 2026-10-27)
+- Import: when a row has a cell that can't be read (e.g. a bad date), show the other fields' checks too, not only the read error
+- Reset page: send `Referrer-Policy: no-referrer` so the token never leaves in a referrer
 - Upgrade to newer majors (TypeScript 7, Vite 8, Prisma 7+, ESLint 10) once they settle
