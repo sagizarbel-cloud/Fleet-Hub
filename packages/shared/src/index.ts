@@ -6,3 +6,5 @@ export * from './records';
 export * from './fuel';
 export * from './fleet';
 export * from './money';
+export * from './admin';
+export * from './import';
