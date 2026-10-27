@@ -120,7 +120,7 @@ One hub for every receipt and invoice, each tagged with its vehicle's serial num
 - Receipts also appear in each vehicle's Documents tab.
 - Editors and admins add receipts directly. Viewers add them as suggestions: marked "Suggested", left out of every total, until an editor or admin approves (or rejects) them.
 - Cost columns and the vehicle's maintenance cost include approved receipts that aren't linked to a record (a linked receipt is already counted in its record). Fuel-category receipts count as fuel, the rest as maintenance. A receipt shared by several vehicles is split evenly between them.
-- Dropping a file on a dashboard tile opens a new receipt for that vehicle. While the file is over the tile, it grows about 10% and glows, and its top view tips onto a turntable and turns slowly (with reduced motion: grow and glow only).
+- Dropping a file on a dashboard tile opens a new receipt for that vehicle. While the file is over the tile, it grows about 10% and glows; the top view stays flat.
 - Later (not in scope now): auto-fill date, vendor and total from the photo.
 
 ### 5.6 Price quotes
