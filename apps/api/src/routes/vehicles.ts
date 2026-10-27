@@ -1,10 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Prisma } from '@prisma/client';
-import { listQuery, serialParam } from '@fleet-hub/shared';
+import multipart from '@fastify/multipart';
+import { listQuery, serialParam, vehiclePictureParams } from '@fleet-hub/shared';
 import { decryptStartCode } from '@fleet-hub/shared/crypto';
 import { HttpError, parse } from '../lib/http';
+import { cleanFileName, storePicture } from '../lib/uploads';
 import { vehicleDetail } from '../lib/vehicle-detail';
-import { requireStartCodeView, requireUser } from '../plugins/auth';
+import { parseVehicle, saveVehicle, vehicleForm } from '../lib/vehicle-write';
+import { requireRole, requireStartCodeView, requireUser } from '../plugins/auth';
 
 /**
  * Fields a vehicle list may return. Never add startCodeEnc here: start codes are
@@ -30,7 +33,23 @@ export const vehicleListSelect = {
   location: { select: { code: true } },
 } satisfies Prisma.VehicleSelect;
 
-export const vehicleRoutes: FastifyPluginAsync<{ codeKey: string }> = async (app, opts) => {
+/** Which Vehicle column holds each picture slot. */
+const SLOT_COLUMN = {
+  top: 'topPhotoId',
+  side: 'sidePhotoId',
+  drawing: 'customImageId',
+} as const;
+
+export const vehicleRoutes: FastifyPluginAsync<{
+  codeKey: string;
+  uploadDir: string;
+  maxMb: number;
+}> = async (app, opts) => {
+  await app.register(multipart, {
+    limits: { fileSize: opts.maxMb * 1024 * 1024, files: 1, fields: 0, parts: 1 },
+  });
+  const editor = { preHandler: requireRole('EDITOR') };
+
   app.get('/', { preHandler: requireUser }, async (req) => {
     const { cursor, limit } = parse(listQuery, req.query);
     const rows = await app.db.vehicle.findMany({
@@ -47,6 +66,105 @@ export const vehicleRoutes: FastifyPluginAsync<{ codeKey: string }> = async (app
   app.get('/:serial', { preHandler: requireUser }, async (req) => {
     const { serial } = parse(serialParam, req.params);
     return vehicleDetail(app, req.user!, serial);
+  });
+
+  // ---------- Add / edit (SPEC 5.8): editors and admins ----------
+
+  app.post('/', editor, async (req, reply) => {
+    const user = req.user!;
+    const saved = await app.db.$transaction(async (tx) => {
+      const { input, typeId } = await parseVehicle(tx, req.body);
+      return saveVehicle(tx, user, null, input, typeId, { codeKey: opts.codeKey, ip: req.ip });
+    });
+    void reply.status(201);
+    return saved;
+  });
+
+  /** The stepper's values for an existing vehicle: never the start code, only whether one is set. */
+  app.get('/:serial/form', editor, async (req) => {
+    const { serial } = parse(serialParam, req.params);
+    const form = await vehicleForm(app.db as unknown as Prisma.TransactionClient, serial);
+    if (!form) throw new HttpError(404, 'vehicle_not_found');
+    return { values: form.values, hasStartCode: form.hasStartCode };
+  });
+
+  app.put('/:serial', editor, async (req) => {
+    const { serial } = parse(serialParam, req.params);
+    const user = req.user!;
+    return app.db.$transaction(async (tx) => {
+      const { input, typeId } = await parseVehicle(tx, req.body);
+      return saveVehicle(tx, user, serial, input, typeId, { codeKey: opts.codeKey, ip: req.ip });
+    });
+  });
+
+  // ---------- Photos and custom drawing (SPEC A4, 5.8) ----------
+
+  app.put('/:serial/pictures/:slot', editor, async (req) => {
+    const { serial, slot } = parse(vehiclePictureParams, req.params);
+    const user = req.user!;
+    if (!req.isMultipart()) throw new HttpError(415, 'not_multipart');
+    const vehicle = await app.db.vehicle.findUnique({ where: { serial }, select: { id: true } });
+    if (!vehicle) throw new HttpError(404, 'vehicle_not_found');
+    const part = await req.file();
+    if (!part) throw new HttpError(400, 'no_files');
+    const buf = await part.toBuffer().catch((err: { code?: string }) => {
+      if (err.code === 'FST_REQ_FILE_TOO_LARGE') throw new HttpError(413, 'too_large');
+      throw err;
+    });
+    const file = await storePicture(opts.uploadDir, buf, slot === 'drawing');
+    return app.db.$transaction(async (tx) => {
+      const row = await tx.attachment.create({
+        data: {
+          ownerType: 'VehiclePicture',
+          ownerId: vehicle.id,
+          fileName: cleanFileName(part.filename),
+          uploadedById: user.id,
+          ...file,
+        },
+        select: { id: true },
+      });
+      await tx.vehicle.update({ where: { id: vehicle.id }, data: { [SLOT_COLUMN[slot]]: row.id } });
+      await tx.event.create({
+        data: {
+          type: 'VEHICLE_UPDATED',
+          vehicleId: vehicle.id,
+          occurredAt: new Date(),
+          userId: user.id,
+          params: { fields: [slot === 'drawing' ? 'drawing' : 'photos'] },
+          sourceType: 'Vehicle',
+          sourceId: vehicle.id,
+        },
+      });
+      return { id: row.id, mimeType: file.mimeType };
+    });
+  });
+
+  app.delete('/:serial/pictures/:slot', editor, async (req) => {
+    const { serial, slot } = parse(vehiclePictureParams, req.params);
+    const user = req.user!;
+    return app.db.$transaction(async (tx) => {
+      const v = await tx.vehicle.findUnique({
+        where: { serial },
+        select: { id: true, topPhotoId: true, sidePhotoId: true, customImageId: true },
+      });
+      if (!v) throw new HttpError(404, 'vehicle_not_found');
+      const current = v[SLOT_COLUMN[slot]];
+      if (!current) return { ok: true };
+      await tx.vehicle.update({ where: { id: v.id }, data: { [SLOT_COLUMN[slot]]: null } });
+      await tx.attachment.update({ where: { id: current }, data: { deletedAt: new Date() } });
+      await tx.event.create({
+        data: {
+          type: 'VEHICLE_UPDATED',
+          vehicleId: v.id,
+          occurredAt: new Date(),
+          userId: user.id,
+          params: { fields: [slot === 'drawing' ? 'drawing' : 'photos'] },
+          sourceType: 'Vehicle',
+          sourceId: v.id,
+        },
+      });
+      return { ok: true };
+    });
   });
 
   /**

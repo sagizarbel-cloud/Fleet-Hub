@@ -24,13 +24,16 @@
     "@fleet-hub/shared": "workspace:*",
     "@node-rs/argon2": "2.2.2",
     "@prisma/client": "6.19.3",
+    "dompurify": "3.2.6",
     "fastify": "5.12.7",
     "fastify-plugin": "^5.0.1",
+    "jsdom": "26.1.0",
     "sharp": "0.35.5",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@faker-js/faker": "10.6.0",
+    "@types/jsdom": "21.1.7",
     "@types/node": "22.20.5",
     "esbuild": "^0.25.0",
     "prisma": "6.19.3",

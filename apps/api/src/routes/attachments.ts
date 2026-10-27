@@ -39,6 +39,11 @@ async function ownerAllows(
   ownerId: string,
   write: boolean,
 ) {
+  // A vehicle's photos and custom drawing: everyone sees them; they change through the vehicle routes.
+  if (ownerType === 'VehiclePicture') {
+    const v = await db.vehicle.findUnique({ where: { id: ownerId }, select: { id: true } });
+    return !!v && !write;
+  }
   if (ownerType === 'Vehicle') {
     const v = await db.vehicle.findUnique({ where: { id: ownerId }, select: { id: true } });
     if (!v) return false;

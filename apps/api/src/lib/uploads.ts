@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import sharp from 'sharp';
 import { HttpError } from './http';
+import { looksLikeSvg, sanitizeSvg } from './svg';
 
 /** Accepted file types, recognised by their first bytes rather than the name or browser label. */
 const SIGNATURES: { mime: string; ext: string; test: (b: Buffer) => boolean }[] = [
@@ -74,3 +75,55 @@ export async function storeUpload(root: string, buf: Buffer) {
 }
 
 export const readStored = (root: string, rel: string) => readFile(resolveStored(root, rel));
+
+/** Longest side of a stored vehicle photo: sharp enough for the vehicle page, small to keep. */
+const PHOTO_MAX_PX = 1600;
+
+/**
+ * A vehicle's photo or custom drawing (SPEC A4, 5.8). Photos are re-encoded as WebP at most
+ * 1600 px (which also drops their location data); a drawing can also be an SVG, kept only
+ * after it has been cleaned.
+ */
+export async function storePicture(root: string, buf: Buffer, allowSvg: boolean) {
+  const now = new Date();
+  const dir = path.join(
+    String(now.getUTCFullYear()),
+    String(now.getUTCMonth() + 1).padStart(2, '0'),
+  );
+  await mkdir(path.join(path.resolve(root), dir), { recursive: true });
+  const name = randomBytes(16).toString('hex');
+
+  if (allowSvg && looksLikeSvg(buf)) {
+    const clean = sanitizeSvg(buf.toString('utf8'));
+    if (!clean) throw new HttpError(415, 'unsupported_type');
+    const out = Buffer.from(clean, 'utf8');
+    const storagePath = path.join(dir, `${name}.svg`);
+    await writeFile(resolveStored(root, storagePath), out, { flag: 'wx' });
+    return { mimeType: 'image/svg+xml', storagePath, thumbPath: null, sizeBytes: out.length };
+  }
+
+  const type = sniff(buf);
+  if (!type || !type.mime.startsWith('image/')) throw new HttpError(415, 'unsupported_type');
+  let photo: Buffer;
+  let thumb: Buffer;
+  try {
+    const img = sharp(buf).rotate();
+    photo = await img
+      .clone()
+      .resize(PHOTO_MAX_PX, PHOTO_MAX_PX, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+    thumb = await img
+      .clone()
+      .resize(320, 320, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 70 })
+      .toBuffer();
+  } catch {
+    throw new HttpError(415, 'unreadable_image');
+  }
+  const storagePath = path.join(dir, `${name}.webp`);
+  const thumbPath = path.join(dir, `${name}.thumb.webp`);
+  await writeFile(resolveStored(root, storagePath), photo, { flag: 'wx' });
+  await writeFile(resolveStored(root, thumbPath), thumb, { flag: 'wx' });
+  return { mimeType: 'image/webp', storagePath, thumbPath, sizeBytes: photo.length };
+}
