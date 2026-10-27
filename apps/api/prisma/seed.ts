@@ -10,7 +10,12 @@ import {
   PrismaClient,
   type VehicleCategory,
 } from '@prisma/client';
-import { deriveStatus, type VehicleTypeCode } from '@fleet-hub/shared';
+import {
+  DEFAULT_FLEET_VIEW,
+  deriveStatus,
+  type FleetViewSettings,
+  type VehicleTypeCode,
+} from '@fleet-hub/shared';
 import { encryptStartCode } from '@fleet-hub/shared/crypto';
 import { rm } from 'node:fs/promises';
 import sharp from 'sharp';
@@ -848,6 +853,28 @@ async function main() {
       attachments++;
     }
   }
+
+  // Two shared fleet-table views (SPEC 5.4).
+  const viewSettings = (v: Partial<FleetViewSettings>) =>
+    ({ ...DEFAULT_FLEET_VIEW, ...v }) as unknown as Prisma.InputJsonObject;
+  await db.savedView.createMany({
+    data: [
+      {
+        name: 'Due within 30 days',
+        createdById: admin!.id,
+        settings: viewSettings({ due: true, sort: [{ id: 'nextExpiry', desc: false }] }),
+      },
+      {
+        name: 'Machines by department',
+        createdById: editor!.id,
+        settings: viewSettings({
+          groupBy: 'department',
+          types: ['tracked_excavator', 'wheel_loader'],
+          columns: [...DEFAULT_FLEET_VIEW.columns, 'economy30', 'maintenance3m', 'fuel3m'],
+        }),
+      },
+    ],
+  });
 
   const counts = await db.vehicle.groupBy({ by: ['status'], _count: true });
   const summary = Object.fromEntries(counts.map((c) => [c.status, c._count]));

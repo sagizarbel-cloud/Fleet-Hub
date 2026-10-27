@@ -59,7 +59,6 @@
     "RED": "מושבת"
   },
   "areas": {
-    "fleetTable": "כל הכלים וכל השדות, בטבלה אחת, יופיעו כאן.",
     "receipts": "קבלות וחשבוניות לפי כלי יופיעו כאן.",
     "quotes": "הצעות מחיר לחלקי חילוף וכלים יופיעו כאן.",
     "equipment": "אביזרים וכלי עבודה והיסטוריית השיוך שלהם יופיעו כאן.",
@@ -294,7 +293,8 @@
       "reason": "סיבה (חובה)",
       "set": "קביעת סטטוס",
       "clear": "חזרה לקביעה אוטומטית"
-    }
+    },
+    "backToTable": "חזרה לטבלה המרוכזת"
   },
   "malfunctionState": {
     "OPEN": "פתוחה",
@@ -435,6 +435,126 @@
       "APPROVED": "אושרה",
       "ORDERED": "הוזמנה",
       "REJECTED": "נדחתה"
+    }
+  },
+  "fleet": {
+    "count": "{{shown}} מתוך {{total}} כלים",
+    "search": "סידורי, רישוי, שילדה, יצרן, דגם, מפעיל",
+    "error": "לא ניתן לטעון את הטבלה המרוכזת.",
+    "columns": "עמודות",
+    "resetColumns": "חזרה לעמודות של התצוגה",
+    "sortHint": "לחיצה ממיינת. Shift ולחיצה מוסיפים מיון שני.",
+    "groupMenu": "עמודות {{group}}",
+    "expandGroup": "הצגת כל העמודות שנבחרו",
+    "collapseGroup": "כיווץ לעמודה אחת",
+    "expandRow": "הצגת פרטי {{serial}}",
+    "collapseRow": "הסתרת פרטי {{serial}}",
+    "noDepartment": "ללא מחלקה",
+    "group": {
+      "identity": "זיהוי",
+      "status": "מצב וכשירות",
+      "usage": "שימוש",
+      "maintenance": "תחזוקה",
+      "compliance": "רישוי ובדיקות",
+      "ownership": "בעלות ואחריות",
+      "equipment": "ציוד",
+      "costs": "עלויות"
+    },
+    "col": {
+      "serial": "מספר סידורי",
+      "type": "סוג",
+      "make": "יצרן",
+      "model": "דגם",
+      "year": "שנה",
+      "vin": "מספר שילדה",
+      "licenseNo": "מספר רישוי",
+      "department": "מחלקה",
+      "location": "מיקום נוכחי",
+      "operator": "מפעיל / נהג",
+      "status": "מצב",
+      "readiness": "רמת כשירות",
+      "openIssues": "תקלות פתוחות",
+      "lastActivity": "פעילות אחרונה",
+      "usage": "קילומטראז׳ / שעות מנוע",
+      "economy30": "צריכת דלק, 30 יום",
+      "lastFuel": "תדלוק אחרון",
+      "nextService": "טיפול הבא",
+      "lastService": "טיפול אחרון",
+      "services12m": "טיפולים, 12 חודשים",
+      "nextExpiry": "תוקף קרוב",
+      "annualTest": "טסט שנתי",
+      "insurance": "ביטוח",
+      "safetyCheck": "בדיקת בודק מוסמך",
+      "warrantyExpiry": "תום אחריות",
+      "purchaseDate": "תאריך רכישה",
+      "supplier": "ספק",
+      "purchasePrice": "מחיר רכישה",
+      "items": "פריטים משויכים",
+      "total12m": "סה״כ, 12 חודשים",
+      "maintenance12m": "תחזוקה, 12 חודשים",
+      "fuel12m": "דלק, 12 חודשים",
+      "total3m": "סה״כ, 3 חודשים",
+      "maintenance3m": "תחזוקה, 3 חודשים",
+      "fuel3m": "דלק, 3 חודשים",
+      "odometerKm": "קילומטראז׳ (ק״מ)",
+      "engineHours": "שעות מנוע (ש׳)",
+      "economyKm": "צריכת דלק, 30 יום (ק״מ/ל׳)",
+      "economyHours": "צריכת דלק, 30 יום (ל׳/ש׳)",
+      "lastFuelDate": "תאריך תדלוק אחרון",
+      "lastFuelLiters": "תדלוק אחרון (ל׳)",
+      "nextServiceDate": "תאריך טיפול הבא",
+      "nextServiceKm": "טיפול הבא (ק״מ)",
+      "nextServiceHours": "טיפול הבא (ש׳)"
+    },
+    "due": {
+      "inDays": "בעוד {{count}} י׳",
+      "overdue": "באיחור {{count}} י׳",
+      "today": "היום"
+    },
+    "filter": {
+      "label": "מסננים",
+      "status": "מצב",
+      "type": "סוג",
+      "department": "מחלקה",
+      "location": "מיקום",
+      "due": "מועד בתוך 30 יום",
+      "issues": "תקלות פתוחות",
+      "clear": "ניקוי מסננים",
+      "done": "סיום"
+    },
+    "groupBy": {
+      "label": "קיבוץ לפי",
+      "none": "ללא קיבוץ",
+      "type": "סוג",
+      "department": "מחלקה"
+    },
+    "views": {
+      "label": "תצוגות שמורות",
+      "all": "כל הכלים",
+      "changed": "(שונתה)",
+      "by": "נשמרה על ידי {{name}}",
+      "makeDefault": "פתיחת הטבלה בתצוגה {{name}}",
+      "defaultHint": "הכוכב מסמן את התצוגה שבה הטבלה נפתחת עבורך.",
+      "update": "שמירת השינויים בתצוגה {{name}}",
+      "saveNew": "שמירה כתצוגה חדשה",
+      "rename": "שינוי שם",
+      "delete": "מחיקת תצוגה",
+      "confirmDelete": "למחוק את התצוגה \"{{name}}\" לכולם?",
+      "name": "שם התצוגה",
+      "save": "שמירה"
+    },
+    "detail": {
+      "services": "טיפולים אחרונים",
+      "malfunctions": "תקלות פתוחות",
+      "noOpen": "אין תקלות פתוחות.",
+      "openPanel": "פתיחה"
+    },
+    "export": {
+      "view": "התצוגה הנוכחית",
+      "viewHint": "השורות והעמודות שעל המסך",
+      "fleet": "כל הצי",
+      "fleetHint": "כל הכלים וכל הרשומות, גיליון לכל סוג",
+      "vehiclesSheet": "כלים"
     }
   }
 }

@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { FleetStage } from '@/fleet/FleetStage';
 import { AppShell } from '@/layout/AppShell';
-import { AREA_ROUTES, AREAS } from '@/layout/nav';
+import { AREA_ROUTES, AREAS, type Area } from '@/layout/nav';
 import { AreaPage } from '@/pages/AreaPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -20,15 +20,19 @@ const router = createBrowserRouter([
   {
     element: <AppShell />,
     children: [
-      // Dashboard and vehicle page share one persistent layout (SPEC 5.2).
+      // Dashboard, fleet table and vehicle page share one persistent layout (SPEC 5.2).
       {
         element: <FleetStage />,
         children: [
           { index: true, element: null },
+          { path: '/fleet', element: null },
           { path: '/vehicles/:serial', element: null },
         ],
       },
-      ...AREAS.filter((area) => area !== 'dashboard').map((area) => ({
+      ...AREAS.filter(
+        (area): area is Exclude<Area, 'dashboard' | 'fleetTable'> =>
+          area !== 'dashboard' && area !== 'fleetTable',
+      ).map((area) => ({
         path: AREA_ROUTES[area].path,
         element: <AreaPage area={area} />,
       })),

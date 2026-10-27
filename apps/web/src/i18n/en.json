@@ -59,7 +59,6 @@
     "RED": "Inoperable"
   },
   "areas": {
-    "fleetTable": "Every vehicle and every field, in one table, will appear here.",
     "receipts": "Receipts and invoices tagged by vehicle will appear here.",
     "quotes": "Price quotes for parts and tools will appear here.",
     "equipment": "Attachable equipment and its assignment history will appear here.",
@@ -294,7 +293,8 @@
       "reason": "Reason (required)",
       "set": "Set status",
       "clear": "Back to automatic"
-    }
+    },
+    "backToTable": "Back to the fleet table"
   },
   "malfunctionState": {
     "OPEN": "Open",
@@ -435,6 +435,126 @@
       "APPROVED": "Approved",
       "ORDERED": "Ordered",
       "REJECTED": "Rejected"
+    }
+  },
+  "fleet": {
+    "count": "{{shown}} of {{total}} vehicles",
+    "search": "Serial, plate, VIN, make, model, operator",
+    "error": "Couldn't load the fleet table.",
+    "columns": "Columns",
+    "resetColumns": "Back to this view's columns",
+    "sortHint": "Click to sort. Shift-click to add a second sort.",
+    "groupMenu": "{{group}} columns",
+    "expandGroup": "Show all chosen columns",
+    "collapseGroup": "Collapse to one column",
+    "expandRow": "Show details of {{serial}}",
+    "collapseRow": "Hide details of {{serial}}",
+    "noDepartment": "No department",
+    "group": {
+      "identity": "Identity",
+      "status": "Status & readiness",
+      "usage": "Usage",
+      "maintenance": "Maintenance",
+      "compliance": "Compliance",
+      "ownership": "Ownership & warranty",
+      "equipment": "Equipment",
+      "costs": "Costs"
+    },
+    "col": {
+      "serial": "Serial No.",
+      "type": "Type",
+      "make": "Make",
+      "model": "Model",
+      "year": "Year",
+      "vin": "VIN / Chassis No.",
+      "licenseNo": "License No.",
+      "department": "Department",
+      "location": "Current location",
+      "operator": "Operator / driver",
+      "status": "Status",
+      "readiness": "Readiness",
+      "openIssues": "Open malfunctions",
+      "lastActivity": "Last activity",
+      "usage": "Odometer / engine hours",
+      "economy30": "Fuel economy, 30 days",
+      "lastFuel": "Last fuel",
+      "nextService": "Next service",
+      "lastService": "Last service",
+      "services12m": "Services, 12 months",
+      "nextExpiry": "Next expiry",
+      "annualTest": "Annual test",
+      "insurance": "Insurance",
+      "safetyCheck": "Certified-inspector check",
+      "warrantyExpiry": "Warranty expiry",
+      "purchaseDate": "Purchase date",
+      "supplier": "Supplier",
+      "purchasePrice": "Purchase price",
+      "items": "Assigned items",
+      "total12m": "Total, 12 months",
+      "maintenance12m": "Maintenance, 12 months",
+      "fuel12m": "Fuel, 12 months",
+      "total3m": "Total, 3 months",
+      "maintenance3m": "Maintenance, 3 months",
+      "fuel3m": "Fuel, 3 months",
+      "odometerKm": "Odometer (km)",
+      "engineHours": "Engine hours (h)",
+      "economyKm": "Fuel economy, 30 days (km/L)",
+      "economyHours": "Fuel economy, 30 days (L/h)",
+      "lastFuelDate": "Last fuel date",
+      "lastFuelLiters": "Last fuel (L)",
+      "nextServiceDate": "Next service date",
+      "nextServiceKm": "Next service (km)",
+      "nextServiceHours": "Next service (h)"
+    },
+    "due": {
+      "inDays": "in {{count}} d",
+      "overdue": "{{count}} d overdue",
+      "today": "today"
+    },
+    "filter": {
+      "label": "Filters",
+      "status": "Status",
+      "type": "Type",
+      "department": "Department",
+      "location": "Location",
+      "due": "Due within 30 days",
+      "issues": "Open malfunctions",
+      "clear": "Clear filters",
+      "done": "Done"
+    },
+    "groupBy": {
+      "label": "Group by",
+      "none": "No grouping",
+      "type": "Type",
+      "department": "Department"
+    },
+    "views": {
+      "label": "Saved views",
+      "all": "All vehicles",
+      "changed": "(changed)",
+      "by": "Saved by {{name}}",
+      "makeDefault": "Open the table with {{name}}",
+      "defaultHint": "The star marks the view the table opens with for you.",
+      "update": "Save changes to {{name}}",
+      "saveNew": "Save as a new view",
+      "rename": "Rename",
+      "delete": "Delete view",
+      "confirmDelete": "Delete the view \"{{name}}\" for everyone?",
+      "name": "View name",
+      "save": "Save"
+    },
+    "detail": {
+      "services": "Latest services",
+      "malfunctions": "Open malfunctions",
+      "noOpen": "No open malfunctions.",
+      "openPanel": "Open"
+    },
+    "export": {
+      "view": "Current view",
+      "viewHint": "These rows and columns, as on screen",
+      "fleet": "Whole fleet",
+      "fleetHint": "Every vehicle and every record, one sheet each",
+      "vehiclesSheet": "Vehicles"
     }
   }
 }

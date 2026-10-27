@@ -11,25 +11,31 @@ export interface SheetSpec {
   rows: RecordRow[];
   ctx: FormatCtx;
   fileName: string;
+  /** Adds a Files column listing each row's attachments (default true). */
+  files?: boolean;
+  /** Rows from several vehicles: each row formats with its own vehicle's unit. */
+  rowCtx?: (row: RecordRow) => FormatCtx;
 }
 
 const HEADER_ROW = 4;
 
 /** Units in the header so the cells can stay plain numbers that sum. */
-function header(col: Column, ctx: FormatCtx) {
+function header(col: Column, ctx: FormatCtx, mixed: boolean) {
   const name = ctx.t(col.header as never) as string;
   const unit =
-    col.key === 'reading'
-      ? ctx.t(ctx.unit === 'KM' ? 'records.unit.km' : 'records.unit.hours')
-      : col.key === 'economy'
-        ? ctx.t(ctx.unit === 'KM' ? 'records.unit.kmPerL' : 'records.unit.lPerHour')
-        : col.key === 'liters'
-          ? ctx.t('records.unit.liters')
-          : col.key === 'downtimeHours'
-            ? ctx.t('records.unit.hours')
-            : col.kind === 'money'
-              ? ctx.t('records.unit.ils')
-              : '';
+    mixed && (col.key === 'reading' || col.key === 'economy')
+      ? ''
+      : col.key === 'reading'
+        ? ctx.t(ctx.unit === 'KM' ? 'records.unit.km' : 'records.unit.hours')
+        : col.key === 'economy'
+          ? ctx.t(ctx.unit === 'KM' ? 'records.unit.kmPerL' : 'records.unit.lPerHour')
+          : col.key === 'liters'
+            ? ctx.t('records.unit.liters')
+            : col.key === 'downtimeHours'
+              ? ctx.t('records.unit.hours')
+              : col.kind === 'money'
+                ? ctx.t('records.unit.ils')
+                : '';
   return unit ? `${name} (${unit})` : name;
 }
 
@@ -48,10 +54,20 @@ function cell(col: Column, row: RecordRow, ctx: FormatCtx): ExcelJS.CellValue {
  * Rows come from the record API, which never carries start codes.
  */
 export async function buildWorkbook(spec: SheetSpec) {
-  const { ctx } = spec;
+  return buildBook([spec]);
+}
+
+/** Several sheets in one workbook, e.g. the whole-fleet export. */
+export async function buildBook(sheets: SheetSpec[]) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Fleet Hub';
   wb.created = new Date();
+  for (const spec of sheets) addSheet(wb, spec);
+  return wb;
+}
+
+function addSheet(wb: ExcelJS.Workbook, spec: SheetSpec) {
+  const { ctx } = spec;
   const rtl = ctx.lang === 'he';
   // Sheet names: at most 31 characters, none of : \ / ? * [ ].
   const name = spec.title.replace(/\s*[:\\/?*[\]]\s*/g, ' - ').slice(0, 31);
@@ -67,8 +83,11 @@ export async function buildWorkbook(spec: SheetSpec) {
   });
 
   const columns = [...spec.columns];
-  const filesHeader = ctx.t('records.files');
-  const headers = [...columns.map((c) => header(c, ctx)), filesHeader];
+  const files = spec.files !== false;
+  const headers = [
+    ...columns.map((c) => header(c, ctx, !!spec.rowCtx)),
+    ...(files ? [ctx.t('records.files')] : []),
+  ];
   const head = ws.getRow(HEADER_ROW);
   head.values = headers as ExcelJS.CellValue[];
   head.font = { bold: true };
@@ -78,9 +97,10 @@ export async function buildWorkbook(spec: SheetSpec) {
   });
 
   for (const row of spec.rows) {
+    const rowCtx = spec.rowCtx?.(row) ?? ctx;
     ws.addRow([
-      ...columns.map((c) => cell(c, row, ctx)),
-      row.attachments.map((a) => a.fileName).join(', ') || null,
+      ...columns.map((c) => cell(c, row, rowCtx)),
+      ...(files ? [row.attachments.map((a) => a.fileName).join(', ') || null] : []),
     ]);
   }
 
@@ -105,11 +125,12 @@ export async function buildWorkbook(spec: SheetSpec) {
     from: { row: HEADER_ROW, column: 1 },
     to: { row: HEADER_ROW, column: headers.length },
   };
-  return wb;
 }
 
-export async function downloadWorkbook(spec: SheetSpec) {
-  const wb = await buildWorkbook(spec);
+export async function downloadWorkbook(
+  spec: SheetSpec | { fileName: string; sheets: SheetSpec[] },
+) {
+  const wb = await buildBook('sheets' in spec ? spec.sheets : [spec]);
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

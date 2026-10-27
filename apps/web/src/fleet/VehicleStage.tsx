@@ -71,6 +71,8 @@ interface Props {
   fromDashboard: boolean;
   /** Arrived from the neighbouring vehicle with Prev / Next: slide in from that side. */
   slide: SlideDirection | null;
+  /** Where Back leads when there is no history to go back to. */
+  home: 'dashboard' | 'fleet';
   onReturnStart: () => void;
   onClosed: () => void;
 }
@@ -87,6 +89,7 @@ export function VehicleStage({
   returning,
   fromDashboard,
   slide,
+  home,
   onReturnStart,
   onClosed,
 }: Props) {
@@ -206,8 +209,8 @@ export function VehicleStage({
   const back = useCallback(() => {
     if (returning) return;
     if (fromDashboard) navigate(-1);
-    else navigate('/');
-  }, [returning, fromDashboard, navigate]);
+    else navigate(home === 'fleet' ? '/fleet' : '/');
+  }, [returning, fromDashboard, home, navigate]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !e.defaultPrevented && back();
@@ -303,8 +306,8 @@ export function VehicleStage({
                 type="button"
                 onClick={back}
                 className="border-border hover:bg-border grid size-9 place-items-center rounded-lg border"
-                aria-label={t('vehicle.back')}
-                title={t('vehicle.back')}
+                aria-label={t(home === 'fleet' ? 'vehicle.backToTable' : 'vehicle.back')}
+                title={t(home === 'fleet' ? 'vehicle.backToTable' : 'vehicle.back')}
               >
                 <ArrowLeft aria-hidden className="size-4 rtl:-scale-x-100" />
               </button>

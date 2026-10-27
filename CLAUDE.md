@@ -10,7 +10,7 @@ Bilingual (English/Hebrew, RTL) fleet-management web app, self-hosted on our own
 ## Stack (confirmed in Phase 0; update here if it changes)
 
 - pnpm monorepo
-  - `apps/web` — React + TypeScript + Vite, Tailwind CSS, shadcn/ui, Motion, react-i18next, React Router, TanStack Query + Table, Recharts, ExcelJS
+  - `apps/web` — React + TypeScript + Vite, Tailwind CSS, shadcn/ui, Motion, react-i18next, React Router, TanStack Query + Table + Virtual, Recharts, ExcelJS
   - `apps/api` — Node.js (LTS) + TypeScript + Fastify, Prisma, PostgreSQL
   - `packages/shared` — zod schemas and types shared by web and api
 - Auth: email + password (argon2id), httpOnly session cookies, roles viewer / editor / admin, plus a `startCode:view` permission

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation, useMatch } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
@@ -13,16 +13,33 @@ import { Timeline } from './Timeline';
 import { VehicleStage } from './VehicleStage';
 
 type Phase = 'home' | 'open' | 'returning';
+type Home = 'dashboard' | 'fleet';
+
+// The table, its column model and Excel load only when someone opens the fleet table.
+const FleetTable = lazy(() => import('./table/FleetTable'));
+
+const Spinner = ({ label }: { label: string }) => (
+  <div className="text-muted grid min-h-[50vh] place-items-center" role="status">
+    <Loader2 aria-hidden className="size-6 animate-spin" />
+    <span className="sr-only">{label}</span>
+  </div>
+);
 
 /**
- * Dashboard and vehicle page in one persistent layout (SPEC 5.2). Both routes render
- * this component, so the grid, and the vehicle flying out of it, never unmount.
+ * Dashboard, fleet table and vehicle page in one persistent layout (SPEC 5.2, 5.4). All three
+ * routes render this component, so the grid or the table, and the vehicle flying out of it,
+ * never unmount.
  */
 export function FleetStage() {
   const { t, i18n } = useTranslation();
   const routeSerial = useMatch('/vehicles/:serial')?.params.serial ?? null;
+  const onTable = useMatch('/fleet') !== null;
   const location = useLocation();
-  const state = location.state as { fromDashboard?: boolean; slide?: 1 | -1 } | null;
+  const state = location.state as {
+    fromDashboard?: boolean;
+    from?: Home;
+    slide?: 1 | -1;
+  } | null;
   const fromDashboard = state?.fromDashboard === true;
   const slideFrom = state?.slide ?? null;
   const dashboard = useDashboard();
@@ -32,6 +49,13 @@ export function FleetStage() {
   const [phase, setPhase] = useState<Phase>(routeSerial ? 'open' : 'home');
   const [tilesBack, setTilesBack] = useState(false);
   const [seenRoute, setSeenRoute] = useState(routeSerial);
+  // What sits behind the vehicle page: where it was opened from (a deep link: the dashboard).
+  const [home, setHome] = useState<Home>(
+    onTable || state?.from === 'fleet' ? 'fleet' : 'dashboard',
+  );
+  if (!routeSerial && home !== (onTable ? 'fleet' : 'dashboard')) {
+    setHome(onTable ? 'fleet' : 'dashboard');
+  }
 
   // Follow the route (button, Esc, swipe and browser Back all just change it).
   if (seenRoute !== routeSerial) {
@@ -46,8 +70,9 @@ export function FleetStage() {
   }
 
   useEffect(() => {
-    if (!routeSerial) document.title = `${t('nav.dashboard')} · ${t('app.name')}`;
-  }, [routeSerial, t]);
+    if (!routeSerial && home === 'dashboard')
+      document.title = `${t('nav.dashboard')} · ${t('app.name')}`;
+  }, [routeSerial, home, t]);
 
   // The stage scrolls on its own; keep the page underneath still.
   useEffect(() => {
@@ -81,16 +106,19 @@ export function FleetStage() {
     }
   };
 
-  let home;
-  if (dashboard.isPending) {
-    home = (
-      <div className="text-muted grid min-h-[50vh] place-items-center" role="status">
-        <Loader2 aria-hidden className="size-6 animate-spin" />
-        <span className="sr-only">{t('common.loading')}</span>
+  let behind;
+  if (home === 'fleet') {
+    behind = (
+      <div inert={phase === 'open'} aria-hidden={phase === 'open' || undefined}>
+        <Suspense fallback={<Spinner label={t('common.loading')} />}>
+          <FleetTable active={phase === 'home' ? null : active} away={away} />
+        </Suspense>
       </div>
     );
+  } else if (dashboard.isPending) {
+    behind = <Spinner label={t('common.loading')} />;
   } else if (dashboard.isError) {
-    home = (
+    behind = (
       <div className="glass grid min-h-[40vh] place-items-center gap-3 p-8 text-center">
         <p>{t('dashboard.error')}</p>
         <Button variant="outline" size="sm" onClick={() => void dashboard.refetch()}>
@@ -100,7 +128,7 @@ export function FleetStage() {
     );
   } else {
     const data = dashboard.data;
-    home = (
+    behind = (
       <div
         className="dash-layout grid gap-3 lg:gap-4"
         inert={phase === 'open'}
@@ -123,7 +151,7 @@ export function FleetStage() {
   return (
     <HoverProvider>
       <div className="relative">
-        {home}
+        {behind}
         {active && (
           <VehicleStage
             key={active}
@@ -131,6 +159,7 @@ export function FleetStage() {
             tile={dashboard.data?.tiles.find((v) => v.serial === active)}
             tiles={dashboard.data?.tiles ?? []}
             slide={phase === 'open' ? slideFrom : null}
+            home={home}
             loading={dashboard.isPending}
             returning={phase === 'returning'}
             fromDashboard={fromDashboard || phase === 'returning'}
@@ -138,7 +167,7 @@ export function FleetStage() {
             onClosed={closed}
           />
         )}
-        {phase === 'home' && <LinkLine />}
+        {phase === 'home' && home === 'dashboard' && <LinkLine />}
         <Outlet />
       </div>
     </HoverProvider>

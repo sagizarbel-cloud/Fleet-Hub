@@ -2,7 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronDown, CircleCheck, CircleX, Plus, TriangleAlert } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import { VEHICLE_STATUSES, VEHICLE_TYPE_CODES, type VehicleStatus } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { drawingFor } from '@/drawings/registry';
@@ -11,13 +11,9 @@ import { cn } from '@/lib/cn';
 import { fade } from '@/lib/motion';
 import { lookupName, useLookups, type Tile } from './data';
 import { useHover } from './hover';
+import { STATUS_ICON } from './statusIcon';
 import { Chip } from './Timeline';
 
-const STATUS_ICON: Record<VehicleStatus, { icon: typeof CircleCheck; tone: string }> = {
-  GREEN: { icon: CircleCheck, tone: 'text-ok' },
-  AMBER: { icon: TriangleAlert, tone: 'text-warn' },
-  RED: { icon: CircleX, tone: 'text-bad' },
-};
 // Top-view drawings fit a box of this size, so long machines (an excavator's arm) stay in the grid.
 const TILE_BOX = { width: 48, height: 84 };
 

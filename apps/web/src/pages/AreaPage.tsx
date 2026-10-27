@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AREA_ROUTES, type Area } from '@/layout/nav';
 
 /** Empty state for an area that later phases fill in. */
-export function AreaPage({ area }: { area: Exclude<Area, 'dashboard'> }) {
+export function AreaPage({ area }: { area: Exclude<Area, 'dashboard' | 'fleetTable'> }) {
   const { t } = useTranslation();
   const Icon = AREA_ROUTES[area].icon;
   const title = t(`nav.${area}`);

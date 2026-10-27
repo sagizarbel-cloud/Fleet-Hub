@@ -529,6 +529,7 @@ model User {
   events            Event[]
   preference        UserPreference?
   resetTokens       PasswordResetToken[] @relation("ResetFor")
+  savedViews        SavedView[]
 }
 
 model Session {
@@ -567,6 +568,21 @@ model UserPreference {
   detailView   String   @default("side")
   language     String?
   theme        String?
+  /// Saved view the fleet table opens with; null means the built-in view.
+  fleetViewId  String?
+}
+
+/// A fleet table view (SPEC 5.4). Every user can pick any view; its creator or an admin changes it.
+model SavedView {
+  id          String   @id @default(cuid())
+  name        String
+  settings    Json
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
 }
 
 /// One-time password reset link created by an admin (Phase 7).

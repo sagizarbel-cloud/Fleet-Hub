@@ -74,6 +74,7 @@ export interface VehicleDetail {
 export interface Preferences {
   pinnedVitals: VitalKey[];
   detailView: DetailView;
+  fleetViewId: string | null;
 }
 
 const vehicleKey = (serial: string) => ['vehicle', serial] as const;
