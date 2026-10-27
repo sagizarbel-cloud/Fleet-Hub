@@ -18,6 +18,9 @@ import { receiptRoutes } from './routes/receipts';
 import { meRoutes } from './routes/me';
 import { recordRoutes } from './routes/records';
 import { vehicleRoutes } from './routes/vehicles';
+import { settingsRoutes } from './routes/settings';
+import { userRoutes } from './routes/users';
+import { importRoutes } from './routes/import';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -73,7 +76,12 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
     secureCookies: env.NODE_ENV === 'production',
   });
   await app.register(lookupRoutes, { prefix: '/api/lookups' });
-  await app.register(vehicleRoutes, { prefix: '/api/vehicles', codeKey: env.FLEET_CODE_KEY });
+  await app.register(vehicleRoutes, {
+    prefix: '/api/vehicles',
+    codeKey: env.FLEET_CODE_KEY,
+    uploadDir: env.UPLOAD_DIR,
+    maxMb: env.UPLOAD_MAX_MB,
+  });
   await app.register(recordRoutes, { prefix: '/api/vehicles' });
   await app.register(attachmentRoutes, {
     prefix: '/api/attachments',
@@ -87,6 +95,9 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
   await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
   await app.register(fleetRoutes, { prefix: '/api/fleet' });
   await app.register(eventRoutes, { prefix: '/api/events' });
+  await app.register(settingsRoutes, { prefix: '/api/settings' });
+  await app.register(userRoutes, { prefix: '/api/users' });
+  await app.register(importRoutes, { prefix: '/api/import', codeKey: env.FLEET_CODE_KEY });
 
   return app;
 }
