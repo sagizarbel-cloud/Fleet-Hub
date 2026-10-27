@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ADMIN, SIGNED_OUT } from './helpers';
+import { ADMIN, SIGNED_OUT, toggleLanguage } from './helpers';
 
 test.describe('signed out', () => {
   test.use({ storageState: SIGNED_OUT });
@@ -13,7 +13,7 @@ test.describe('signed out', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
 
-    await page.getByTestId('language-toggle').click();
+    await toggleLanguage(page);
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(page.locator('html')).toHaveAttribute('lang', 'he');
     await expect(page.getByRole('heading', { name: 'לוח בקרה' })).toBeVisible();
@@ -24,7 +24,11 @@ test.describe('signed out', () => {
 
     await page.getByRole('link', { name: 'הגדרות' }).click();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByRole('heading', { name: 'הגדרות' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ההגדרות שלי' })).toBeVisible();
+
+    // The choice is saved to the account too; switch back so other tests run in English.
+    await toggleLanguage(page);
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
   });
 
   test('rejects a wrong password with a translated message', async ({ page }) => {

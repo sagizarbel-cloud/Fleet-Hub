@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { toggleLanguage } from './helpers';
 
 const box = async (page: Page, testId: string) => (await page.getByTestId(testId).boundingBox())!;
 
@@ -12,11 +13,11 @@ test.describe('dashboard', () => {
     await expect(page.locator('[data-event-id]').first()).toBeVisible();
     expect((await box(page, 'timeline')).x).toBeLessThan((await box(page, 'fleet-grid')).x);
 
-    await page.getByTestId('language-toggle').click();
+    await toggleLanguage(page);
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     expect((await box(page, 'timeline')).x).toBeGreaterThan((await box(page, 'fleet-grid')).x);
     await expect(page.getByRole('heading', { name: 'פעילות אחרונה' })).toBeVisible();
-    await page.getByTestId('language-toggle').click();
+    await toggleLanguage(page);
   });
 
   test('filters the timeline by event type', async ({ page }) => {

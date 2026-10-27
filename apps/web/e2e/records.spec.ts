@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createRequire } from 'node:module';
-import { VIEWER_STATE } from './helpers';
+import { VIEWER_STATE, toggleLanguage } from './helpers';
 
 // SPEC 5.3 record panels, A7 status, A8 exports, against the seeded fleet.
 const LOADER = 'WL-401';
@@ -122,13 +122,13 @@ test.describe('record panels', () => {
     expect(en.sheet.getCell('A5').value).toBeInstanceOf(Date);
     expect(en.sheet.rowCount).toBeGreaterThan(10);
 
-    await page.getByTestId('language-toggle').click();
+    await toggleLanguage(page);
     await expect(page.getByTestId('export')).toHaveText('ייצוא לאקסל');
     const he = await readExport(page);
     expect(he.sheet.views[0]?.rightToLeft).toBe(true);
     expect(he.sheet.getCell('A1').value).toBe('צריכת דלק');
     expect(he.sheet.getRow(4).values).toEqual(expect.arrayContaining(['תאריך', 'עלות (₪)']));
-    await page.getByTestId('language-toggle').click();
+    await toggleLanguage(page);
   });
 
   test('admins can set the status by hand and go back to automatic', async ({ page }) => {
