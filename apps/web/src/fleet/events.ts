@@ -18,7 +18,7 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
-import { RECORD_KINDS, type EventType } from '@fleet-hub/shared';
+import { RECORD_KINDS, VEHICLE_FIELDS, type EventType, type VehicleField } from '@fleet-hub/shared';
 import { lookupName, type FleetEvent, type Lookups } from './data';
 
 /** Timeline filter chips. Each chip covers related event types. */
@@ -69,6 +69,10 @@ export const EVENT_ICON = Object.fromEntries(
     OWN_ICON[type as EventType] ?? EVENT_GROUPS[g].icon,
   ]),
 ) as Record<EventType, LucideIcon>;
+
+// Vehicle fields an update event can name; the ownership panel also changes the supplier.
+type NamedField = VehicleField | 'supplier';
+const NAMED_FIELDS = new Set<NamedField>([...VEHICLE_FIELDS, 'supplier']);
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 const num = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0);
@@ -171,8 +175,20 @@ export function describeEvent(
     case 'QUOTE_LINKED':
     case 'QUOTE_UNLINKED':
       return t(`events.${e.type}`, { supplier: isolate(str(p.supplier)) });
+    case 'VEHICLE_UPDATED': {
+      // "Vehicle details updated: model, odometer", from the names of the changed fields.
+      const fields = (Array.isArray(p.fields) ? p.fields : []).filter((f): f is NamedField =>
+        NAMED_FIELDS.has(f as NamedField),
+      );
+      if (!fields.length) return t('events.VEHICLE_UPDATED');
+      const names = fields.map((f) => t(`vehicleForm.field.${f}`));
+      return t('events.VEHICLE_UPDATED_fields', {
+        fields: new Intl.ListFormat(lang === 'he' ? 'he' : 'en', { type: 'conjunction' }).format(
+          names,
+        ),
+      });
+    }
     case 'VEHICLE_CREATED':
-    case 'VEHICLE_UPDATED':
     case 'NOTE_ADDED':
       return t(`events.${e.type}`);
   }

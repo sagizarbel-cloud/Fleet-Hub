@@ -91,6 +91,15 @@ export function EventRow({
         <span className="min-w-0 flex-1 truncate" title={text}>
           {text}
         </span>
+        {event.imported && (
+          <span
+            className="border-border text-muted shrink-0 rounded-full border px-1.5 text-[0.65rem]"
+            title={t('events.importedHint')}
+            data-imported
+          >
+            {t('events.imported')}
+          </span>
+        )}
         <time dateTime={event.occurredAt} className="num text-muted shrink-0 text-xs">
           {time}
         </time>
