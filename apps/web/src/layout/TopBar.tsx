@@ -1,17 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router';
 import { Plus, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { SessionUser } from '@fleet-hub/shared';
+import { hasRole, type SessionUser } from '@fleet-hub/shared';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserMenu } from '@/components/UserMenu';
 import { Button } from '@/components/ui/button';
+import { prefersReducedMotion } from '@/lib/motion';
+import { usePreferenceSync, useSaveLook } from '@/settings/prefs';
 import { ScrollableNav } from './ScrollableNav';
+
+const VehicleForm = lazy(() =>
+  import('@/vehicle/VehicleForm').then((m) => ({ default: m.VehicleForm })),
+);
 
 export function TopBar({ user }: { user: SessionUser }) {
   const { t } = useTranslation();
   const ref = useRef<HTMLElement>(null);
+  const look = useSaveLook();
+  const [adding, setAdding] = useState(false);
+  const [reduced] = useState(prefersReducedMotion);
+  usePreferenceSync();
 
   // Full-screen layers (the vehicle stage) start just below the sticky bar.
   useEffect(() => {
@@ -50,17 +60,20 @@ export function TopBar({ user }: { user: SessionUser }) {
         </div>
 
         <div className="ms-auto flex items-center gap-1">
-          <Button
-            size="sm"
-            disabled
-            title={t('topbar.comingSoon')}
-            className="hidden sm:inline-flex"
-          >
-            <Plus aria-hidden />
-            {t('topbar.add')}
-          </Button>
-          <LanguageToggle />
-          <ThemeToggle />
+          {hasRole(user.role, 'EDITOR') && (
+            <Button
+              size="sm"
+              onClick={() => setAdding(true)}
+              aria-label={t('vehicleForm.addTitle')}
+              title={t('vehicleForm.addTitle')}
+              data-testid="add-vehicle"
+            >
+              <Plus aria-hidden />
+              <span className="hidden sm:inline">{t('topbar.add')}</span>
+            </Button>
+          )}
+          <LanguageToggle onChange={look.language} />
+          <ThemeToggle onChange={look.theme} />
           <UserMenu user={user} />
         </div>
       </div>
@@ -68,6 +81,11 @@ export function TopBar({ user }: { user: SessionUser }) {
       <ScrollableNav />
       {/* Machine-yellow band with a red end: the brand accents, decorative only. */}
       <div aria-hidden className="fh-band mx-4 h-0.5 rounded-full" />
+      {adding && (
+        <Suspense>
+          <VehicleForm serial={null} reduced={reduced} onClose={() => setAdding(false)} />
+        </Suspense>
+      )}
     </header>
   );
 }
