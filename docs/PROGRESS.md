@@ -2,12 +2,22 @@
 
 ## Status
 
-- Current phase: 5 — Fleet table (built; waiting for Sagi's review in the PR)
-- Last completed phase: 4 — Records, forms and exports
+- Current phase: 6 — Receipts, quotes and equipment (built; waiting for Sagi's review in the PR)
+- Last completed phase: 5 — Fleet table
 
 ## Phase log
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
+
+### Phase 6 — 2026-10-27
+
+- Shipped: Receipts (`/receipts`): multi-file upload (one receipt per file, or one receipt with several pages), camera on phones, vehicle tags picked from mini drawings, date, vendor, amount, category, type and an optional linked record; grid of thumbnails or a table; filters by vehicle, category, approval, date and amount; totals overall, per vehicle and per month; Excel export; drop files on the page to add them. Viewers send receipts for approval; editors and admins approve or reject them from a "waiting for approval" banner. Price quotes (`/quotes`): supplier, dates, line items with conditions and totals, status flow, several vehicles per quote, file attachment, admin-only visibility control; compare one part across quotes (cheapest marked) or 2–4 whole quotes side by side; Excel export of quotes and lines. Equipment & tools (`/equipment`): the catalog with kinds, filters, assign / move / back to the yard, retire, and each item's history; Excel export. Each vehicle's Documents and Quotes tabs show the same lists for that vehicle. Dashboard: drop a file on a tile to start a receipt for it (the tile grows, glows, tips onto a turntable and turns; grow and glow only with reduced motion); editors open an equipment tray and drag an item onto a tile (or on a phone tap the item, then the tile) and confirm.
+- API: `/api/receipts` (list with totals, detail, add, edit, delete / restore, review), `/api/quotes` (list, suppliers, parts, compare, detail, add, edit, vehicles, status, visibility, delete / restore), `/api/items` (catalog, detail with history, add, edit, retire / unretire). One visibility filter (`lib/quote-visibility.ts`) serves every quote route, a vehicle's tab and count, search and the timeline.
+- Database (migration `phase6_receipts_quotes`): `Document.approvedAt` / `approvedById` (existing receipts backfilled as approved), `Item.retiredAt`, `Quote.createdById` now required (orphans given to the first admin), event type `QUOTE_UNLINKED`. No new packages.
+- Receipts join the cost columns and the vehicle's maintenance cost this year: approved, not linked to a record, fuel category as fuel and the rest as maintenance, shared receipts split evenly.
+- Seed: three suggested receipts from the viewer, eight quotes across creators, levels and statuses with shared fake part numbers, so comparisons have something to show.
+- Tests: 93 api tests (18 new: receipts and suggestions, the full visibility matrix with two viewers and an admin across every route, the locked admins-only quote, public read-only, quote files, status rules, validation, equipment), 53 Playwright tests (10 new: add / find / delete / Undo a receipt, a file dropped on a tile, a viewer's suggestion approved by an admin, two quotes compared, status and visibility, the viewer's quote view, dragging equipment from the tray, the catalog). Screenshots in `docs/screenshots/phase-6/`.
+- Deferred: nothing from the phase.
 
 ### Phase 5 — 2026-10-26
 
@@ -90,6 +100,8 @@
 - The fleet table joins the dashboard's persistent layout (`FleetStage`), so the fly-in from a row never unmounts; the vehicle page's Back leads to whichever of the two it was opened from.
 - The table's settings live in the URL (`?view=` plus `?s=` for unsaved changes), so Back, reload and shared links keep them. A view's "(changed)" mark shows when the screen differs from the saved view.
 - Maintenance cost in the table = service and repair (malfunction) costs, the same rule as the vehicle page's "maintenance cost this year". Receipts join in Phase 6.
+- Phase 6 (2026-10-27, from Sagi): new quotes start Standard; creators keep seeing their quote when an admin makes it Admins only, but it is then locked (only admins edit or delete it); public quotes are read-only for non-creators; viewers can add receipts as suggestions that editors and admins approve; unlinked receipts count in the cost columns. Approving or ordering a quote needs an editor or admin.
+- Dropping a file on a tile tilts and turns the flat top view with CSS 3D; the 3D isometric drawings only model the side facing the viewer, so they can't spin a full turn.
 - Start codes stay out of the fleet table completely, including the "has a start code" flag (SPEC A7).
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 

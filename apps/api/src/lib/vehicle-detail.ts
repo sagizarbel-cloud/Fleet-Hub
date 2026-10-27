@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import type { SessionUser } from '@fleet-hub/shared';
 import { HttpError } from './http';
 import { visibleQuotesWhere } from './quote-visibility';
+import { receiptCosts } from './receipts';
 import { startOfYear } from './time';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -156,8 +157,16 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
   ]);
 
   const { id: _id, type, department, location, supplier, purchasePrice, ...fields } = vehicle;
+  // Unlinked receipts other than fuel count as maintenance too, as in the fleet table.
+  const receipts = await receiptCosts(
+    app.db as unknown as Prisma.TransactionClient,
+    yearStart,
+    vehicleId,
+  );
   const costYtd =
-    (serviceCost._sum.cost?.toNumber() ?? 0) + (malfunctionCost._sum.cost?.toNumber() ?? 0);
+    (serviceCost._sum.cost?.toNumber() ?? 0) +
+    (malfunctionCost._sum.cost?.toNumber() ?? 0) +
+    (receipts.get(vehicleId)?.maintenance ?? 0);
 
   return {
     ...fields,

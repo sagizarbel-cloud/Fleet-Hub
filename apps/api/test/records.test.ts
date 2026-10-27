@@ -462,6 +462,7 @@ describe('ownership, documents and quotes', () => {
     const v = await vehicle();
     const supplier = await app.db.supplier.create({ data: { name: 'Parts Co' } });
     const viewerRow = await app.db.user.findUniqueOrThrow({ where: { id: viewerId } });
+    const otherId = (await app.db.user.findFirstOrThrow({ where: { NOT: { id: viewerId } } })).id;
     await app.db.document.create({
       data: {
         date: new Date(),
@@ -476,7 +477,7 @@ describe('ownership, documents and quotes', () => {
           supplierId: supplier.id,
           date: new Date(),
           visibility,
-          createdById: visibility === 'PUBLIC' ? null : viewerRow.id,
+          createdById: visibility === 'PUBLIC' ? otherId : viewerRow.id,
           lines: { create: [{ item: 'Filter', quantity: 2, unitPrice: 50 }] },
           vehicles: { create: { vehicleId: v.id } },
         },
@@ -487,7 +488,8 @@ describe('ownership, documents and quotes', () => {
     const quotes = async (cookie: string) =>
       (await req('GET', `/api/vehicles/${v.serial}/quotes`, cookie)).json().items.length;
     expect(await quotes(viewer2)).toBe(1); // public only
-    expect(await quotes(viewer)).toBe(2); // public + own standard
+    // Public, plus both of their own: creators keep sight of an admins-only quote (2026-10-27).
+    expect(await quotes(viewer)).toBe(3);
     expect(await quotes(admin)).toBe(3);
     const first = (await req('GET', `/api/vehicles/${v.serial}/quotes`, admin)).json().items[0];
     expect(first.total).toBe(100);
@@ -620,9 +622,10 @@ describe('attachments', () => {
       ).statusCode,
     ).toBe(404);
     expect(
+      // Not a receipt id, so there is nothing to attach to.
       (await upload(editor, 'Document', item.id, [{ name: 'a.png', type: 'image/png', data: png }]))
         .statusCode,
-    ).toBe(400);
+    ).toBe(404);
     expect(await app.db.attachment.count({ where: { ownerId: item.id } })).toBe(0);
 
     // A viewer may attach files to their own note.

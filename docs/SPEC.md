@@ -118,6 +118,9 @@ One hub for every receipt and invoice, each tagged with its vehicle's serial num
 - Fields: vehicle serial tag, date, vendor, amount (₪), category (fuel, service, parts, tools, tires, inspection, insurance, other), and an optional link to a specific record such as a service.
 - Thumbnail grid or table view; filter by vehicle, category, date and amount; totals per vehicle and per month; Excel export.
 - Receipts also appear in each vehicle's Documents tab.
+- Editors and admins add receipts directly. Viewers add them as suggestions: marked "Suggested", left out of every total, until an editor or admin approves (or rejects) them.
+- Cost columns and the vehicle's maintenance cost include approved receipts that aren't linked to a record (a linked receipt is already counted in its record). Fuel-category receipts count as fuel, the rest as maintenance. A receipt shared by several vehicles is split evenly between them.
+- Dropping a file on a dashboard tile opens a new receipt for that vehicle. While the file is over the tile, it grows about 10% and glows, and its top view tips onto a turntable and turns slowly (with reduced motion: grow and glow only).
 - Later (not in scope now): auto-fill date, vendor and total from the photo.
 
 ### 5.6 Price quotes
@@ -134,9 +137,11 @@ A dedicated area for quotes on vehicle parts and tools, assignable to vehicles.
   | --- | --- |
   | Standard (default for new quotes) | Its creator and all admins |
   | Public | Every signed-in user |
-  | Admins only (for sensitive quotes) | Admins only, even if a non-admin created it |
+  | Admins only (for sensitive quotes) | Admins and its creator; only admins can edit or delete it |
 
   - Only admins can change a quote's level.
+  - Public quotes are read-only for everyone except their creator and admins.
+  - Anyone who can edit a quote can mark it Received or Rejected; only editors and admins can mark it Approved or Ordered.
   - The level applies everywhere quotes appear: the Quotes area, a vehicle's Quotes tab and its count, comparisons, search, Excel exports and the activity timeline ("quote linked" events).
   - Only the creator (while they can still see it) and admins can edit or delete a quote; public quotes are read-only for everyone else.
   - Asking for a quote you can't see, by id, returns "not found", so its existence isn't revealed.

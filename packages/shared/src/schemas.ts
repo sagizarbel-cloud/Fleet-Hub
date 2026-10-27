@@ -3,6 +3,14 @@ import { MALFUNCTION_SEVERITIES, MALFUNCTION_STATES, ROLES, VEHICLE_STATUSES } f
 import { INSPECTION_KINDS, RECORD_KINDS, SORT_DIRS, type RecordKind } from './records';
 import { DETAIL_VIEWS, VITAL_KEYS } from './vitals';
 import { ALL_FLEET_COLUMNS, FLEET_GROUP_BY, FLEET_GROUPS } from './fleet';
+import {
+  DOCUMENT_KINDS,
+  ITEM_KINDS,
+  LINE_CONDITIONS,
+  QUOTE_STATUSES,
+  QUOTE_VISIBILITIES,
+  RECEIPT_STATES,
+} from './money';
 
 export const loginBody = z.object({
   email: z.email().max(254),
@@ -203,6 +211,8 @@ export const ATTACHMENT_OWNERS = [
   'Inspection',
   'Note',
   'Vehicle',
+  'Document',
+  'Quote',
 ] as const;
 export type AttachmentOwner = (typeof ATTACHMENT_OWNERS)[number];
 export const attachmentQuery = z.object({
@@ -244,3 +254,115 @@ export const fleetViewBody = z.object({
 });
 export type FleetViewBody = z.infer<typeof fleetViewBody>;
 export const fleetViewParams = z.object({ id: z.string().min(1).max(40) });
+
+// ---------- Receipts, quotes and equipment (SPEC 5.5–5.7) ----------
+
+const serial = z.string().min(1).max(40);
+const id = z.string().min(1).max(40);
+const serials = (min: number, max: number) =>
+  unique(serial, max).refine((l) => l.length >= min, 'required');
+const page = {
+  offset: z.coerce.number().int().min(0).max(100_000).default(0),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  /** Every matching row, for the Excel export (capped). */
+  all: flag,
+  q: z.string().trim().max(100).optional(),
+  from: anyDay.optional(),
+  to: anyDay.optional(),
+};
+
+export const receiptBody = z.object({
+  vehicles: serials(1, 20),
+  kind: z.enum(DOCUMENT_KINDS).default('RECEIPT'),
+  date: day,
+  vendor: optText(120),
+  amount: money,
+  category: nullable(code),
+  /** Optional link to one record of a tagged vehicle, e.g. the service this receipt paid for. */
+  linked: nullable(z.object({ kind: z.enum(RECORD_KINDS), id })),
+  notes: optText(500),
+});
+export type ReceiptBody = z.input<typeof receiptBody>;
+
+export const receiptsQuery = z.object({
+  ...page,
+  vehicle: serial.optional(),
+  category: code.optional(),
+  state: z.enum(RECEIPT_STATES).optional(),
+  min: z.coerce.number().min(0).optional(),
+  max: z.coerce.number().min(0).optional(),
+  sort: z.enum(['date', 'amount', 'vendor']).default('date'),
+  dir: z.enum(SORT_DIRS).default('desc'),
+});
+export type ReceiptsQuery = z.input<typeof receiptsQuery>;
+
+export const reviewBody = z.object({ approve: z.boolean() });
+
+const quoteLine = z.object({
+  item: text(120),
+  partNo: optText(60),
+  condition: z.enum(LINE_CONDITIONS).default('NEW'),
+  quantity: z.number().int().min(1).max(100_000),
+  unitPrice: z.number().min(0).max(100_000_000),
+});
+
+export const quoteBody = z
+  .object({
+    /** An existing supplier, or a new name to add. */
+    supplier: z.union([z.object({ id }), z.object({ name: text(120) })]),
+    date: day,
+    validUntil: nullable(anyDay),
+    notes: optText(1000),
+    lines: z.array(quoteLine).min(1).max(100),
+    vehicles: serials(0, 50),
+    /** Admins only; anyone else sending a level other than STANDARD gets 403. */
+    visibility: z.enum(QUOTE_VISIBILITIES).optional(),
+  })
+  .refine((q) => !q.validUntil || q.validUntil >= q.date, {
+    path: ['validUntil'],
+    message: 'before_date',
+  });
+export type QuoteBody = z.input<typeof quoteBody>;
+
+export const quoteStatusBody = z.object({ status: z.enum(QUOTE_STATUSES) });
+export const quoteVisibilityBody = z.object({ visibility: z.enum(QUOTE_VISIBILITIES) });
+export const quoteVehiclesBody = z.object({ vehicles: serials(0, 50) });
+
+export const quotesQuery = z.object({
+  ...page,
+  status: z.enum(QUOTE_STATUSES).optional(),
+  supplier: id.optional(),
+  vehicle: serial.optional(),
+  visibility: z.enum(QUOTE_VISIBILITIES).optional(),
+});
+export type QuotesQuery = z.input<typeof quotesQuery>;
+
+/** Compare one part across quotes (by part no., else by name), or two to four whole quotes. */
+export const compareQuery = z.union([
+  z.object({ part: z.string().trim().min(1).max(120) }),
+  z.object({
+    ids: z
+      .string()
+      .max(200)
+      .transform((s) => s.split(',').filter(Boolean))
+      .pipe(unique(id, 4).refine((l) => l.length >= 2, 'too_few')),
+  }),
+]);
+
+export const itemBody = z.object({
+  kind: z.enum(ITEM_KINDS),
+  name: text(120),
+  model: optText(80),
+  spec: optText(300),
+  serial: optText(60),
+});
+export type ItemBody = z.input<typeof itemBody>;
+
+export const itemsQuery = z.object({
+  q: z.string().trim().max(100).optional(),
+  kind: z.enum(ITEM_KINDS).optional(),
+  vehicle: serial.optional(),
+  /** "yard" lists items on no vehicle. */
+  where: z.enum(['yard', 'assigned']).optional(),
+  retired: flag,
+});

@@ -11,11 +11,13 @@ import {
   type SessionUser,
 } from '@fleet-hub/shared';
 import { HttpError, parse } from '../lib/http';
+import { canEditQuote, visibleQuotesWhere } from '../lib/quote-visibility';
+import { canChangeReceipt } from '../lib/receipts';
 import { canChange, delegate } from '../lib/records';
 import { cleanFileName, resolveStored, storeUpload } from '../lib/uploads';
 import { requireUser } from '../plugins/auth';
 
-const KIND_OF: Record<Exclude<AttachmentOwner, 'Vehicle'>, RecordKind> = {
+const KIND_OF: Record<Exclude<AttachmentOwner, 'Vehicle' | 'Document' | 'Quote'>, RecordKind> = {
   ServiceRecord: 'service',
   Malfunction: 'malfunctions',
   FluidAddition: 'fluids',
@@ -43,10 +45,15 @@ async function ownerAllows(
     return !write || hasRole(user.role, 'EDITOR');
   }
   if (ownerType === 'Document') {
-    // Receipts are uploaded through the receipts hub (Phase 6); here they are read-only.
-    if (write) return false;
     const d = await db.document.findFirst({ where: { id: ownerId, deletedAt: null } });
-    return !!d;
+    return !!d && (!write || canChangeReceipt(user, d));
+  }
+  if (ownerType === 'Quote') {
+    // The quote's own visibility rule: a file on a quote you can't see is "not found".
+    const q = await db.quote.findFirst({
+      where: { AND: [visibleQuotesWhere(user), { id: ownerId }] },
+    });
+    return !!q && (!write || canEditQuote(user, q));
   }
   const kind = KIND_OF[ownerType as keyof typeof KIND_OF];
   if (!kind) return false;

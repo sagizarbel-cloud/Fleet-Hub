@@ -149,8 +149,8 @@ Acceptance criteria:
 - Quotes with line items, status flow, multi-vehicle assignment picker, side-by-side comparison, export.
 - Quote visibility (SPEC 5.6), enforced in the API queries:
   - Any role, viewer included, can create a quote; `Quote.createdById` is required; `Quote.visibility` is STANDARD (default), PUBLIC or ADMINS.
-  - One shared visibility filter is used by every route that returns quotes or quote counts: list, detail, a vehicle's Quotes tab and count, comparison, search, Excel export and the vehicle timeline's QUOTE_LINKED events. Admins see all; non-admins see their own STANDARD quotes plus all PUBLIC quotes.
-  - Only admins can change visibility (403 for others). Edit and delete: the creator while the quote is visible to them, or an admin. A quote the user can't see returns 404 on read, edit and delete.
+  - One shared visibility filter is used by every route that returns quotes or quote counts: list, detail, a vehicle's Quotes tab and count, comparison, search, Excel export and the vehicle timeline's QUOTE_LINKED events. Admins see all; non-admins see their own quotes (any level) plus all PUBLIC quotes.
+  - Only admins can change visibility (403 for others). Edit and delete: an admin, or the creator unless the quote is ADMINS. A quote the user can't see returns 404 on read, edit and delete.
   - API tests cover each route with two non-admin users and one admin, across all three levels, including a non-admin's own quote that an admin set to ADMINS.
 - Equipment catalog with assignment history; assign from vehicle page and by drag onto a tile.
 

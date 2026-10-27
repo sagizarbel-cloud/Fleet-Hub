@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
+import { receiptCosts } from './receipts';
 import { fuelEconomy } from './vehicle-detail';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -84,6 +85,8 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
     service3,
     repair3,
     fuel3,
+    receipts12,
+    receipts3,
   ] = await Promise.all([
     db.vehicle.findMany({ select: tableSelect, orderBy: { serial: 'asc' } }),
     db.malfunction.groupBy({
@@ -115,6 +118,8 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
     costBy('serviceRecord', 'date', m3),
     costBy('malfunction', 'reportedAt', m3),
     costBy('fuelEntry', 'date', m3),
+    receiptCosts(db as unknown as Prisma.TransactionClient, y1),
+    receiptCosts(db as unknown as Prisma.TransactionClient, m3),
   ]);
 
   const count = (rows: { vehicleId: string; _count: number }[]) =>
@@ -140,10 +145,13 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
   return vehicles.map(
     ({ id, type, department, location, supplier, currentItems, purchasePrice, ...v }) => {
       const fill = lastFill.get(id);
-      const m12 = maint12(id);
-      const f12 = fuel12.get(id) ?? 0;
-      const m3c = maint3(id);
-      const f3 = fuel3.get(id) ?? 0;
+      // Unlinked receipts join the costs (Sagi, 2026-10-27): see receiptCosts.
+      const r12 = receipts12.get(id);
+      const r3 = receipts3.get(id);
+      const m12 = maint12(id) + (r12?.maintenance ?? 0);
+      const f12 = (fuel12.get(id) ?? 0) + (r12?.fuel ?? 0);
+      const m3c = maint3(id) + (r3?.maintenance ?? 0);
+      const f3 = (fuel3.get(id) ?? 0) + (r3?.fuel ?? 0);
       return {
         ...v,
         purchasePrice: purchasePrice?.toNumber() ?? null,

@@ -59,9 +59,6 @@
     "RED": "מושבת"
   },
   "areas": {
-    "receipts": "קבלות וחשבוניות לפי כלי יופיעו כאן.",
-    "quotes": "הצעות מחיר לחלקי חילוף וכלים יופיעו כאן.",
-    "equipment": "אביזרים וכלי עבודה והיסטוריית השיוך שלהם יופיעו כאן.",
     "settings": "רשימות, נתונים מוצגים כברירת מחדל, ומשתמשים והרשאות יופיעו כאן."
   },
   "common": {
@@ -148,14 +145,16 @@
     "INSPECTION": "עדכון {{kind}}",
     "ITEM_ASSIGNED": "פריט שויך: {{item}}",
     "ITEM_REMOVED": "פריט הוסר: {{item}}",
-    "DOCUMENT_ADDED": "נוספה קבלה: {{category}}, {{amount}}",
+    "DOCUMENT_ADDED": "נוספה קבלה: {{details}}",
+    "DOCUMENT_ADDED_bare": "נוספה קבלה",
     "QUOTE_LINKED": "הצעת מחיר מאת {{supplier}}",
     "NOTE_ADDED": "נוספה הערה",
     "STATUS_OVERRIDDEN_REASON": "הסטטוס נקבע ידנית ל{{to}}: {{reason}}",
     "STATUS_OVERRIDE_CLEARED": "הקביעה הידנית בוטלה, הסטטוס כעת {{to}}",
     "RECORD_EDITED": "עריכת {{record}}: {{detail}}",
     "RECORD_DELETED": "מחיקת {{record}}: {{detail}}",
-    "RECORD_RESTORED": "שחזור {{record}}: {{detail}}"
+    "RECORD_RESTORED": "שחזור {{record}}: {{detail}}",
+    "QUOTE_UNLINKED": "הצעת מחיר מ{{supplier}} נותקה"
   },
   "severity": {
     "LOW": "נמוכה",
@@ -340,7 +339,6 @@
     "dropFlag": "ירידה חדה",
     "accidentFlag": "תאונה",
     "liters": "{{value}} ל׳",
-    "addLater": "הוספה ועריכה של אלה יגיעו עם מסכי הקבלות והצעות המחיר.",
     "col": {
       "date": "תאריך",
       "reading": "קילומטראז׳ / שעות מנוע",
@@ -556,5 +554,171 @@
       "fleetHint": "כל הכלים וכל הרשומות, גיליון לכל סוג",
       "vehiclesSheet": "כלים"
     }
+  },
+  "money": {
+    "view": "תצוגה",
+    "grid": "רשת",
+    "table": "טבלה"
+  },
+  "picker": {
+    "assign": "שיוך כלי",
+    "search": "חיפוש מספר סידורי, יצרן, דגם או מספר רישוי",
+    "type": "סוג כלי",
+    "allTypes": "כל הסוגים",
+    "none": "אין כלים תואמים.",
+    "remove": "הסרת {{serial}}"
+  },
+  "receipts": {
+    "one": "קבלה",
+    "add": "הוספת קבלה",
+    "addTitle": "הוספת קבלה",
+    "editTitle": "עריכת קבלה",
+    "vehicles": "כלים",
+    "vehicle": "כלי",
+    "amount": "סכום (₪)",
+    "state": "אישור",
+    "states": {
+      "approved": "מאושרת",
+      "suggested": "מוצעת"
+    },
+    "suggest": "שליחה לאישור",
+    "suggestHint": "עורך או מנהל יאשרו את הקבלה לפני שתיכלל בסיכומים ובעלויות.",
+    "suggestedSaved": "נשלחו לאישור: {{count}}",
+    "saved": "קבלות שנשמרו: {{count}}",
+    "perFile": "קבלה נפרדת לכל קובץ ({{count}} קבצים)",
+    "pages": "קבצים: {{count}}",
+    "linkKind": "מקושרת אל (לא חובה)",
+    "noLink": "ללא קישור",
+    "linkRecord": "רשומה",
+    "approve": "אישור",
+    "reject": "דחייה",
+    "waiting": "קבלות שממתינות לאישור: {{count}}. להצגה",
+    "totals": "סיכומים",
+    "total": "סה״כ",
+    "count": "קבלות: {{count}}",
+    "byVehicle": "לפי כלי (קבלה משותפת מתחלקת שווה בשווה)",
+    "byMonth": "לפי חודש",
+    "search": "חיפוש ספק או הערות",
+    "min": "מ־₪",
+    "max": "עד ₪",
+    "empty": "אין עדיין קבלות. אפשר לגרור לכאן תמונות או קובצי PDF, או ללחוץ על הוספת קבלה.",
+    "dropHere": "שחררו כדי להוסיף קבלות",
+    "noFile": "אין קובץ",
+    "noVendor": "ללא ספק"
+  },
+  "quotes": {
+    "one": "הצעת מחיר",
+    "add": "הוספת הצעה",
+    "addTitle": "הוספת הצעת מחיר",
+    "editTitle": "עריכת הצעת מחיר",
+    "from": "הצעה מ{{supplier}}",
+    "supplierHint": "בחרו ספק או הקלידו שם חדש.",
+    "lines": "שורות",
+    "item": "חלק או כלי",
+    "partNo": "מק״ט / דגם",
+    "condition": "מצב",
+    "conditions": {
+      "IN_STOCK": "קיים במלאי",
+      "NEW": "חדש",
+      "NEEDS_REPLACEMENT": "דרוש להחלפה"
+    },
+    "quantity": "כמות",
+    "unitPrice": "מחיר ליחידה",
+    "qty": "כמות {{count}}",
+    "addLine": "הוספת שורה",
+    "removeLine": "הסרת שורה {{n}}",
+    "vehicles": "כלים",
+    "noVehicles": "לא משויכת לכלי.",
+    "changeVehicles": "שינוי כלים",
+    "file": "קובץ ההצעה (PDF או תמונה)",
+    "visibility": "מי רואה",
+    "levels": {
+      "STANDARD": "רגילה",
+      "PUBLIC": "ציבורית",
+      "ADMINS": "מנהלים בלבד"
+    },
+    "levelHint": {
+      "STANDARD": "היוצר והמנהלים",
+      "PUBLIC": "כל המשתמשים",
+      "ADMINS": "מנהלים והיוצר; רק מנהלים יכולים לשנות"
+    },
+    "moveTo": {
+      "REQUESTED": "פתיחה מחדש",
+      "RECEIVED": "סימון כהתקבלה",
+      "APPROVED": "אישור",
+      "ORDERED": "סימון כהוזמנה",
+      "REJECTED": "דחייה"
+    },
+    "approvalWaits": "עורך או מנהל מאשרים ומזמינים.",
+    "expired": "פג תוקף",
+    "validTo": "בתוקף עד {{date}}",
+    "readOnly": "לקריאה בלבד",
+    "lockedByAdmin": "ננעלה על ידי מנהל",
+    "notFound": "ההצעה אינה זמינה.",
+    "search": "חיפוש ספק, חלק או מק״ט",
+    "compare": "השוואת חלק",
+    "compareChosen": "השוואת הנבחרות ({{count}})",
+    "compareTitle": "השוואת הצעות מחיר",
+    "comparePart": "חלק",
+    "quoteCount": "הצעות: {{count}}",
+    "cheapest": "הזולה ביותר",
+    "pick": "בחירת {{supplier}} להשוואה",
+    "pickHint": "סמנו שתיים עד ארבע הצעות כדי להשוות ביניהן.",
+    "empty": "אין עדיין הצעות מחיר.",
+    "error": {
+      "validUntil": "לא יכול להיות לפני תאריך ההצעה."
+    }
+  },
+  "equipment": {
+    "one": "פריט",
+    "add": "הוספת פריט",
+    "addTitle": "הוספת פריט",
+    "editTitle": "עריכת פריט",
+    "kind": "סוג",
+    "kinds": {
+      "bucket": "כף",
+      "hydraulic_breaker": "פטיש חציבה",
+      "concrete_crusher": "מרסק בטון",
+      "generator": "גנרטור",
+      "equipment_box": "ארגז ציוד",
+      "adapter": "מתאם / מצמד",
+      "pallet_forks": "מזלגות משטחים",
+      "tool": "כלי עבודה",
+      "other": "אחר"
+    },
+    "vehicle": "כלי",
+    "where": "איפה",
+    "onVehicle": "על כלי",
+    "inYard": "במחסן",
+    "since": "מאז {{date}}",
+    "moveTo": "העברה אל",
+    "assignTo": "שיוך אל",
+    "toYard": "החזרה למחסן",
+    "retire": "הוצאה משימוש",
+    "unretire": "החזרה לשימוש",
+    "retired": "הוצא משימוש",
+    "showRetired": "הצגת פריטים שהוצאו משימוש",
+    "history": "היסטוריית שיוך",
+    "noHistory": "לא שויך מעולם.",
+    "now": "עד היום",
+    "days": "ימים",
+    "search": "חיפוש שם, דגם, מפרט או מספר סידורי",
+    "empty": "אין פריטים תואמים.",
+    "serialTaken": "לפריט אחר יש מספר סידורי זה."
+  },
+  "tray": {
+    "title": "אביזרים",
+    "hint": "גררו פריט אל כלי כדי לשייך אותו. בטלפון: הקישו על הפריט ואז על הכלי.",
+    "show": "הצגת אביזרים",
+    "hide": "הסתרת אביזרים",
+    "picked": "הקישו על כלי כדי לשייך את {{item}}",
+    "cancel": "ביטול",
+    "assigned": "{{item}} שויך ל־{{serial}}",
+    "failed": "השיוך נכשל. נסו שוב.",
+    "dropFile": "שחררו כדי להוסיף קבלה ל־{{serial}}",
+    "dropItem": "שחררו כדי לשייך ל־{{serial}}",
+    "confirm": "לשייך את {{item}} ל־{{serial}}?",
+    "confirmMove": "להעביר את {{item}} מ־{{from}} ל־{{serial}}?",
+    "yes": "שיוך"
   }
 }
