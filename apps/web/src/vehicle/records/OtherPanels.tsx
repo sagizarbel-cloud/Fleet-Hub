@@ -1,221 +1,56 @@
-import { useState, type FormEvent } from 'react';
+import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileSpreadsheet, Loader2, Pencil } from 'lucide-react';
 import { hasRole, ownershipBody } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
-import { lookupName } from '@/fleet/data';
 import { cn } from '@/lib/cn';
 import type { VehicleDetail } from '../data';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   refreshAfterWrite,
   uploadFiles,
-  useDocuments,
   useOwnership,
-  useQuotes,
   useSaveOwnership,
   type Ownership,
   type RecordRow,
 } from './api';
 import { AttachmentList, FilePicker } from './Attachments';
 import { cellText, useFormatCtx } from './format';
-import { localDay, type Column, type FormatCtx } from './kinds';
+import { localDay, type Column } from './kinds';
 import { useExport } from './useExport';
-
-const asRows = <T extends { id: string }>(items: T[]) =>
-  items.map((i) => ({ createdById: null, createdBy: null, attachments: [], ...i }) as RecordRow);
-
-/** A read-only table with Export, for documents and quotes until Phase 6 adds their forms. */
-function ReadOnlyTable({
-  kind,
-  vehicle,
-  columns,
-  rows,
-  pending,
-  ctx,
-}: {
-  kind: 'documents' | 'quotes';
-  vehicle: VehicleDetail;
-  columns: Column[];
-  rows: RecordRow[];
-  pending: boolean;
-  ctx: FormatCtx;
-}) {
-  const { t } = useTranslation();
-  const exporter = useExport();
-  return (
-    <div className="space-y-3" data-testid={`records-${kind}`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-muted me-auto text-xs">{t('records.addLater')}</p>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={exporter.busy || rows.length === 0}
-          onClick={() =>
-            exporter.run({ serial: vehicle.serial, kind, vehicle, columns, ctx, rows })
-          }
-          data-testid="export"
-        >
-          {exporter.busy ? (
-            <Loader2 aria-hidden className="animate-spin" />
-          ) : (
-            <FileSpreadsheet aria-hidden />
-          )}
-          {t('records.export')}
-        </Button>
-      </div>
-      {exporter.error && (
-        <p role="alert" className="text-bad text-xs">
-          {t('records.error.export')}
-        </p>
-      )}
-      {pending ? (
-        <Loader2 aria-hidden className="text-muted mx-auto my-8 size-5 animate-spin" />
-      ) : rows.length === 0 ? (
-        <p className="text-muted py-6 text-center text-sm">{t('vehicle.records.empty')}</p>
-      ) : (
-        <div className="-mx-1 overflow-x-auto">
-          <table className="w-full min-w-[32rem] text-sm">
-            <thead className="text-muted text-xs">
-              <tr className="border-border border-b">
-                {columns.map((c) => (
-                  <th
-                    key={c.key}
-                    scope="col"
-                    className={cn(
-                      'px-1.5 py-2 font-medium',
-                      c.kind === 'money' || c.kind === 'number' ? 'text-end' : 'text-start',
-                    )}
-                  >
-                    {t(c.header as never)}
-                  </th>
-                ))}
-                <th className="px-1.5 py-2">
-                  <span className="sr-only">{t('records.files')}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-border border-b last:border-0">
-                  {columns.map((c) => (
-                    <td
-                      key={c.key}
-                      className={cn(
-                        'px-1.5 py-2',
-                        (c.kind === 'money' || c.kind === 'number') && 'num text-end',
-                      )}
-                    >
-                      {cellText(c, row, ctx) || <span className="text-muted">—</span>}
-                    </td>
-                  ))}
-                  <td className="px-1.5 py-1">
-                    <AttachmentList
-                      serial={vehicle.serial}
-                      items={row.attachments}
-                      canEdit={false}
-                      compact
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
 
 const str = (v: unknown) => (typeof v === 'string' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
 const date = (v: unknown) => (typeof v === 'string' ? new Date(v) : null);
 
-const DOC_COLUMNS: Column[] = [
-  { key: 'date', header: 'records.col.date', kind: 'date', value: (r) => date(r.date) },
-  {
-    key: 'kind',
-    header: 'records.col.documentKind',
-    kind: 'text',
-    value: (r) => str(r.kind),
-    text: (r, ctx) => ctx.t(`records.documentKind.${str(r.kind) ?? 'OTHER'}` as never),
-  },
-  {
-    key: 'category',
-    header: 'records.col.category',
-    kind: 'text',
-    value: (r, ctx) =>
-      lookupName(
-        ctx.lookups?.receiptCategories.find((c) => c.code === r.category),
-        ctx.lang,
-      ) ?? str(r.category),
-  },
-  { key: 'vendor', header: 'records.col.vendor', kind: 'text', value: (r) => str(r.vendor) },
-  {
-    key: 'amount',
-    header: 'records.col.amount',
-    kind: 'money',
-    value: (r) => num(r.amount),
-    numFmt: '#,##0.00 "₪"',
-  },
-  { key: 'notes', header: 'records.col.notes', kind: 'long', value: (r) => str(r.notes) },
-];
+// The receipts and quotes screens, scoped to this vehicle (SPEC 5.5, 5.6).
+const ReceiptsView = lazy(() =>
+  import('@/money/Receipts').then((m) => ({ default: m.ReceiptsView })),
+);
+const QuotesView = lazy(() => import('@/money/Quotes').then((m) => ({ default: m.QuotesView })));
+const Spinner = () => (
+  <Loader2 aria-hidden className="text-muted mx-auto my-8 size-5 animate-spin" />
+);
 
 export function DocumentsPanel({ vehicle }: { vehicle: VehicleDetail }) {
-  const ctx = useFormatCtx(vehicle.usageUnit);
-  const docs = useDocuments(vehicle.serial);
   return (
-    <ReadOnlyTable
-      kind="documents"
-      vehicle={vehicle}
-      columns={DOC_COLUMNS}
-      rows={asRows(docs.data?.items ?? [])}
-      pending={docs.isPending}
-      ctx={ctx}
-    />
+    <div data-testid="records-documents">
+      <Suspense fallback={<Spinner />}>
+        <ReceiptsView vehicle={vehicle.serial} />
+      </Suspense>
+    </div>
   );
 }
 
-const QUOTE_COLUMNS: Column[] = [
-  { key: 'date', header: 'records.col.date', kind: 'date', value: (r) => date(r.date) },
-  { key: 'supplier', header: 'records.col.supplier', kind: 'text', value: (r) => str(r.supplier) },
-  {
-    key: 'status',
-    header: 'records.col.quoteStatus',
-    kind: 'text',
-    value: (r) => str(r.status),
-    text: (r, ctx) => ctx.t(`records.quoteStatus.${str(r.status) ?? 'REQUESTED'}` as never),
-  },
-  { key: 'lineCount', header: 'records.col.lines', kind: 'number', value: (r) => num(r.lineCount) },
-  {
-    key: 'total',
-    header: 'records.col.total',
-    kind: 'money',
-    value: (r) => num(r.total),
-    numFmt: '#,##0.00 "₪"',
-  },
-  {
-    key: 'validUntil',
-    header: 'records.col.validUntil',
-    kind: 'date',
-    value: (r) => date(r.validUntil),
-  },
-];
-
 export function QuotesPanel({ vehicle }: { vehicle: VehicleDetail }) {
-  const ctx = useFormatCtx(vehicle.usageUnit);
-  const quotes = useQuotes(vehicle.serial);
   return (
-    <ReadOnlyTable
-      kind="quotes"
-      vehicle={vehicle}
-      columns={QUOTE_COLUMNS}
-      rows={asRows(quotes.data?.items ?? [])}
-      pending={quotes.isPending}
-      ctx={ctx}
-    />
+    <div data-testid="records-quotes">
+      <Suspense fallback={<Spinner />}>
+        <QuotesView vehicle={vehicle.serial} />
+      </Suspense>
+    </div>
   );
 }
 

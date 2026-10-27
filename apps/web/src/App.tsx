@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { FleetStage } from '@/fleet/FleetStage';
 import { AppShell } from '@/layout/AppShell';
-import { AREA_ROUTES, AREAS, type Area } from '@/layout/nav';
+import { AREA_ROUTES, AREAS } from '@/layout/nav';
 import { AreaPage } from '@/pages/AreaPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -11,6 +11,15 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 const DrawingsPage = lazy(() =>
   import('@/pages/DrawingsPage').then((m) => ({ default: m.DrawingsPage })),
 );
+// Receipts, quotes and equipment load when first opened.
+const ReceiptsPage = lazy(() =>
+  import('@/money/Receipts').then((m) => ({ default: m.ReceiptsPage })),
+);
+const QuotesPage = lazy(() => import('@/money/Quotes').then((m) => ({ default: m.QuotesPage })));
+const EquipmentPage = lazy(() =>
+  import('@/money/Equipment').then((m) => ({ default: m.EquipmentPage })),
+);
+const MONEY_PAGES = { receipts: ReceiptsPage, quotes: QuotesPage, equipment: EquipmentPage };
 const I18nCheckPage = lazy(() =>
   import('@/pages/I18nCheckPage').then((m) => ({ default: m.I18nCheckPage })),
 );
@@ -29,10 +38,18 @@ const router = createBrowserRouter([
           { path: '/vehicles/:serial', element: null },
         ],
       },
-      ...AREAS.filter(
-        (area): area is Exclude<Area, 'dashboard' | 'fleetTable'> =>
-          area !== 'dashboard' && area !== 'fleetTable',
-      ).map((area) => ({
+      ...(['receipts', 'quotes', 'equipment'] as const).map((area) => {
+        const Page = MONEY_PAGES[area];
+        return {
+          path: AREA_ROUTES[area].path,
+          element: (
+            <Suspense>
+              <Page />
+            </Suspense>
+          ),
+        };
+      }),
+      ...AREAS.filter((area): area is 'settings' => area === 'settings').map((area) => ({
         path: AREA_ROUTES[area].path,
         element: <AreaPage area={area} />,
       })),

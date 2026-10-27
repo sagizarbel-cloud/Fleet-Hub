@@ -89,6 +89,9 @@ export function refreshAfterWrite(qc: QueryClient, serial: string) {
     qc.invalidateQueries({ queryKey: ['ownership', serial] }),
     qc.invalidateQueries({ queryKey: ['events'] }),
     qc.invalidateQueries({ queryKey: ['dashboard'] }),
+    // Receipts and quotes carry files too.
+    qc.invalidateQueries({ queryKey: ['receipts'] }),
+    qc.invalidateQueries({ queryKey: ['quotes'] }),
   ]);
 }
 

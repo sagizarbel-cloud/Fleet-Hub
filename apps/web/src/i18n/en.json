@@ -59,9 +59,6 @@
     "RED": "Inoperable"
   },
   "areas": {
-    "receipts": "Receipts and invoices tagged by vehicle will appear here.",
-    "quotes": "Price quotes for parts and tools will appear here.",
-    "equipment": "Attachable equipment and its assignment history will appear here.",
     "settings": "Lookup lists, default vitals, and users and roles will appear here."
   },
   "common": {
@@ -155,7 +152,8 @@
     "STATUS_OVERRIDE_CLEARED": "Manual status cleared, now {{to}}",
     "RECORD_EDITED": "{{record}} edited: {{detail}}",
     "RECORD_DELETED": "{{record}} deleted: {{detail}}",
-    "RECORD_RESTORED": "{{record}} restored: {{detail}}"
+    "RECORD_RESTORED": "{{record}} restored: {{detail}}",
+    "QUOTE_UNLINKED": "Price quote from {{supplier}} unlinked"
   },
   "severity": {
     "LOW": "low",
@@ -340,7 +338,6 @@
     "dropFlag": "Sudden drop",
     "accidentFlag": "Accident",
     "liters": "{{value}} L",
-    "addLater": "Adding and editing these comes with the receipts and quotes screens.",
     "col": {
       "date": "Date",
       "reading": "Odometer / engine hours",
@@ -556,5 +553,171 @@
       "fleetHint": "Every vehicle and every record, one sheet each",
       "vehiclesSheet": "Vehicles"
     }
+  },
+  "money": {
+    "view": "View",
+    "grid": "Grid",
+    "table": "Table"
+  },
+  "picker": {
+    "assign": "Assign vehicle",
+    "search": "Search serial, make, model or plate",
+    "type": "Vehicle type",
+    "allTypes": "All types",
+    "none": "No vehicles match.",
+    "remove": "Remove {{serial}}"
+  },
+  "receipts": {
+    "one": "Receipt",
+    "add": "Add receipt",
+    "addTitle": "Add receipt",
+    "editTitle": "Edit receipt",
+    "vehicles": "Vehicles",
+    "vehicle": "Vehicle",
+    "amount": "Amount (₪)",
+    "state": "Approval",
+    "states": {
+      "approved": "Approved",
+      "suggested": "Suggested"
+    },
+    "suggest": "Send for approval",
+    "suggestHint": "An editor or admin approves your receipt before it counts in totals and costs.",
+    "suggestedSaved": "Sent for approval: {{count}}",
+    "saved": "Receipts saved: {{count}}",
+    "perFile": "One receipt per file ({{count}} files)",
+    "pages": "Files: {{count}}",
+    "linkKind": "Linked to (optional)",
+    "noLink": "No link",
+    "linkRecord": "Record",
+    "approve": "Approve",
+    "reject": "Reject",
+    "waiting": "Receipts waiting for approval: {{count}}. Show them",
+    "totals": "Totals",
+    "total": "Total",
+    "count": "Receipts: {{count}}",
+    "byVehicle": "By vehicle (shared receipts split evenly)",
+    "byMonth": "By month",
+    "search": "Search vendor or notes",
+    "min": "Min ₪",
+    "max": "Max ₪",
+    "empty": "No receipts yet. Drop photos or PDFs here, or press Add receipt.",
+    "dropHere": "Drop to add receipts",
+    "noFile": "No file",
+    "noVendor": "No vendor"
+  },
+  "quotes": {
+    "one": "Price quote",
+    "add": "Add quote",
+    "addTitle": "Add price quote",
+    "editTitle": "Edit price quote",
+    "from": "Quote from {{supplier}}",
+    "supplierHint": "Pick a supplier or type a new name.",
+    "lines": "Line items",
+    "item": "Part or tool",
+    "partNo": "Part no. / model",
+    "condition": "Condition",
+    "conditions": {
+      "IN_STOCK": "In stock",
+      "NEW": "New",
+      "NEEDS_REPLACEMENT": "Needs replacement"
+    },
+    "quantity": "Qty",
+    "unitPrice": "Unit price",
+    "qty": "Qty {{count}}",
+    "addLine": "Add line",
+    "removeLine": "Remove line {{n}}",
+    "vehicles": "Vehicles",
+    "noVehicles": "Not linked to a vehicle.",
+    "changeVehicles": "Change vehicles",
+    "file": "Quote file (PDF or photo)",
+    "visibility": "Who can see it",
+    "levels": {
+      "STANDARD": "Standard",
+      "PUBLIC": "Public",
+      "ADMINS": "Admins only"
+    },
+    "levelHint": {
+      "STANDARD": "its creator and admins",
+      "PUBLIC": "everyone signed in",
+      "ADMINS": "admins and its creator; only admins can change it"
+    },
+    "moveTo": {
+      "REQUESTED": "Reopen",
+      "RECEIVED": "Mark received",
+      "APPROVED": "Approve",
+      "ORDERED": "Mark ordered",
+      "REJECTED": "Reject"
+    },
+    "approvalWaits": "An editor or admin approves and orders it.",
+    "expired": "Expired",
+    "validTo": "Valid to {{date}}",
+    "readOnly": "Read only",
+    "lockedByAdmin": "Locked by an admin",
+    "notFound": "This quote isn’t available.",
+    "search": "Search supplier, part or part no.",
+    "compare": "Compare a part",
+    "compareChosen": "Compare chosen ({{count}})",
+    "compareTitle": "Compare quotes",
+    "comparePart": "Part",
+    "quoteCount": "quotes: {{count}}",
+    "cheapest": "Cheapest",
+    "pick": "Choose {{supplier}} to compare",
+    "pickHint": "Tick two to four quotes to compare them side by side.",
+    "empty": "No price quotes yet.",
+    "error": {
+      "validUntil": "Can’t be before the quote date."
+    }
+  },
+  "equipment": {
+    "one": "Item",
+    "add": "Add item",
+    "addTitle": "Add item",
+    "editTitle": "Edit item",
+    "kind": "Kind",
+    "kinds": {
+      "bucket": "Bucket",
+      "hydraulic_breaker": "Hydraulic breaker",
+      "concrete_crusher": "Concrete crusher",
+      "generator": "Generator",
+      "equipment_box": "Equipment box",
+      "adapter": "Adapter / coupler",
+      "pallet_forks": "Pallet forks",
+      "tool": "Tool",
+      "other": "Other"
+    },
+    "vehicle": "Vehicle",
+    "where": "Where",
+    "onVehicle": "On a vehicle",
+    "inYard": "In the yard",
+    "since": "since {{date}}",
+    "moveTo": "Move to",
+    "assignTo": "Assign to",
+    "toYard": "Back to the yard",
+    "retire": "Retire item",
+    "unretire": "Bring back",
+    "retired": "Retired",
+    "showRetired": "Show retired",
+    "history": "Assignment history",
+    "noHistory": "Never assigned.",
+    "now": "Now",
+    "days": "Days",
+    "search": "Search name, model, spec or serial",
+    "empty": "No items match.",
+    "serialTaken": "Another item has this serial."
+  },
+  "tray": {
+    "title": "Equipment",
+    "hint": "Drag an item onto a vehicle to assign it. On a phone: tap the item, then the vehicle.",
+    "show": "Show equipment",
+    "hide": "Hide equipment",
+    "picked": "Tap a vehicle to assign {{item}}",
+    "cancel": "Cancel",
+    "assigned": "{{item}} assigned to {{serial}}",
+    "failed": "Couldn’t assign. Try again.",
+    "dropFile": "Drop to add a receipt for {{serial}}",
+    "dropItem": "Drop to assign to {{serial}}",
+    "confirm": "Assign {{item}} to {{serial}}?",
+    "confirmMove": "Move {{item}} from {{from}} to {{serial}}?",
+    "yes": "Assign"
   }
 }

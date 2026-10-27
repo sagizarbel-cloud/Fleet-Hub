@@ -4,6 +4,7 @@ import {
   CircleDot,
   ClipboardCheck,
   Droplet,
+  FileMinus2,
   FilePlus2,
   Fuel,
   Package,
@@ -43,7 +44,7 @@ export const EVENT_GROUPS = {
   movements: { icon: ArrowLeftRight, types: ['MOVEMENT'] },
   inspections: { icon: ClipboardCheck, types: ['INSPECTION'] },
   items: { icon: Package, types: ['ITEM_ASSIGNED', 'ITEM_REMOVED'] },
-  documents: { icon: ReceiptText, types: ['DOCUMENT_ADDED', 'QUOTE_LINKED'] },
+  documents: { icon: ReceiptText, types: ['DOCUMENT_ADDED', 'QUOTE_LINKED', 'QUOTE_UNLINKED'] },
   notes: { icon: StickyNote, types: ['NOTE_ADDED'] },
 } satisfies Record<string, { icon: LucideIcon; types: EventType[] }>;
 export type EventGroup = keyof typeof EVENT_GROUPS;
@@ -55,6 +56,7 @@ const GROUP_OF = Object.fromEntries(
 
 const OWN_ICON: Partial<Record<EventType, LucideIcon>> = {
   QUOTE_LINKED: FilePlus2,
+  QUOTE_UNLINKED: FileMinus2,
   RECORD_EDITED: Pencil,
   RECORD_DELETED: Trash2,
   RECORD_RESTORED: Undo2,
@@ -111,7 +113,11 @@ export function describeEvent(
       const kind = RECORD_KINDS.find((k) => k === p.kind);
       const detail = of && of !== e.type ? describeEvent(t, { ...e, type: of }, lookups, lang) : '';
       return t(`events.${e.type}`, {
-        record: kind ? t(`vehicle.records.one.${kind}`) : '',
+        record: kind
+          ? t(`vehicle.records.one.${kind}`)
+          : p.kind === 'receipt'
+            ? t('receipts.one')
+            : '',
         detail,
       });
     }
@@ -157,7 +163,8 @@ export function describeEvent(
         amount: formatMoney(num(p.amount), lang),
       });
     case 'QUOTE_LINKED':
-      return t('events.QUOTE_LINKED', { supplier: str(p.supplier) });
+    case 'QUOTE_UNLINKED':
+      return t(`events.${e.type}`, { supplier: str(p.supplier) });
     case 'VEHICLE_CREATED':
     case 'VEHICLE_UPDATED':
     case 'NOTE_ADDED':
