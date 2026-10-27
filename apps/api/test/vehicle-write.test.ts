@@ -145,6 +145,17 @@ describe('add and edit a vehicle', () => {
       odometerKm: 12_500,
     });
     expect(same.json().changed).toEqual([]);
+    // A stored time of day is kept when the form sends back the same day.
+    await app.db.vehicle.update({
+      where: { serial: 'VW-1' },
+      data: { insuranceExpiry: new Date('2027-05-10T14:30:00Z') },
+    });
+    const day = (await req('GET', '/api/vehicles/VW-1/form', editor)).json().values;
+    const kept = await req('PUT', '/api/vehicles/VW-1', editor, {
+      ...day,
+      insuranceExpiry: '2027-05-10',
+    });
+    expect(kept.json().changed).toEqual([]);
   });
 
   it('only users with the start-code permission set one; it is encrypted and audited', async () => {
@@ -264,6 +275,13 @@ describe('photos and drawings', () => {
       where: { vehicleId: v.id, type: 'VEHICLE_UPDATED' },
       orderBy: { createdAt: 'desc' },
     });
-    expect(last.params).toEqual({ fields: ['photos'] });
+    // The uploads and the removal moments apart are one timeline entry.
+    expect((last.params as { fields: string[] }).fields).toEqual(['photos', 'drawing']);
+    const photoEvents = await app.db.event.findMany({
+      where: { vehicleId: v.id, type: 'VEHICLE_UPDATED' },
+    });
+    expect(
+      photoEvents.filter((e) => (e.params as { fields: string[] }).fields.includes('photos')),
+    ).toHaveLength(1);
   });
 });

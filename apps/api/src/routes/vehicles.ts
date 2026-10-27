@@ -6,7 +6,7 @@ import { decryptStartCode } from '@fleet-hub/shared/crypto';
 import { HttpError, parse } from '../lib/http';
 import { cleanFileName, storePicture } from '../lib/uploads';
 import { vehicleDetail } from '../lib/vehicle-detail';
-import { parseVehicle, saveVehicle, vehicleForm } from '../lib/vehicle-write';
+import { noteVehicleUpdate, parseVehicle, saveVehicle, vehicleForm } from '../lib/vehicle-write';
 import { requireRole, requireStartCodeView, requireUser } from '../plugins/auth';
 
 /**
@@ -124,17 +124,7 @@ export const vehicleRoutes: FastifyPluginAsync<{
         select: { id: true },
       });
       await tx.vehicle.update({ where: { id: vehicle.id }, data: { [SLOT_COLUMN[slot]]: row.id } });
-      await tx.event.create({
-        data: {
-          type: 'VEHICLE_UPDATED',
-          vehicleId: vehicle.id,
-          occurredAt: new Date(),
-          userId: user.id,
-          params: { fields: [slot === 'drawing' ? 'drawing' : 'photos'] },
-          sourceType: 'Vehicle',
-          sourceId: vehicle.id,
-        },
-      });
+      await noteVehicleUpdate(tx, vehicle.id, user.id, [slot === 'drawing' ? 'drawing' : 'photos']);
       return { id: row.id, mimeType: file.mimeType };
     });
   });
@@ -152,17 +142,7 @@ export const vehicleRoutes: FastifyPluginAsync<{
       if (!current) return { ok: true };
       await tx.vehicle.update({ where: { id: v.id }, data: { [SLOT_COLUMN[slot]]: null } });
       await tx.attachment.update({ where: { id: current }, data: { deletedAt: new Date() } });
-      await tx.event.create({
-        data: {
-          type: 'VEHICLE_UPDATED',
-          vehicleId: v.id,
-          occurredAt: new Date(),
-          userId: user.id,
-          params: { fields: [slot === 'drawing' ? 'drawing' : 'photos'] },
-          sourceType: 'Vehicle',
-          sourceId: v.id,
-        },
-      });
+      await noteVehicleUpdate(tx, v.id, user.id, [slot === 'drawing' ? 'drawing' : 'photos']);
       return { ok: true };
     });
   });

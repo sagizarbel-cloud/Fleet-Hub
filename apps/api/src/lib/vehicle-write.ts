@@ -38,6 +38,16 @@ const COLUMNS = [
   'warrantyExpiry',
 ] as const satisfies readonly VehicleField[];
 
+const DATE_COLUMNS = [
+  'nextServiceDate',
+  'annualTestExpiry',
+  'insuranceExpiry',
+  'safetyCheckExpiry',
+  'purchaseDate',
+  'warrantyExpiry',
+] as const satisfies readonly (typeof COLUMNS)[number][];
+const sameDay = (a: Date, b: Date) => a.toISOString().slice(0, 10) === b.toISOString().slice(0, 10);
+
 const formSelect = {
   id: true,
   ...Object.fromEntries(COLUMNS.map((c) => [c, true])),
@@ -112,6 +122,62 @@ async function codeId(tx: Tx, list: 'department' | 'location', code: string | nu
   return row.id;
 }
 
+const MERGE_MS = 2 * 60_000;
+
+/**
+ * Writes VEHICLE_UPDATED naming the changed fields. A save and the picture uploads that follow
+ * it moments later, by the same user, share one event instead of filling the timeline.
+ */
+export async function noteVehicleUpdate(
+  tx: Tx,
+  vehicleId: string,
+  userId: string,
+  fields: string[],
+  importRunId: string | null = null,
+) {
+  const now = new Date();
+  const last = importRunId
+    ? null
+    : await tx.event.findFirst({
+        where: { vehicleId },
+        orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+        select: {
+          id: true,
+          type: true,
+          userId: true,
+          occurredAt: true,
+          params: true,
+          importRunId: true,
+        },
+      });
+  if (
+    last &&
+    last.type === 'VEHICLE_UPDATED' &&
+    last.userId === userId &&
+    !last.importRunId &&
+    now.getTime() - last.occurredAt.getTime() < MERGE_MS
+  ) {
+    const before = (last.params as { fields?: string[] } | null)?.fields ?? [];
+    await tx.event.update({
+      where: { id: last.id },
+      data: { params: { fields: [...new Set([...before, ...fields])] } },
+    });
+    return;
+  }
+  await tx.event.create({
+    data: {
+      type: 'VEHICLE_UPDATED',
+      vehicleId,
+      userId,
+      importRunId,
+      occurredAt: now,
+      params: { fields },
+      sourceType: 'Vehicle',
+      sourceId: vehicleId,
+    },
+  });
+}
+
 const same = (a: unknown, b: unknown) => {
   const norm = (v: unknown) =>
     v instanceof Date ? v.getTime() : v instanceof Prisma.Decimal ? v.toNumber() : (v ?? null);
@@ -164,6 +230,10 @@ export async function saveVehicle(
   const changed: VehicleField[] = [];
   if (before) {
     const b = before as unknown as Record<string, unknown>;
+    // The form edits days; a stored time of day on the same day is not a change.
+    const d = data as unknown as Record<string, unknown>;
+    for (const c of DATE_COLUMNS)
+      if (b[c] instanceof Date && d[c] instanceof Date && sameDay(b[c], d[c])) d[c] = b[c];
     for (const c of COLUMNS) if (!same(b[c], data[c as keyof typeof data])) changed.push(c);
     if (b.typeId !== typeId) changed.push('type');
     if (!same(b.departmentId, data.departmentId)) changed.push('department');
@@ -200,16 +270,7 @@ export async function saveVehicle(
       },
     });
   } else if (changed.length) {
-    await tx.event.create({
-      data: {
-        ...base,
-        type: 'VEHICLE_UPDATED',
-        occurredAt: now,
-        params: { fields: changed },
-        sourceType: 'Vehicle',
-        sourceId: id,
-      },
-    });
+    await noteVehicleUpdate(tx, id, user.id, changed, opts.importRunId ?? null);
   }
   if (input.startCode !== undefined && (before ? true : input.startCode !== null))
     await tx.auditLog.create({

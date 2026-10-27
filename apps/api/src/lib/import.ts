@@ -90,8 +90,8 @@ const CHOICES: Record<string, Record<string, string[]>> = {
   },
   itemKind: {
     bucket: ['bucket', 'כף'],
-    hydraulic_breaker: ['breaker', 'hammer', 'hydraulic breaker', 'פטיש', 'פטיש הידראולי'],
-    concrete_crusher: ['crusher', 'concrete crusher', 'מפצח', 'מרסק'],
+    hydraulic_breaker: ['breaker', 'hammer', 'hydraulic breaker', 'פטיש', 'פטיש חציבה', 'פטיש הידראולי'],
+    concrete_crusher: ['crusher', 'concrete crusher', 'מפצח', 'מרסק', 'מרסק בטון'],
     generator: ['generator', 'גנרטור'],
     equipment_box: ['box', 'equipment box', 'ארגז', 'ארגז ציוד'],
     adapter: ['adapter', 'coupler', 'quick coupler', 'מתאם', 'מצמד'],
