@@ -30,6 +30,7 @@ import {
   type Receipt,
   type ReceiptFilters,
 } from './api';
+import { hasFiles } from './drag';
 import { ReceiptForm } from './ReceiptForm';
 import {
   Badge,
@@ -101,8 +102,6 @@ const COLUMNS: Column[] = [
 ];
 
 /** Files dragged in from the computer (not text or links). */
-export const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer.types).includes('Files');
-
 function ReceiptActions({
   r,
   canReview,

@@ -176,3 +176,18 @@
     align-items: start;
   }
 }
+
+/* A dashboard tile with a file or an item over it: its tilted top view turns in place. */
+@keyframes fh-turntable {
+  to {
+    transform: rotateZ(360deg);
+  }
+}
+.tile-turntable {
+  animation: fh-turntable 6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile-turntable {
+    animation: none;
+  }
+}

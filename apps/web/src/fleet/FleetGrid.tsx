@@ -1,18 +1,61 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronDown, Plus } from 'lucide-react';
-import { VEHICLE_STATUSES, VEHICLE_TYPE_CODES, type VehicleStatus } from '@fleet-hub/shared';
+import { ChevronDown, Package, Plus } from 'lucide-react';
+import {
+  hasRole,
+  VEHICLE_STATUSES,
+  VEHICLE_TYPE_CODES,
+  type VehicleStatus,
+} from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { drawingFor } from '@/drawings/registry';
 import { VehicleVisual } from '@/drawings/VehicleVisual';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
-import { fade } from '@/lib/motion';
+import { fade, prefersReducedMotion, spring } from '@/lib/motion';
+import { useItemMove } from '@/money/api';
+import { hasFiles, hasItem, ITEM_MIME } from '@/money/drag';
 import { lookupName, useLookups, type Tile } from './data';
 import { useHover } from './hover';
 import { STATUS_ICON } from './statusIcon';
+import type { PickedItem } from './EquipmentTray';
 import { Chip } from './Timeline';
+
+// Both load only when used: a file dropped on a tile, or the equipment tray opened.
+const ReceiptForm = lazy(() =>
+  import('@/money/ReceiptForm').then((m) => ({ default: m.ReceiptForm })),
+);
+const EquipmentTray = lazy(() => import('./EquipmentTray'));
+
+/** Keeps a serial in one left-to-right piece inside a Hebrew sentence. */
+const ltr = (s: string) => `\u2068${s}\u2069`;
+
+/** Isometric tilt: the top view tipped onto a turntable. */
+const ISO_TILT = 54.74;
+
+type DropWhat = 'file' | 'item';
+
+/** What a tile needs to take a dropped file or item, or a tapped item on a phone. */
+interface DropHandlers {
+  reduced: boolean;
+  canAssign: boolean;
+  picking: boolean;
+  onFiles: (serial: string, files: File[]) => void;
+  onItem: (serial: string, item: PickedItem) => void;
+  onPicked: (serial: string) => void;
+}
 
 // Top-view drawings fit a box of this size, so long machines (an excavator's arm) stay in the grid.
 const TILE_BOX = { width: 48, height: 84 };
@@ -76,18 +119,37 @@ function HoverCard({ tile }: { tile: Tile }) {
   );
 }
 
+function DropHint({ text }: { text: string }) {
+  return (
+    <motion.div
+      role="status"
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 4 }}
+      transition={fade.fast}
+      className="pointer-events-none absolute -inset-x-16 bottom-full z-20 mb-3 flex justify-center"
+    >
+      <p className="bg-accent text-accent-contrast rounded-full px-3 py-1 text-center text-xs font-medium shadow-lg">
+        {text}
+      </p>
+    </motion.div>
+  );
+}
+
 function TileButton({
   tile,
   away,
   delay,
   carried,
   linked,
+  drop,
 }: {
   tile: Tile;
   away: boolean;
   delay: number;
   carried: boolean;
   linked: boolean;
+  drop: DropHandlers;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -95,10 +157,61 @@ function TileButton({
   const [open, setOpen] = useState(false);
   const { icon: Icon, tone } = STATUS_ICON[tile.status];
 
+  const [over, setOver] = useState<DropWhat | null>(null);
+  // Counts enter/leave pairs, since moving over the drawing inside the tile fires both.
+  const depth = useRef(0);
+
   const show = (on: boolean) => {
     setOpen(on);
     hover.setSerial(on ? tile.serial : null);
   };
+
+  const what = (e: DragEvent): DropWhat | null =>
+    hasFiles(e) ? 'file' : drop.canAssign && hasItem(e) ? 'item' : null;
+  const onDragEnter = (e: DragEvent) => {
+    const w = what(e);
+    if (!w) return;
+    e.preventDefault();
+    depth.current += 1;
+    setOver(w);
+  };
+  const onDragOver = (e: DragEvent) => {
+    if (!what(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = hasFiles(e) ? 'copy' : 'move';
+  };
+  const onDragLeave = () => {
+    depth.current = Math.max(0, depth.current - 1);
+    if (depth.current === 0) setOver(null);
+  };
+  const onDrop = (e: DragEvent) => {
+    const w = what(e);
+    depth.current = 0;
+    setOver(null);
+    if (!w) return;
+    e.preventDefault();
+    if (w === 'file') return drop.onFiles(tile.serial, Array.from(e.dataTransfer.files));
+    try {
+      drop.onItem(tile.serial, JSON.parse(e.dataTransfer.getData(ITEM_MIME)) as PickedItem);
+    } catch {
+      // Not one of our items.
+    }
+  };
+  // A drag that ends elsewhere (Esc, dropped outside) never sends this tile a leave.
+  useEffect(() => {
+    if (!over) return;
+    const reset = () => {
+      depth.current = 0;
+      setOver(null);
+    };
+    window.addEventListener('dragend', reset);
+    window.addEventListener('drop', reset);
+    return () => {
+      window.removeEventListener('dragend', reset);
+      window.removeEventListener('drop', reset);
+    };
+  }, [over]);
+  const tilted = !!over && !drop.reduced;
 
   return (
     <motion.li
@@ -113,10 +226,17 @@ function TileButton({
         data-tile={tile.serial}
         aria-label={t('dashboard.openVehicle', { serial: tile.serial })}
         onClick={() =>
-          navigate(`/vehicles/${encodeURIComponent(tile.serial)}`, {
-            state: { fromDashboard: true },
-          })
+          drop.picking
+            ? drop.onPicked(tile.serial)
+            : navigate(`/vehicles/${encodeURIComponent(tile.serial)}`, {
+                state: { fromDashboard: true },
+              })
         }
+        onDragEnter={onDragEnter}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        animate={{ scale: over ? 1.1 : 1 }}
         onPointerEnter={(e) => e.pointerType === 'mouse' && show(true)}
         onPointerLeave={() => show(false)}
         onFocus={(e) => e.currentTarget.matches(':focus-visible') && show(true)}
@@ -124,20 +244,54 @@ function TileButton({
         whileHover={{ y: -4 }}
         transition={{ type: 'spring', stiffness: 520, damping: 38 }}
         className={cn(
-          'border-border bg-surface flex w-full flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2',
+          'border-border bg-surface relative flex w-full flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2',
           'hover:border-border-strong',
           linked && 'border-accent/70 ring-accent/40 ring-2',
+          drop.picking && 'border-accent/60 border-dashed',
         )}
+        data-drop={over ?? undefined}
       >
-        <div className="grid place-items-center" style={{ height: TILE_BOX.height }}>
-          <div data-tile-visual={tile.serial} style={{ opacity: carried ? 0 : 1 }}>
-            <VehicleVisual
-              type={tile.type}
-              view="top"
-              status={tile.status}
-              size={tileSize(tile.type)}
-            />
-          </div>
+        {/* Glow while something is over the tile: a fixed shadow that only fades in and out. */}
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute -inset-px rounded-xl shadow-[0_0_0_2px_var(--fh-accent),0_0_22px_4px_color-mix(in_oklab,var(--fh-accent)_55%,transparent)]"
+          initial={false}
+          animate={{ opacity: over ? 1 : 0 }}
+          transition={fade.base}
+        />
+        <div
+          className="pointer-events-none grid place-items-center"
+          style={{ height: TILE_BOX.height, perspective: 320 }}
+        >
+          <motion.div
+            className="relative"
+            style={{ transformStyle: 'preserve-3d' }}
+            initial={false}
+            animate={{ rotateX: tilted ? ISO_TILT : 0 }}
+            transition={spring.smooth}
+          >
+            <div className={cn('relative', tilted && 'tile-turntable')}>
+              {tilted && (
+                <span
+                  aria-hidden
+                  className="border-accent/60 bg-accent/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border"
+                  style={{ width: TILE_BOX.height, height: TILE_BOX.height }}
+                />
+              )}
+              <div
+                data-tile-visual={tile.serial}
+                className="relative"
+                style={{ opacity: carried ? 0 : 1 }}
+              >
+                <VehicleVisual
+                  type={tile.type}
+                  view="top"
+                  status={tile.status}
+                  size={tileSize(tile.type)}
+                />
+              </div>
+            </div>
+          </motion.div>
         </div>
         <span className="flex items-center gap-1 text-xs">
           <Icon aria-hidden className={cn('size-3.5', tone)} />
@@ -147,7 +301,18 @@ function TileButton({
           </bdi>
         </span>
       </motion.button>
-      <AnimatePresence>{open && !away && <HoverCard tile={tile} />}</AnimatePresence>
+      <AnimatePresence>
+        {over ? (
+          <DropHint
+            key="drop"
+            text={t(over === 'file' ? 'tray.dropFile' : 'tray.dropItem', {
+              serial: ltr(tile.serial),
+            })}
+          />
+        ) : (
+          open && !away && <HoverCard key="card" tile={tile} />
+        )}
+      </AnimatePresence>
     </motion.li>
   );
 }
@@ -172,6 +337,19 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
   const [department, setDepartment] = useState('');
   const [collapsed, setCollapsed] = useState(loadCollapsed);
   const [delays, setDelays] = useState<Record<string, number>>({});
+  const [reduced] = useState(prefersReducedMotion);
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [picked, setPicked] = useState<PickedItem | null>(null);
+  const [receipt, setReceipt] = useState<{ serial: string; files: File[] } | null>(null);
+  const [confirm, setConfirm] = useState<{ item: PickedItem; serial: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const move = useItemMove();
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const visible = tiles.filter(
     (v) =>
@@ -219,8 +397,32 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
       return next;
     });
   const filtered = statuses.length > 0 || !!type || !!department;
-  const canAdd = user?.role === 'EDITOR' || user?.role === 'ADMIN';
+  const canAdd = !!user && hasRole(user.role, 'EDITOR');
   const lang = i18n.language;
+
+  const askAssign = (serial: string, item: PickedItem) => {
+    setPicked(null);
+    if (item.from !== serial) setConfirm({ item, serial });
+  };
+  const drop: DropHandlers = {
+    reduced,
+    canAssign: canAdd,
+    picking: !!picked,
+    onFiles: (serial, files) => setReceipt({ serial, files }),
+    onItem: askAssign,
+    onPicked: (serial) => picked && askAssign(serial, picked),
+  };
+  const assign = async () => {
+    if (!confirm) return;
+    const { item, serial } = confirm;
+    try {
+      await move.mutateAsync({ id: item.id, action: 'assign', vehicle: serial });
+      setNotice(t('tray.assigned', { item: item.name, serial: ltr(serial) }));
+    } catch {
+      setNotice(t('tray.failed'));
+    }
+    setConfirm(null);
+  };
 
   return (
     <section
@@ -365,6 +567,7 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
                       delay={away ? (delays[tile.serial] ?? 0) : 0.25 - (delays[tile.serial] ?? 0)}
                       carried={tile.serial === activeSerial}
                       linked={hover.event?.serial === tile.serial}
+                      drop={drop}
                     />
                   ))}
                 </ul>
@@ -381,16 +584,107 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
           transition={fade.base}
           className="mt-3"
         >
-          <button
-            type="button"
-            disabled
-            title={t('topbar.comingSoon')}
-            className="border-border-strong text-muted flex h-24 w-[5.25rem] flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs disabled:cursor-not-allowed"
-          >
-            <Plus aria-hidden className="size-5" />
-            {t('dashboard.addVehicle')}
-          </button>
+          <div className="flex flex-wrap items-end gap-2">
+            <button
+              type="button"
+              disabled
+              title={t('topbar.comingSoon')}
+              className="border-border-strong text-muted flex h-24 w-[5.25rem] flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs disabled:cursor-not-allowed"
+            >
+              <Plus aria-hidden className="size-5" />
+              {t('dashboard.addVehicle')}
+            </button>
+            <button
+              type="button"
+              aria-expanded={trayOpen}
+              onClick={() => {
+                setTrayOpen((o) => !o);
+                setPicked(null);
+              }}
+              className="text-muted hover:text-text ms-auto inline-flex items-center gap-1.5 text-xs"
+              data-testid="tray-toggle"
+            >
+              <Package aria-hidden className="size-4" />
+              {t(trayOpen ? 'tray.hide' : 'tray.show')}
+            </button>
+          </div>
+          {trayOpen && (
+            <Suspense fallback={null}>
+              <EquipmentTray picked={picked} onPick={setPicked} />
+            </Suspense>
+          )}
         </motion.div>
+      )}
+
+      {createPortal(
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+          <AnimatePresence mode="wait">
+            {(confirm || picked || notice) && (
+              <motion.div
+                key={confirm ? 'confirm' : picked ? 'picked' : 'notice'}
+                role={confirm ? 'alertdialog' : 'status'}
+                aria-live="polite"
+                initial={{ opacity: 0, y: reduced ? 0 : 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduced ? 0 : 16 }}
+                transition={{ duration: 0.2 }}
+                className="glass bg-surface-strong pointer-events-auto flex max-w-xl items-center gap-3 px-4 py-2.5 text-sm shadow-lg"
+                data-testid="tray-bar"
+              >
+                {confirm ? (
+                  <>
+                    <span className="me-auto">
+                      {confirm.item.from
+                        ? t('tray.confirmMove', {
+                            item: confirm.item.name,
+                            from: ltr(confirm.item.from),
+                            serial: ltr(confirm.serial),
+                          })
+                        : t('tray.confirm', {
+                            item: confirm.item.name,
+                            serial: ltr(confirm.serial),
+                          })}
+                    </span>
+                    <span className="flex shrink-0 gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => setConfirm(null)}>
+                        {t('tray.cancel')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => void assign()}
+                        disabled={move.isPending}
+                        data-testid="tray-confirm"
+                      >
+                        {t('tray.yes')}
+                      </Button>
+                    </span>
+                  </>
+                ) : picked ? (
+                  <>
+                    <span className="me-auto">{t('tray.picked', { item: picked.name })}</span>
+                    <Button variant="ghost" size="sm" onClick={() => setPicked(null)}>
+                      {t('tray.cancel')}
+                    </Button>
+                  </>
+                ) : (
+                  <span>{notice}</span>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>,
+        document.body,
+      )}
+      {receipt && (
+        <Suspense fallback={null}>
+          <ReceiptForm
+            vehicles={[receipt.serial]}
+            files={receipt.files}
+            reduced={reduced}
+            onClose={() => setReceipt(null)}
+            onSaved={setNotice}
+          />
+        </Suspense>
       )}
     </section>
   );
