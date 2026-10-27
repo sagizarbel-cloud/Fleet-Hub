@@ -5,3 +5,4 @@ export * from './vitals';
 export * from './records';
 export * from './fuel';
 export * from './fleet';
+export * from './money';

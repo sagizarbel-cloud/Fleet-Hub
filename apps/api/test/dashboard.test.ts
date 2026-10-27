@@ -203,7 +203,8 @@ describe('events', () => {
 
   it('shows quote events only to users who can see the quote', async () => {
     expect(await quoteIds(admin)).toEqual(Object.values(quotes).sort());
-    expect(await quoteIds(editor)).toEqual([quotes.editorStd, quotes.pub].sort());
+    // The editor created the admins-only quote, so they still see it (2026-10-27).
+    expect(await quoteIds(editor)).toEqual([quotes.adminOnly, quotes.editorStd, quotes.pub].sort());
     expect(await quoteIds(viewer)).toEqual([quotes.viewerStd, quotes.pub].sort());
   });
 });

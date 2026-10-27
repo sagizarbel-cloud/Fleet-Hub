@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { EVENT_TYPES, type SessionUser } from '@fleet-hub/shared';
 import { HttpError } from './http';
-import { visibleQuotesWhere } from './quote-visibility';
+import { QUOTE_EVENTS, visibleQuotesWhere } from './quote-visibility';
 
 export const eventsQuery = z.object({
   cursor: z.string().max(80).optional(),
@@ -25,7 +25,7 @@ function decodeCursor(cursor: string) {
   return { date, id };
 }
 
-/** One page of the event log, newest first, hiding QUOTE_LINKED events for quotes the user can't see. */
+/** One page of the event log, newest first, hiding quote events for quotes the user can't see. */
 export async function listEvents(app: FastifyInstance, user: SessionUser, q: EventsQuery) {
   // Entries of deleted records stay hidden until Undo.
   const and: Prisma.EventWhereInput[] = [{ hiddenAt: null }];
@@ -42,7 +42,7 @@ export async function listEvents(app: FastifyInstance, user: SessionUser, q: Eve
       select: { id: true },
     });
     and.push({
-      OR: [{ type: { not: 'QUOTE_LINKED' } }, { sourceId: { in: visible.map((v) => v.id) } }],
+      OR: [{ type: { notIn: [...QUOTE_EVENTS] } }, { sourceId: { in: visible.map((v) => v.id) } }],
     });
   }
 

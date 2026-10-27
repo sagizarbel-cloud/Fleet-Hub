@@ -13,6 +13,8 @@ import { dashboardRoutes } from './routes/dashboard';
 import { eventRoutes } from './routes/events';
 import { lookupRoutes } from './routes/lookups';
 import { itemRoutes } from './routes/items';
+import { quoteRoutes } from './routes/quotes';
+import { receiptRoutes } from './routes/receipts';
 import { meRoutes } from './routes/me';
 import { recordRoutes } from './routes/records';
 import { vehicleRoutes } from './routes/vehicles';
@@ -79,6 +81,8 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
     maxMb: env.UPLOAD_MAX_MB,
   });
   await app.register(itemRoutes, { prefix: '/api/items' });
+  await app.register(receiptRoutes, { prefix: '/api/receipts' });
+  await app.register(quoteRoutes, { prefix: '/api/quotes' });
   await app.register(meRoutes, { prefix: '/api/me' });
   await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
   await app.register(fleetRoutes, { prefix: '/api/fleet' });

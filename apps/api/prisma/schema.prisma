@@ -51,6 +51,7 @@ enum EventType {
   ITEM_REMOVED
   DOCUMENT_ADDED
   QUOTE_LINKED
+  QUOTE_UNLINKED
   NOTE_ADDED
   RECORD_EDITED
   RECORD_DELETED
@@ -94,7 +95,7 @@ enum QuoteStatus {
 enum QuoteVisibility {
   STANDARD // creator + admins (default)
   PUBLIC // every signed-in user
-  ADMINS // admins only
+  ADMINS // admins + its creator; only admins edit or delete (Sagi, 2026-10-27)
 }
 
 enum LineCondition {
@@ -405,6 +406,8 @@ model Item {
   model            String?
   spec             String?
   serial           String?          @unique
+  /// Retired items leave the catalog but keep their history.
+  retiredAt        DateTime?
   currentVehicleId String?
   currentVehicle   Vehicle?         @relation("CurrentVehicle", fields: [currentVehicleId], references: [id])
   createdAt        DateTime         @default(now())
@@ -452,12 +455,18 @@ model Document {
   linkedRecordId   String?
   notes            String?
   createdById      String?
+  createdBy        User?             @relation("DocumentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  /// Null while a viewer's receipt waits for an editor or admin (a "suggested" receipt).
+  approvedAt       DateTime?
+  approvedById     String?
+  approvedBy       User?             @relation("DocumentApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   deletedAt        DateTime?
   vehicles         DocumentVehicle[]
 
   @@index([date])
+  @@index([approvedAt])
 }
 
 model DocumentVehicle {
@@ -479,7 +488,8 @@ model Quote {
   status      QuoteStatus     @default(REQUESTED)
   visibility  QuoteVisibility @default(STANDARD)
   notes       String?
-  createdById String?
+  createdById String
+  createdBy   User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   deletedAt   DateTime?
@@ -530,6 +540,9 @@ model User {
   preference        UserPreference?
   resetTokens       PasswordResetToken[] @relation("ResetFor")
   savedViews        SavedView[]
+  quotes            Quote[]
+  documents         Document[]           @relation("DocumentCreatedBy")
+  approvedDocuments Document[]           @relation("DocumentApprovedBy")
 }
 
 model Session {

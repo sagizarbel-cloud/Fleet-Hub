@@ -396,6 +396,7 @@ async function main() {
     occurredAt: Date,
     params: Prisma.InputJsonObject = {},
     source?: { type: string; id: string },
+    hidden = false,
   ) =>
     events.push({
       type,
@@ -405,6 +406,8 @@ async function main() {
       userId: faker.helpers.arrayElement(userIds),
       sourceType: source?.type ?? null,
       sourceId: source?.id ?? null,
+      // A suggested receipt's entry waits, hidden, until it is approved.
+      hiddenAt: hidden ? occurredAt : null,
     });
 
   const vehicleIds: Record<string, string> = {};
@@ -732,13 +735,20 @@ async function main() {
       ]),
     );
     const amount = money(80, 8_000);
+    // The last few come from the viewer and wait for approval ("suggested").
+    const suggested = i >= 29;
+    const author = suggested ? viewer! : faker.helpers.arrayElement([admin!, editor!]);
+    const date = daysAgo(faker.number.int({ min: suggested ? 0 : 1, max: suggested ? 6 : 180 }));
     const doc = await db.document.create({
       data: {
         kind: faker.helpers.arrayElement(['RECEIPT', 'RECEIPT', 'INVOICE'] as const),
-        date: daysAgo(faker.number.int({ min: 1, max: 180 })),
+        date,
         vendor: faker.company.name(),
         amount,
         categoryId: catBy[cat]!.id,
+        createdById: author.id,
+        approvedAt: suggested ? null : date,
+        approvedById: suggested ? null : author.id,
         vehicles: { create: tagged.map((s) => ({ vehicleId: vehicleIds[s]! })) },
       },
     });
@@ -749,13 +759,33 @@ async function main() {
         doc.date,
         { category: cat, amount: amount.toNumber() },
         { type: 'Document', id: doc.id },
+        suggested,
       );
     }
   }
 
-  // Price quotes with line items, linked to vehicles
-  const quoteStatuses = ['REQUESTED', 'RECEIVED', 'APPROVED', 'ORDERED', 'REJECTED'] as const;
-  for (let i = 0; i < 5; i++) {
+  // Price quotes with line items, linked to vehicles. Several suppliers quote the same parts,
+  // so the comparison has something to compare. Part numbers are made up.
+  const parts = [
+    { item: 'Hydraulic pump', partNo: 'HP-4410' },
+    { item: 'Bucket teeth set', partNo: 'BT-0920' },
+    { item: 'Track roller', partNo: 'TR-3301' },
+    { item: 'Alternator', partNo: 'AL-7712' },
+    { item: 'Tire 12R22.5', partNo: 'TY-1225' },
+    { item: 'Filter kit', partNo: 'FK-0500' },
+    { item: 'Seat', partNo: null },
+  ];
+  const quotePlans = [
+    { status: 'REQUESTED', visibility: 'STANDARD', author: 0, parts: [0, 5] },
+    { status: 'RECEIVED', visibility: 'PUBLIC', author: 1, parts: [0, 1, 6] },
+    { status: 'RECEIVED', visibility: 'STANDARD', author: 2, parts: [0, 2] },
+    { status: 'APPROVED', visibility: 'ADMINS', author: 1, parts: [3, 4] },
+    { status: 'ORDERED', visibility: 'PUBLIC', author: 0, parts: [1, 5, 6] },
+    { status: 'REJECTED', visibility: 'PUBLIC', author: 2, parts: [0, 4] },
+    { status: 'RECEIVED', visibility: 'PUBLIC', author: 1, parts: [2, 5] },
+    { status: 'REQUESTED', visibility: 'STANDARD', author: 2, parts: [1, 3] },
+  ] as const;
+  for (const [i, plan] of quotePlans.entries()) {
     const supplier = suppliers[i % suppliers.length]!;
     const date = daysAgo(faker.number.int({ min: 3, max: 120 }));
     const linked = faker.helpers.arrayElements(serials, faker.number.int({ min: 1, max: 3 }));
@@ -764,22 +794,13 @@ async function main() {
         supplierId: supplier.id,
         date,
         validUntil: new Date(date.getTime() + 30 * DAY),
-        status: quoteStatuses[i]!,
+        status: plan.status,
         // Mix of creators and visibility levels so the quote rules have something to filter.
-        createdById: quoteAuthors[i % quoteAuthors.length]!,
-        visibility: (['STANDARD', 'PUBLIC', 'STANDARD', 'ADMINS', 'PUBLIC'] as const)[i]!,
+        createdById: quoteAuthors[plan.author]!,
+        visibility: plan.visibility,
         lines: {
-          create: Array.from({ length: faker.number.int({ min: 2, max: 5 }) }, (_, n) => ({
-            item: faker.helpers.arrayElement([
-              'Hydraulic pump',
-              'Bucket teeth set',
-              'Track roller',
-              'Alternator',
-              'Tire 12R22.5',
-              'Filter kit',
-              'Seat',
-            ]),
-            partNo: faker.string.alphanumeric({ length: 8, casing: 'upper' }),
+          create: plan.parts.map((p, n) => ({
+            ...parts[p]!,
             condition: faker.helpers.arrayElement([
               'IN_STOCK',
               'NEW',
