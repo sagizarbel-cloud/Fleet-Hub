@@ -18,11 +18,10 @@ async function newPage(
   browser: Browser,
   viewport: { width: number; height: number },
   lang: string,
-  reduced: boolean,
 ) {
   const context = await browser.newContext({
     viewport,
-    reducedMotion: reduced ? 'reduce' : 'no-preference',
+    reducedMotion: 'reduce',
     storageState: 'test-results/.auth/admin.json',
   });
   await context.addInitScript((l) => localStorage.setItem('fh.lang', l), lang);
@@ -41,7 +40,7 @@ for (const [sizeName, viewport] of Object.entries(SIZES)) {
   for (const lang of ['en', 'he'] as const) {
     test(`${lang} ${sizeName}`, async ({ browser }) => {
       test.setTimeout(120_000);
-      const { context, page } = await newPage(browser, viewport, lang, true);
+      const { context, page } = await newPage(browser, viewport, lang);
       const shot = (name: string, p = page) =>
         p.screenshot({ path: `${OUT}/${name}-${lang}-${sizeName}.png` });
 
@@ -70,22 +69,15 @@ for (const [sizeName, viewport] of Object.entries(SIZES)) {
       await open(page, '/equipment', 'item-row');
       await shot('equipment');
 
-      // Reduced motion: the tile only grows and glows.
+      // A file held over a tile: it grows and glows.
       await open(page, '/', 'fleet-grid');
       await page.getByTestId('tray-toggle').click();
       await page.getByTestId('tray-item').first().waitFor();
+      await page.locator('[data-tile="EX-102"]').scrollIntoViewIfNeeded();
       await holdFile(page, 'EX-102');
       await page.waitForTimeout(400);
-      await shot('tile-drop-reduced-motion');
+      await shot('tile-drop');
       await context.close();
-
-      // Full motion: it also tips onto a turntable and turns.
-      const moving = await newPage(browser, viewport, lang, false);
-      await open(moving.page, '/', 'fleet-grid');
-      await holdFile(moving.page, 'EX-102');
-      await moving.page.waitForTimeout(1500);
-      await shot('tile-drop', moving.page);
-      await moving.context.close();
     });
   }
 }

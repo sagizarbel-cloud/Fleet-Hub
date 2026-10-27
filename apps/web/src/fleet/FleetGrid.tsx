@@ -25,7 +25,7 @@ import { VehicleVisual } from '@/drawings/VehicleVisual';
 import { Button } from '@/components/ui/button';
 import { isolate } from '@/lib/bidi';
 import { cn } from '@/lib/cn';
-import { fade, prefersReducedMotion, spring } from '@/lib/motion';
+import { fade, prefersReducedMotion } from '@/lib/motion';
 import { useItemMove } from '@/money/api';
 import { hasFiles, hasItem, ITEM_MIME } from '@/money/drag';
 import { lookupName, useLookups, type Tile } from './data';
@@ -40,14 +40,10 @@ const ReceiptForm = lazy(() =>
 );
 const EquipmentTray = lazy(() => import('./EquipmentTray'));
 
-/** Isometric tilt: the top view tipped onto a turntable. */
-const ISO_TILT = 54.74;
-
 type DropWhat = 'file' | 'item';
 
 /** What a tile needs to take a dropped file or item, or a tapped item on a phone. */
 interface DropHandlers {
-  reduced: boolean;
   canAssign: boolean;
   picking: boolean;
   onFiles: (serial: string, files: File[]) => void;
@@ -209,7 +205,6 @@ function TileButton({
       window.removeEventListener('drop', reset);
     };
   }, [over]);
-  const tilted = !!over && !drop.reduced;
 
   return (
     <motion.li
@@ -259,37 +254,16 @@ function TileButton({
         />
         <div
           className="pointer-events-none grid place-items-center"
-          style={{ height: TILE_BOX.height, perspective: 320 }}
+          style={{ height: TILE_BOX.height }}
         >
-          <motion.div
-            className="relative"
-            style={{ transformStyle: 'preserve-3d' }}
-            initial={false}
-            animate={{ rotateX: tilted ? ISO_TILT : 0 }}
-            transition={spring.smooth}
-          >
-            <div className={cn('relative', tilted && 'tile-turntable')}>
-              {tilted && (
-                <span
-                  aria-hidden
-                  className="border-accent/60 bg-accent/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border"
-                  style={{ width: TILE_BOX.height, height: TILE_BOX.height }}
-                />
-              )}
-              <div
-                data-tile-visual={tile.serial}
-                className="relative"
-                style={{ opacity: carried ? 0 : 1 }}
-              >
-                <VehicleVisual
-                  type={tile.type}
-                  view="top"
-                  status={tile.status}
-                  size={tileSize(tile.type)}
-                />
-              </div>
-            </div>
-          </motion.div>
+          <div data-tile-visual={tile.serial} style={{ opacity: carried ? 0 : 1 }}>
+            <VehicleVisual
+              type={tile.type}
+              view="top"
+              status={tile.status}
+              size={tileSize(tile.type)}
+            />
+          </div>
         </div>
         <span className="flex items-center gap-1 text-xs">
           <Icon aria-hidden className={cn('size-3.5', tone)} />
@@ -403,7 +377,6 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
     if (item.from !== serial) setConfirm({ item, serial });
   };
   const drop: DropHandlers = {
-    reduced,
     canAssign: canAdd,
     picking: !!picked,
     onFiles: (serial, files) => setReceipt({ serial, files }),
