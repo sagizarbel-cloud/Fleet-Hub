@@ -12,6 +12,9 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
       pinnedVitals: pref ? pref.pinnedVitals : DEFAULT_PINNED_VITALS,
       detailView: pref?.detailView === 'iso' ? 'iso' : 'side',
       fleetViewId: pref?.fleetViewId ?? null,
+      // Null: follow the device (browser language, system theme).
+      language: pref?.language === 'en' || pref?.language === 'he' ? pref.language : null,
+      theme: pref?.theme === 'dark' || pref?.theme === 'light' ? pref.theme : null,
     };
   };
 

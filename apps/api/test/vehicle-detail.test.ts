@@ -191,6 +191,8 @@ describe('preferences', () => {
       pinnedVitals: ['status', 'usage', 'nextService', 'annualTest', 'location', 'department'],
       detailView: 'side',
       fleetViewId: null,
+      language: null,
+      theme: null,
     });
     const put = await app.inject({
       method: 'PUT',
@@ -204,6 +206,8 @@ describe('preferences', () => {
       pinnedVitals: ['fuelEconomy', 'status'],
       detailView: 'iso',
       fleetViewId: null,
+      language: null,
+      theme: null,
     });
   });
 
