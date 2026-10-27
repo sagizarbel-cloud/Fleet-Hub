@@ -149,9 +149,8 @@ test.describe('record panels', () => {
     await openPanel(page, 'EX-101', 'ownership');
     await expect(page.getByTestId('records-ownership')).toContainText('Purchase price');
     await openPanel(page, 'EX-101', 'documents');
-    await expect(page.getByTestId('records-documents')).toContainText(
-      'Adding and editing these comes',
-    );
+    await expect(page.getByTestId('records-documents').getByTestId('receipts-view')).toBeVisible();
+    await expect(page.getByTestId('receipt-add')).toBeVisible();
   });
 });
 

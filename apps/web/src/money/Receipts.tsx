@@ -160,15 +160,15 @@ function ReceiptActions({
             className={cn(btn, 'hover:text-bad')}
             disabled={act.isPending}
             onClick={() =>
-              act.mutate(
-                { id: r.id, action: 'delete' },
-                {
-                  onSuccess: () =>
-                    offerUndo(t('records.deleted', { record: t('receipts.one') }), () =>
-                      act.mutateAsync({ id: r.id, action: 'restore' }),
-                    ),
-                },
-              )
+              // The card leaves the list on success, so the Undo offer can't wait for a callback on it.
+              void act
+                .mutateAsync({ id: r.id, action: 'delete' })
+                .then(() =>
+                  offerUndo(t('records.deleted', { record: t('receipts.one') }), () =>
+                    act.mutateAsync({ id: r.id, action: 'restore' }),
+                  ),
+                )
+                .catch(() => undefined)
             }
             aria-label={t('records.delete')}
             title={t('records.delete')}

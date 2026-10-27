@@ -23,6 +23,7 @@ import { useSession } from '@/auth/session';
 import { drawingFor } from '@/drawings/registry';
 import { VehicleVisual } from '@/drawings/VehicleVisual';
 import { Button } from '@/components/ui/button';
+import { isolate } from '@/lib/bidi';
 import { cn } from '@/lib/cn';
 import { fade, prefersReducedMotion, spring } from '@/lib/motion';
 import { useItemMove } from '@/money/api';
@@ -38,9 +39,6 @@ const ReceiptForm = lazy(() =>
   import('@/money/ReceiptForm').then((m) => ({ default: m.ReceiptForm })),
 );
 const EquipmentTray = lazy(() => import('./EquipmentTray'));
-
-/** Keeps a serial in one left-to-right piece inside a Hebrew sentence. */
-const ltr = (s: string) => `\u2068${s}\u2069`;
 
 /** Isometric tilt: the top view tipped onto a turntable. */
 const ISO_TILT = 54.74;
@@ -306,7 +304,7 @@ function TileButton({
           <DropHint
             key="drop"
             text={t(over === 'file' ? 'tray.dropFile' : 'tray.dropItem', {
-              serial: ltr(tile.serial),
+              serial: isolate(tile.serial),
             })}
           />
         ) : (
@@ -417,7 +415,7 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
     const { item, serial } = confirm;
     try {
       await move.mutateAsync({ id: item.id, action: 'assign', vehicle: serial });
-      setNotice(t('tray.assigned', { item: item.name, serial: ltr(serial) }));
+      setNotice(t('tray.assigned', { item: item.name, serial: isolate(serial) }));
     } catch {
       setNotice(t('tray.failed'));
     }
@@ -637,12 +635,12 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
                       {confirm.item.from
                         ? t('tray.confirmMove', {
                             item: confirm.item.name,
-                            from: ltr(confirm.item.from),
-                            serial: ltr(confirm.serial),
+                            from: isolate(confirm.item.from),
+                            serial: isolate(confirm.serial),
                           })
                         : t('tray.confirm', {
                             item: confirm.item.name,
-                            serial: ltr(confirm.serial),
+                            serial: isolate(confirm.serial),
                           })}
                     </span>
                     <span className="flex shrink-0 gap-1">

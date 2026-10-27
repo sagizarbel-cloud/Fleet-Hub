@@ -1,70 +1,91 @@
-import { test, type Page } from '@playwright/test';
+import { test, type Browser, type Page } from '@playwright/test';
 
-// Saves the current phase's screenshots for the PR: the fleet table with its column groups,
-// grouping, an opened row, saved views and filters, EN and HE, desktop and phone. Earlier
-// phases keep their own folders.
-const OUT = '../../docs/screenshots/phase-5';
+// Saves the current phase's screenshots for the PR: receipts, price quotes and their comparison,
+// equipment, and a file held over a dashboard tile, EN and HE, desktop and phone. Earlier phases
+// keep their own folders.
+const OUT = '../../docs/screenshots/phase-6';
 const SIZES = { desktop: { width: 1440, height: 900 }, phone: { width: 390, height: 844 } };
 
 test.skip(!process.env.SCREENSHOTS, 'set SCREENSHOTS=1 to refresh docs/screenshots');
 
-async function table(page: Page, query = '') {
-  await page.goto(`/fleet${query}`);
-  await page.getByTestId('fleet-grid').waitFor();
+async function open(page: Page, path: string, ready: string) {
+  await page.goto(path);
+  await page.getByTestId(ready).first().waitFor();
   await page.waitForTimeout(700);
 }
+
+async function newPage(
+  browser: Browser,
+  viewport: { width: number; height: number },
+  lang: string,
+  reduced: boolean,
+) {
+  const context = await browser.newContext({
+    viewport,
+    reducedMotion: reduced ? 'reduce' : 'no-preference',
+    storageState: 'test-results/.auth/admin.json',
+  });
+  await context.addInitScript((l) => localStorage.setItem('fh.lang', l), lang);
+  return { context, page: await context.newPage() };
+}
+
+/** Holds a file over a dashboard tile, as a drag from the desktop would. */
+const holdFile = (page: Page, serial: string) =>
+  page.locator(`[data-tile="${serial}"]`).evaluate((el) => {
+    const dt = new DataTransfer();
+    dt.items.add(new File(['x'], 'receipt.pdf', { type: 'application/pdf' }));
+    el.dispatchEvent(new DragEvent('dragenter', { dataTransfer: dt, bubbles: true }));
+  });
 
 for (const [sizeName, viewport] of Object.entries(SIZES)) {
   for (const lang of ['en', 'he'] as const) {
     test(`${lang} ${sizeName}`, async ({ browser }) => {
       test.setTimeout(120_000);
-      const context = await browser.newContext({
-        viewport,
-        reducedMotion: 'reduce',
-        storageState: 'test-results/.auth/admin.json',
-      });
-      await context.addInitScript((l) => localStorage.setItem('fh.lang', l), lang);
-      const page = await context.newPage();
-      const shot = (name: string) =>
-        page.screenshot({ path: `${OUT}/${name}-${lang}-${sizeName}.png` });
-      await page.request.put('/api/me/preferences', {
-        headers: { origin: 'http://localhost:5173' },
-        data: { fleetViewId: null },
-      });
+      const { context, page } = await newPage(browser, viewport, lang, true);
+      const shot = (name: string, p = page) =>
+        p.screenshot({ path: `${OUT}/${name}-${lang}-${sizeName}.png` });
 
-      await table(page);
-      await shot('fleet-table');
-
-      // Scrolled sideways to the compliance and cost columns, with one row opened.
-      await page.locator('tr[data-row="EX-102"]').getByTestId('expand-row').click();
-      await page.getByTestId('detail-EX-102').locator('li').first().waitFor();
-      await page.getByTestId('fleet-scroller').evaluate((el, rtl) => {
-        el.scrollLeft = (rtl ? -1 : 1) * el.scrollWidth;
-      }, lang === 'he');
+      await open(page, '/receipts', 'receipt-card');
+      await shot('receipts');
+      await page.getByTestId('receipt-add').click();
+      await page.getByTestId('sheet').waitFor();
       await page.waitForTimeout(300);
-      await shot('row-detail');
-
-      await table(page);
-      await page.getByTestId('views-menu').click();
-      await page.waitForTimeout(200);
-      await shot('saved-views');
+      await shot('receipt-form');
       await page.keyboard.press('Escape');
 
-      if (sizeName === 'desktop') {
-        const select = page.getByLabel(lang === 'he' ? 'קיבוץ לפי' : 'Group by');
-        await select.selectOption('type');
-        await page.waitForTimeout(300);
-        await shot('grouped-by-type');
-        await page.getByTestId('group-compliance').click();
-        await page.waitForTimeout(200);
-        await shot('column-group-menu');
-      } else {
-        await page.getByTestId('filters-button').click();
-        await page.getByTestId('sheet').waitFor();
-        await page.waitForTimeout(300);
-        await shot('filters');
-      }
+      await open(page, '/quotes', 'quote-row');
+      await shot('quotes');
+      await page.getByTestId('quote-open').first().click();
+      await page.getByTestId('quote-detail').waitFor();
+      await page.waitForTimeout(300);
+      await shot('quote-detail');
+      await page.keyboard.press('Escape');
+      await page.getByTestId('sheet').waitFor({ state: 'detached' });
+      await page.getByTestId('quote-compare').click();
+      await page.getByTestId('compare-line').first().waitFor();
+      await page.waitForTimeout(300);
+      await shot('compare-part');
+      await page.keyboard.press('Escape');
+
+      await open(page, '/equipment', 'item-row');
+      await shot('equipment');
+
+      // Reduced motion: the tile only grows and glows.
+      await open(page, '/', 'fleet-grid');
+      await page.getByTestId('tray-toggle').click();
+      await page.getByTestId('tray-item').first().waitFor();
+      await holdFile(page, 'EX-102');
+      await page.waitForTimeout(400);
+      await shot('tile-drop-reduced-motion');
       await context.close();
+
+      // Full motion: it also tips onto a turntable and turns.
+      const moving = await newPage(browser, viewport, lang, false);
+      await open(moving.page, '/', 'fleet-grid');
+      await holdFile(moving.page, 'EX-102');
+      await moving.page.waitForTimeout(1500);
+      await shot('tile-drop', moving.page);
+      await moving.context.close();
     });
   }
 }

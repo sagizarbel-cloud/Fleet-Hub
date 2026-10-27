@@ -22,6 +22,7 @@ import {
 import { useSession } from '@/auth/session';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
+import { isolate } from '@/lib/bidi';
 import { cn } from '@/lib/cn';
 import { prefersReducedMotion } from '@/lib/motion';
 import type { RecordRow } from '@/vehicle/records/api';
@@ -256,7 +257,7 @@ function QuoteDetail({
 
   return (
     <Sheet
-      title={t('quotes.from', { supplier: q.supplier.name })}
+      title={t('quotes.from', { supplier: isolate(q.supplier.name) })}
       onClose={onClose}
       reduced={reduced}
       footer={
@@ -266,17 +267,15 @@ function QuoteDetail({
               variant="ghost"
               className="text-bad"
               onClick={() =>
-                act.mutate(
-                  { id: q.id, action: 'delete' },
-                  {
-                    onSuccess: () => {
-                      onClose();
-                      offerUndo(t('records.deleted', { record: t('quotes.one') }), () =>
-                        act.mutateAsync({ id: q.id, action: 'restore' }),
-                      );
-                    },
-                  },
-                )
+                void act
+                  .mutateAsync({ id: q.id, action: 'delete' })
+                  .then(() => {
+                    onClose();
+                    offerUndo(t('records.deleted', { record: t('quotes.one') }), () =>
+                      act.mutateAsync({ id: q.id, action: 'restore' }),
+                    );
+                  })
+                  .catch(() => undefined)
               }
               data-testid="quote-delete"
             >

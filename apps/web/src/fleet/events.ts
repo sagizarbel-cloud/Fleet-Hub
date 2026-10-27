@@ -1,3 +1,4 @@
+import { isolate } from '@/lib/bidi';
 import type { TFunction } from 'i18next';
 import {
   ArrowLeftRight,
@@ -157,14 +158,19 @@ export function describeEvent(
     case 'ITEM_ASSIGNED':
     case 'ITEM_REMOVED':
       return t(`events.${e.type}`, { item: str(p.item) });
-    case 'DOCUMENT_ADDED':
-      return t('events.DOCUMENT_ADDED', {
-        category: lookup('receiptCategories', p.category),
-        amount: formatMoney(num(p.amount), lang),
-      });
+    case 'DOCUMENT_ADDED': {
+      // Category and amount are both optional on a receipt.
+      const details = [
+        p.category ? lookup('receiptCategories', p.category) : null,
+        p.amount === null || p.amount === undefined ? null : formatMoney(num(p.amount), lang),
+      ].filter(Boolean);
+      return details.length
+        ? t('events.DOCUMENT_ADDED', { details: details.join(', ') })
+        : t('events.DOCUMENT_ADDED_bare');
+    }
     case 'QUOTE_LINKED':
     case 'QUOTE_UNLINKED':
-      return t(`events.${e.type}`, { supplier: str(p.supplier) });
+      return t(`events.${e.type}`, { supplier: isolate(str(p.supplier)) });
     case 'VEHICLE_CREATED':
     case 'VEHICLE_UPDATED':
     case 'NOTE_ADDED':
