@@ -73,6 +73,7 @@ for (const [sizeName, viewport] of Object.entries(SIZES)) {
       await open(page, '/', 'fleet-grid');
       await page.getByTestId('tray-toggle').click();
       await page.getByTestId('tray-item').first().waitFor();
+      await page.locator('[data-tile="EX-102"]').scrollIntoViewIfNeeded();
       await holdFile(page, 'EX-102');
       await page.waitForTimeout(400);
       await shot('tile-drop');
