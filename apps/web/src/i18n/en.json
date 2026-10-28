@@ -939,7 +939,9 @@
       "option": "{{name}} ({{rows}} rows)",
       "holds": "This sheet holds",
       "cut": "Only the first {{max}} rows are imported; {{cut}} more are left out.",
-      "empty": "This sheet has no rows under its headers."
+      "empty": "This sheet has no rows under its headers.",
+      "headerRow": "Headers are on",
+      "headerOption": "Row {{n}}: {{text}}"
     },
     "target": {
       "vehicles": "Vehicles",
@@ -960,7 +962,8 @@
       "column": "Column {{n}}",
       "example": "e.g. {{value}}",
       "missing": "Match these first: {{fields}}",
-      "vehiclesNote": "Vehicles already in the fleet keep any value this sheet leaves out. Start codes are never imported."
+      "vehiclesNote": "Vehicles already in the fleet keep any value this sheet leaves out. Start codes are never imported.",
+      "vehicleNote": "The vehicle column can hold the serial, the license number or the VIN."
     },
     "preview": "Dry run",
     "commit": "Import {{count}} rows",
@@ -984,7 +987,8 @@
       "update": "Update",
       "unchanged": "No change",
       "duplicate": "Already there",
-      "error": "Problem"
+      "error": "Problem",
+      "summary": "Totals row"
     },
     "result": {
       "previewTitle": "4. Dry run",
@@ -999,7 +1003,8 @@
       "errorsSkipped": "Rows with problems will be skipped. Fix them in Excel and import the sheet again.",
       "doneTitle": "Imported",
       "done": "The import is saved. Its entries are marked \"Imported\" on the timelines.",
-      "toDashboard": "Go to the dashboard"
+      "toDashboard": "Go to the dashboard",
+      "summary": "A totals row under the data, skipped."
     },
     "error": {
       "line": "{{field}}: {{problem}}",
@@ -1021,7 +1026,8 @@
       "before_reported": "before the report date",
       "before_date": "before the inspection date",
       "same": "same as the starting location",
-      "invalid": "check this value"
+      "invalid": "check this value",
+      "lineValue": "{{field}} \"⁨{{value}}⁩\": {{problem}}"
     },
     "field": {
       "serial": "Serial No.",

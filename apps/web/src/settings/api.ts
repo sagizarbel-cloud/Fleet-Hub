@@ -149,7 +149,7 @@ export interface ImportRow {
   row: number;
   action: ImportAction;
   key: string | null;
-  errors: { field: string; code: string }[];
+  errors: { field: string; code: string; value?: string }[];
   changes?: string[];
 }
 export interface ImportResult {
