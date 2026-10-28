@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { currentTheme, setTheme, type Theme } from '@/lib/theme';
+import { currentTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme';
 import { Button } from './ui/button';
 
-export function ThemeToggle() {
+export function ThemeToggle({ onChange }: { onChange?: (theme: Theme) => void }) {
   const { t } = useTranslation();
-  const [theme, setState] = useState<Theme>(currentTheme);
+  const theme = useSyncExternalStore(subscribeTheme, currentTheme);
   const next: Theme = theme === 'dark' ? 'light' : 'dark';
 
   return (
@@ -18,7 +18,7 @@ export function ThemeToggle() {
       data-testid="theme-toggle"
       onClick={() => {
         setTheme(next);
-        setState(next);
+        onChange?.(next);
       }}
     >
       {theme === 'dark' ? <Sun aria-hidden /> : <Moon aria-hidden />}

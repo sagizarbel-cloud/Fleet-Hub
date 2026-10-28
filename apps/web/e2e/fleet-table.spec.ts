@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createRequire } from 'node:module';
-import { VIEWER_STATE } from './helpers';
+import { VIEWER_STATE, toggleLanguage } from './helpers';
 
 // SPEC 5.4 fleet table, against the seeded fleet (17 vehicles).
 const SEEDED = 17;
@@ -185,11 +185,11 @@ test.describe('fleet table', () => {
     const all = JSON.stringify(fleet.wb.worksheets.map((w) => w.getSheetValues()));
     expect(all).not.toMatch(/start ?code/i);
 
-    await page.getByTestId('language-toggle').click();
+    await toggleLanguage(page);
     const he = await download(page, 'view');
     expect(he.wb.worksheets[0]!.views[0]?.rightToLeft).toBe(true);
     expect(he.wb.worksheets[0]!.getCell('A1').value).toBe('טבלה מרוכזת');
-    await page.getByTestId('language-toggle').click();
+    await toggleLanguage(page);
   });
 
   test('draws only the visible rows of a 500-vehicle fleet', async ({ page }) => {

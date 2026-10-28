@@ -57,12 +57,14 @@ export async function listEvents(app: FastifyInstance, user: SessionUser, q: Eve
       params: true,
       sourceType: true,
       sourceId: true,
+      importRunId: true,
       vehicle: { select: { serial: true, type: { select: { code: true } } } },
     },
   });
   const hasMore = rows.length > q.limit;
-  const items = (hasMore ? rows.slice(0, q.limit) : rows).map(({ vehicle, ...e }) => ({
+  const items = (hasMore ? rows.slice(0, q.limit) : rows).map(({ vehicle, importRunId, ...e }) => ({
     ...e,
+    imported: importRunId !== null,
     vehicle: { serial: vehicle.serial, type: vehicle.type.code },
   }));
   const last = items.at(-1);

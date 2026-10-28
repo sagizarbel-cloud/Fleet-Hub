@@ -2,9 +2,9 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { FleetStage } from '@/fleet/FleetStage';
 import { AppShell } from '@/layout/AppShell';
-import { AREA_ROUTES, AREAS } from '@/layout/nav';
-import { AreaPage } from '@/pages/AreaPage';
+import { AREA_ROUTES } from '@/layout/nav';
 import { LoginPage } from '@/pages/LoginPage';
+import { ResetPage } from '@/pages/ResetPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 // Hidden review pages stay out of the main bundle.
@@ -20,12 +20,22 @@ const EquipmentPage = lazy(() =>
   import('@/money/Equipment').then((m) => ({ default: m.EquipmentPage })),
 );
 const MONEY_PAGES = { receipts: ReceiptsPage, quotes: QuotesPage, equipment: EquipmentPage };
+const SettingsPage = lazy(() =>
+  import('@/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+const SETTINGS = [
+  ['mine', '/settings'],
+  ['lists', '/settings/lists'],
+  ['users', '/settings/users'],
+  ['import', '/settings/import'],
+] as const;
 const I18nCheckPage = lazy(() =>
   import('@/pages/I18nCheckPage').then((m) => ({ default: m.I18nCheckPage })),
 );
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/reset/:token', element: <ResetPage /> },
   {
     element: <AppShell />,
     children: [
@@ -49,9 +59,13 @@ const router = createBrowserRouter([
           ),
         };
       }),
-      ...AREAS.filter((area): area is 'settings' => area === 'settings').map((area) => ({
-        path: AREA_ROUTES[area].path,
-        element: <AreaPage area={area} />,
+      ...SETTINGS.map(([section, path]) => ({
+        path,
+        element: (
+          <Suspense>
+            <SettingsPage section={section} />
+          </Suspense>
+        ),
       })),
       {
         path: '/i18n-check',

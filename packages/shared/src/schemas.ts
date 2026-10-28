@@ -50,6 +50,9 @@ export const preferencesBody = z.object({
   detailView: z.enum(DETAIL_VIEWS).optional(),
   /** The saved view the fleet table opens with; null for the built-in one. */
   fleetViewId: z.string().min(1).max(40).nullable().optional(),
+  /** Defaults that follow the user to every device; null = this device decides. */
+  language: z.enum(['en', 'he']).nullable().optional(),
+  theme: z.enum(['dark', 'light']).nullable().optional(),
 });
 export type PreferencesBody = z.infer<typeof preferencesBody>;
 

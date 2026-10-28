@@ -124,7 +124,9 @@ describe('dashboard', () => {
     const res = await get('/api/dashboard', viewer);
     const tile = res.json().tiles.find((t: { serial: string }) => t.serial === SERIAL);
     expect(tile).toMatchObject({ type: 'dash_test', category: 'EQUIPMENT', openIssues: 1 });
-    expect(res.body).not.toContain('startCode');
+    // History may say a start code was changed (a field name), never carry one.
+    expect(res.body).not.toContain('startCodeEnc');
+    expect(res.body).not.toMatch(/"startCode"\s*:/);
   });
 });
 

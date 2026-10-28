@@ -10,6 +10,8 @@ export interface FleetEvent {
   sourceType: string | null;
   sourceId: string | null;
   vehicle: { serial: string; type: string };
+  /** Written by an Excel import. */
+  imported?: boolean;
 }
 export interface EventPage {
   items: FleetEvent[];

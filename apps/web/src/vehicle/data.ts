@@ -34,6 +34,10 @@ export interface VehicleDetail {
   statusOverride: VehicleStatus | null;
   statusOverrideReason: string | null;
   hasStartCode: boolean;
+  /** Photo style and custom drawing (SPEC A4): attachment ids, or null for the built-in drawing. */
+  topPhotoId: string | null;
+  sidePhotoId: string | null;
+  customImageId: string | null;
   purchaseDate: string | null;
   purchasePrice: number | null;
   supplier: string | null;
@@ -75,15 +79,19 @@ export interface Preferences {
   pinnedVitals: VitalKey[];
   detailView: DetailView;
   fleetViewId: string | null;
+  /** Null: follow this device's own choice. */
+  language: 'en' | 'he' | null;
+  theme: 'dark' | 'light' | null;
 }
 
 const vehicleKey = (serial: string) => ['vehicle', serial] as const;
 const PREFS = ['me', 'preferences'] as const;
 
-export const useVehicle = (serial: string) =>
+export const useVehicle = (serial: string, enabled = true) =>
   useQuery({
     queryKey: vehicleKey(serial),
     queryFn: () => api<VehicleDetail>(`/vehicles/${encodeURIComponent(serial)}`),
+    enabled,
   });
 
 export const usePreferences = () =>

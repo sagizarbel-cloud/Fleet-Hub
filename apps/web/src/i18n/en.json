@@ -58,9 +58,6 @@
     "AMBER": "Has issues",
     "RED": "Inoperable"
   },
-  "areas": {
-    "settings": "Lookup lists, default vitals, and users and roles will appear here."
-  },
   "common": {
     "loading": "Loading…",
     "comingSoon": "Coming soon"
@@ -154,7 +151,10 @@
     "RECORD_EDITED": "{{record}} edited: {{detail}}",
     "RECORD_DELETED": "{{record}} deleted: {{detail}}",
     "RECORD_RESTORED": "{{record}} restored: {{detail}}",
-    "QUOTE_UNLINKED": "Price quote from {{supplier}} unlinked"
+    "QUOTE_UNLINKED": "Price quote from {{supplier}} unlinked",
+    "VEHICLE_UPDATED_fields": "Vehicle details updated: {{fields}}",
+    "imported": "Imported",
+    "importedHint": "Added by an Excel import"
   },
   "severity": {
     "LOW": "low",
@@ -720,5 +720,354 @@
     "confirm": "Assign {{item}} to {{serial}}?",
     "confirmMove": "Move {{item}} from {{from}} to {{serial}}?",
     "yes": "Assign"
+  },
+  "settings": {
+    "section": {
+      "mine": "My settings",
+      "lists": "Lists",
+      "users": "Users and roles",
+      "import": "Excel import"
+    },
+    "loadFailed": "Couldn't load this. Try again.",
+    "mine": {
+      "look": "Language and theme",
+      "lookHint": "Saved to your account, so they follow you to every device.",
+      "language": "Language",
+      "theme": "Theme",
+      "themes": {
+        "dark": "Dark",
+        "light": "Light"
+      },
+      "vitals": "Default vitals"
+    },
+    "password": {
+      "title": "Change password",
+      "hint": "You stay signed in here; your other devices are signed out.",
+      "current": "Current password",
+      "next": "New password",
+      "confirm": "New password again",
+      "submit": "Change password",
+      "done": "Password changed.",
+      "wrong": "That isn't your current password.",
+      "tooShort": "At least 10 characters.",
+      "mismatch": "The two passwords don't match."
+    },
+    "lists": {
+      "choose": "Choose a list",
+      "kinds": {
+        "departments": "Departments",
+        "locations": "Locations",
+        "vehicleTypes": "Vehicle types",
+        "fluidTypes": "Fluid types",
+        "receiptCategories": "Receipt categories"
+      },
+      "add": "Add value",
+      "addTitle": "Add to {{list}}",
+      "editTitle": "Edit in {{list}}",
+      "empty": "This list is empty.",
+      "nameEn": "English name",
+      "nameHe": "Hebrew name",
+      "code": "Code",
+      "codeHint": "Lower-case letters, digits and _. Used by imports and exports.",
+      "codeLocked": "In use, so the code stays fixed. Names can change.",
+      "unit": "Usage measured in",
+      "categoryLabel": "Kind",
+      "category": {
+        "ROAD": "Road vehicle (needs a VIN)",
+        "EQUIPMENT": "Machine or equipment"
+      },
+      "usage": {
+        "KM": "Kilometers",
+        "HOURS": "Engine hours"
+      },
+      "inUse": "Used by",
+      "shown": "Offered",
+      "actions": "Actions",
+      "visible": "Shown",
+      "hidden": "Hidden",
+      "showName": "Offer {{name}} in pickers",
+      "editName": "Edit {{name}}",
+      "deleteName": "Delete {{name}}",
+      "cantDelete": "Used by {{count}} records: hide it instead",
+      "confirmDelete": "Delete {{name}}?",
+      "delete": "Delete",
+      "hint": "A value in use can be hidden from pickers but not deleted, so older records keep their names.",
+      "error": {
+        "code": "Use lower-case letters, digits and _, starting with a letter.",
+        "taken": "This code is already in the list.",
+        "inUse": "In use: the code can't change."
+      }
+    },
+    "users": {
+      "hint": "New users get a one-time link to choose their password. Users are turned off, never deleted.",
+      "add": "Add user",
+      "addTitle": "Add user",
+      "addHint": "After saving you get a link to send them on WhatsApp.",
+      "create": "Add and get link",
+      "name": "Name",
+      "role": "Role",
+      "startCodes": "Can view start codes",
+      "active": "Active",
+      "off": "Turned off",
+      "you": "(you)",
+      "resetLink": "Reset link",
+      "resetHint": "Make a one-time link to set a new password",
+      "linkFailed": "Couldn't make a link. Try again.",
+      "emailTaken": "A user with this email already exists.",
+      "createdTitle": "{{name}} was added",
+      "linkTitle": "Reset link for {{name}}",
+      "linkHint": "Send this link to them. It works once, until {{expires}}.",
+      "linkOnce": "Making a new link stops the old one from working.",
+      "whatsapp": "Send on WhatsApp",
+      "done": "Done",
+      "messageNew": "Hi {{name}}, here is your link to set a password for {{app}}: {{url}}",
+      "messageReset": "Hi {{name}}, here is your link to set a new password for {{app}}: {{url}}"
+    }
+  },
+  "reset": {
+    "title": "Choose a password",
+    "hello": "Hi {{name}}, choose a password for",
+    "password": "New password",
+    "confirm": "New password again",
+    "rule": "At least 10 characters. A short sentence works well.",
+    "submit": "Save password",
+    "tooShort": "The password needs at least 10 characters.",
+    "done": "Your password is saved. Sign in with it now.",
+    "invalid": "This link has already been used or has expired. Ask an admin for a new one.",
+    "toLogin": "Go to sign in"
+  },
+  "vehicleForm": {
+    "addTitle": "Add vehicle",
+    "editTitle": "Edit {{serial}}",
+    "steps": "Steps",
+    "step": {
+      "type": "Type",
+      "identity": "Identity",
+      "assignment": "Assignment",
+      "compliance": "Compliance dates",
+      "ownership": "Ownership & warranty",
+      "pictures": "Photo or drawing"
+    },
+    "next": "Next",
+    "back": "Back",
+    "create": "Add vehicle",
+    "none": "None",
+    "field": {
+      "type": "Type",
+      "serial": "Serial No.",
+      "vin": "VIN / Chassis No.",
+      "pin": "PIN / Chassis No.",
+      "licenseNo": "License No.",
+      "make": "Make",
+      "model": "Model",
+      "year": "Year",
+      "department": "Department",
+      "location": "Current location",
+      "operatorName": "Operator / driver",
+      "odometerKm": "Odometer (km)",
+      "engineHours": "Engine hours",
+      "nextServiceDate": "Next service date",
+      "nextServiceKm": "Next service at km",
+      "nextServiceHours": "Next service at hours",
+      "annualTestExpiry": "Annual test expiry",
+      "insuranceExpiry": "Insurance expiry",
+      "safetyCheckExpiry": "Certified-inspector check expiry",
+      "purchaseDate": "Purchase date",
+      "purchasePrice": "Purchase price (₪)",
+      "warrantyTerms": "Warranty terms",
+      "warrantyExpiry": "Warranty expiry",
+      "startCode": "Start code",
+      "photos": "Photos",
+      "drawing": "Drawing",
+      "supplier": "Supplier"
+    },
+    "hint": {
+      "serial": "Letters, digits and dashes, as painted on the vehicle.",
+      "vin": "17 letters and digits, without I, O or Q.",
+      "vinCount": "{{n}} of 17 characters.",
+      "vinOk": "Looks like a valid VIN.",
+      "pin": "Free text, as stamped on the machine.",
+      "plate": "7 or 8 digits; dashes are fine.",
+      "plateOk": "Looks like a valid Israeli plate."
+    },
+    "error": {
+      "vin": "A VIN has 17 letters and digits, without I, O or Q.",
+      "plate": "An Israeli license has 7 or 8 digits.",
+      "serial": "Use letters, digits and dashes.",
+      "taken": "Another vehicle already has this.",
+      "pickType": "Choose a vehicle type.",
+      "picture": "The vehicle is saved, but a picture didn't upload. Try again.",
+      "pictureTooBig": "The vehicle is saved, but a picture is too large.",
+      "pictureType": "The vehicle is saved, but a picture isn't a JPEG, PNG, WebP or SVG."
+    },
+    "startCode": {
+      "hint": "Optional. Stored encrypted and shown masked.",
+      "isSet": "A start code is set.",
+      "willRemove": "The start code will be removed.",
+      "change": "Change",
+      "remove": "Remove",
+      "keep": "Keep it",
+      "noPermission": "Only users allowed to view start codes can set one.",
+      "setNoPermission": "A start code is set. Only users allowed to view start codes can change it."
+    },
+    "pictures": {
+      "hint": "Photos replace the drawing on the vehicle page only: the top photo fades into the side photo. A drawing replaces the built-in one.",
+      "top": "Top photo",
+      "side": "Side photo",
+      "drawing": "Custom drawing (SVG or image)",
+      "none": "No photo",
+      "drawingNone": "Built-in drawing",
+      "current": "Saved",
+      "willRemove": "Will be removed",
+      "choose": "Choose",
+      "replace": "Replace",
+      "remove": "Remove",
+      "undo": "Undo"
+    }
+  },
+  "import": {
+    "file": {
+      "title": "1. Excel file",
+      "hint": "An .xlsx file with a header row. Up to {{max}} rows per import; split bigger sheets.",
+      "choose": "Choose an Excel file or drop it here",
+      "types": ".xlsx only",
+      "unreadable": "Couldn't read this file. Save it as .xlsx and try again."
+    },
+    "sheet": {
+      "title": "2. Sheet and contents",
+      "sheet": "Sheet",
+      "option": "{{name}} ({{rows}} rows)",
+      "holds": "This sheet holds",
+      "cut": "Only the first {{max}} rows are imported; {{cut}} more are left out.",
+      "empty": "This sheet has no rows under its headers."
+    },
+    "target": {
+      "vehicles": "Vehicles",
+      "service": "Service history",
+      "malfunctions": "Malfunctions / accidents",
+      "fluids": "Fluid additions",
+      "fuel": "Fuel",
+      "movements": "Location changes",
+      "inspections": "Inspections (test, insurance, certified check)",
+      "notes": "Notes",
+      "equipment": "Equipment & tools"
+    },
+    "match": {
+      "title": "3. Match the columns",
+      "hint": "Our guess from the headers. Fix anything that's off; the matching is saved for the next sheet like this.",
+      "saved": "Using the matching saved last time for a sheet with these headers.",
+      "none": "Not in this sheet",
+      "column": "Column {{n}}",
+      "example": "e.g. {{value}}",
+      "missing": "Match these first: {{fields}}",
+      "vehiclesNote": "Vehicles already in the fleet keep any value this sheet leaves out. Start codes are never imported."
+    },
+    "preview": "Dry run",
+    "commit": "Import {{count}} rows",
+    "failed": "The server couldn't process this sheet. Try again.",
+    "count": {
+      "will": {
+        "created": "Will add",
+        "updated": "Will update",
+        "skipped": "Already there",
+        "errors": "Rows with problems"
+      },
+      "did": {
+        "created": "Added",
+        "updated": "Updated",
+        "skipped": "Already there",
+        "errors": "Skipped with problems"
+      }
+    },
+    "action": {
+      "create": "Add",
+      "update": "Update",
+      "unchanged": "No change",
+      "duplicate": "Already there",
+      "error": "Problem"
+    },
+    "result": {
+      "previewTitle": "4. Dry run",
+      "previewHint": "Nothing is saved yet. Rows with problems are skipped when you import.",
+      "problemsOnly": "Show only rows with problems",
+      "none": "No rows to show.",
+      "row": "Row",
+      "key": "Serial / item",
+      "action": "Result",
+      "details": "Details",
+      "more": "{{n}} more rows not shown.",
+      "errorsSkipped": "Rows with problems will be skipped. Fix them in Excel and import the sheet again.",
+      "doneTitle": "Imported",
+      "done": "The import is saved. Its entries are marked \"Imported\" on the timelines.",
+      "toDashboard": "Go to the dashboard"
+    },
+    "error": {
+      "line": "{{field}}: {{problem}}",
+      "row": "Row",
+      "required": "missing",
+      "unknown": "not found",
+      "date": "not a date",
+      "number": "not a number",
+      "bool": "not yes or no",
+      "choice": "not a known value",
+      "taken": "already used by another vehicle",
+      "vin": "not a valid VIN",
+      "plate": "not a valid license number",
+      "serial": "letters, digits and dashes only",
+      "future": "in the future",
+      "too_small": "too small",
+      "too_big": "too large",
+      "invalid_type": "missing or wrong type",
+      "before_reported": "before the report date",
+      "before_date": "before the inspection date",
+      "same": "same as the starting location",
+      "invalid": "check this value"
+    },
+    "field": {
+      "serial": "Serial No.",
+      "type": "Vehicle type",
+      "make": "Make",
+      "model": "Model",
+      "year": "Year",
+      "vin": "VIN / Chassis No.",
+      "licenseNo": "License No.",
+      "department": "Department",
+      "location": "Current location",
+      "operatorName": "Operator / driver",
+      "odometerKm": "Odometer (km)",
+      "engineHours": "Engine hours",
+      "nextServiceDate": "Next service date",
+      "nextServiceKm": "Next service at km",
+      "nextServiceHours": "Next service at hours",
+      "annualTestExpiry": "Annual test expiry",
+      "insuranceExpiry": "Insurance expiry",
+      "safetyCheckExpiry": "Certified-inspector check expiry",
+      "purchaseDate": "Purchase date",
+      "purchasePrice": "Purchase price",
+      "warrantyExpiry": "Warranty expiry",
+      "date": "Date",
+      "description": "Description",
+      "vendor": "Garage / supplier",
+      "cost": "Cost",
+      "reportedAt": "Reported on",
+      "severity": "Severity",
+      "state": "Status",
+      "downtimeHours": "Downtime (hours)",
+      "resolvedAt": "Fixed on",
+      "fluidType": "Fluid",
+      "liters": "Liters",
+      "notes": "Notes",
+      "toLocation": "To",
+      "fromLocation": "From",
+      "kind": "Kind",
+      "validUntil": "Valid until",
+      "inspector": "Inspector",
+      "passed": "Passed",
+      "body": "Note",
+      "name": "Item",
+      "spec": "Spec",
+      "itemSerial": "Item serial",
+      "vehicle": "On vehicle"
+    }
   }
 }

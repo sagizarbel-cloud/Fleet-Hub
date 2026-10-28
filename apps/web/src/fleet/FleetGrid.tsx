@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'motion/react';
+import { takeNewTile } from './newTile';
 import { ChevronDown, Package, Plus } from 'lucide-react';
 import {
   hasRole,
@@ -152,6 +153,12 @@ function TileButton({
   const { icon: Icon, tone } = STATUS_ICON[tile.status];
 
   const [over, setOver] = useState<DropWhat | null>(null);
+  // A vehicle just added grows into its place with a short glow (SPEC 5.8).
+  const [entering] = useState(() => takeNewTile(tile.serial));
+  const liRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (entering) liRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [entering]);
   // Counts enter/leave pairs, since moving over the drawing inside the tile fires both.
   const depth = useRef(0);
 
@@ -208,11 +215,17 @@ function TileButton({
 
   return (
     <motion.li
+      ref={liRef}
       className="relative w-[5.25rem]"
-      initial={false}
+      initial={entering ? { opacity: 0, scale: prefersReducedMotion() ? 1 : 0.3 } : false}
+      data-new={entering || undefined}
       // The chosen tile only fades, so its slot keeps the size the vehicle flies back to.
       animate={away ? { opacity: 0, scale: carried ? 1 : 0.6 } : { opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay }}
+      transition={
+        entering
+          ? { type: 'spring', stiffness: 260, damping: 16, delay: 0.15 }
+          : { duration: 0.3, ease: [0.22, 1, 0.36, 1], delay }
+      }
     >
       <motion.button
         type="button"
@@ -244,6 +257,15 @@ function TileButton({
         )}
         data-drop={over ?? undefined}
       >
+        {entering && (
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute -inset-px rounded-xl shadow-[0_0_0_2px_var(--fh-accent),0_0_22px_4px_color-mix(in_oklab,var(--fh-accent)_55%,transparent)]"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 1.6, delay: 0.5, ease: 'easeOut' }}
+          />
+        )}
         {/* Glow while something is over the tile: a fixed shadow that only fades in and out. */}
         <motion.span
           aria-hidden

@@ -211,7 +211,11 @@ model Vehicle {
   warrantyTerms  String?
   warrantyExpiry DateTime?
 
+  /// A custom drawing (image or cleaned SVG) that replaces the built-in one (SPEC A4).
   customImageId String?
+  /// The photo pair for the photo style: the top photo crossfades into the side photo.
+  topPhotoId    String?
+  sidePhotoId   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -235,20 +239,23 @@ model Vehicle {
 }
 
 model Event {
-  id         String    @id @default(cuid())
-  type       EventType
-  vehicleId  String
-  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  occurredAt DateTime
-  userId     String?
-  user       User?     @relation(fields: [userId], references: [id])
+  id          String     @id @default(cuid())
+  type        EventType
+  vehicleId   String
+  vehicle     Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  occurredAt  DateTime
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id])
   /// Template parameters; the sentence is built from translated templates at render time.
-  params     Json      @default("{}")
-  sourceType String?
-  sourceId   String?
+  params      Json       @default("{}")
+  sourceType  String?
+  sourceId    String?
   /// Set while the source record is deleted, so its entries drop out of timelines until Undo.
-  hiddenAt   DateTime?
-  createdAt  DateTime  @default(now())
+  hiddenAt    DateTime?
+  /// Set when the record came from an Excel import (shown as "imported").
+  importRunId String?
+  importRun   ImportRun? @relation(fields: [importRunId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
 
   @@index([vehicleId, occurredAt])
   @@index([occurredAt])
@@ -382,7 +389,7 @@ model Note {
 
 /// A file attached to any record. ownerType names the model (e.g. "Inspection").
 model Attachment {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   ownerType    String
   ownerId      String
   fileName     String
@@ -543,6 +550,8 @@ model User {
   quotes            Quote[]
   documents         Document[]           @relation("DocumentCreatedBy")
   approvedDocuments Document[]           @relation("DocumentApprovedBy")
+  importRuns        ImportRun[]
+  importMappings    ImportMapping[]
 }
 
 model Session {
@@ -610,4 +619,35 @@ model PasswordResetToken {
   createdAt   DateTime  @default(now())
 
   @@index([userId])
+}
+
+// ---------- Excel import (Phase 7) ----------
+
+/// How a sheet's columns map to fields, saved so the same sheet maps itself next time.
+model ImportMapping {
+  id          String   @id @default(cuid())
+  target      String
+  /// The sheet's headers, normalised and joined: the same layout finds its mapping again.
+  signature   String
+  mapping     Json
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([target, signature])
+}
+
+/// One committed import: who brought in which file, and what it did.
+model ImportRun {
+  id        String   @id @default(cuid())
+  target    String
+  fileName  String
+  sheet     String
+  created   Int
+  updated   Int
+  skipped   Int
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  events    Event[]
 }

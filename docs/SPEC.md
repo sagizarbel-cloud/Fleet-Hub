@@ -160,12 +160,15 @@ A short stepper; the new tile animates into the grid on save.
 
 - Steps: Type → Identity (serial, VIN/chassis, license, make, model, year, start code if any) → Assignment (department, location, operator) → Compliance dates → Ownership & warranty → Photo or drawing.
 - Validation: 17-character VIN for road vehicles (free text for equipment PINs); Israeli license formats (7 or 8 digits).
+- Editors and admins add and edit. Edit opens the same steps from the vehicle page.
+- Photo or drawing: a top and a side photo (the vehicle page shows the top photo, then fades the side photo over it), or one SVG drawing (cleaned on upload) in place of the built-in one. Only photos Sagi took or has permission to use. The dashboard and table keep the drawings.
 
 ### 5.9 Settings
 
-- Editable lists in both languages: departments, locations, vehicle types, fluid types, receipt categories.
-- Default vitals, language and theme.
-- Users and roles (admin only).
+- Editable lists in both languages: departments, locations, vehicle types, fluid types, receipt categories. Editors and admins edit them; a value in use can be hidden, not deleted.
+- Default vitals, language and theme (saved to the account), and changing one's own password.
+- Users and roles (admin only): add, change role and start-code permission, turn off (never deleted), one-time reset link to send on WhatsApp.
+- Excel import (admin only): see ARCHITECTURE → Excel import.
 
 ## A6. Vitals options
 

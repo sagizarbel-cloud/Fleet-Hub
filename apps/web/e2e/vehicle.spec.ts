@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { VIEWER_STATE } from './helpers';
+import { VIEWER_STATE, toggleLanguage } from './helpers';
 
 // SPEC 5.3 and A7 against the seeded fleet: PU-901 is a pickup with a start code.
 const PICKUP = 'PU-901';
@@ -92,12 +92,14 @@ test.describe('vehicle page', () => {
     await page.keyboard.press('ArrowLeft');
     await expect(stage).toHaveAttribute('data-serial', PICKUP);
 
-    await page.evaluate(() => localStorage.setItem('fh.lang', 'he'));
-    await openVehicle(page);
+    // The language follows the account, so switch it the way a user does, and back after.
+    await toggleLanguage(page);
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.locator('body').click({ position: { x: 5, y: 5 } });
     await page.keyboard.press('ArrowLeft');
     await expect(stage).toHaveAttribute('data-serial', 'PU-902');
-    await page.evaluate(() => localStorage.setItem('fh.lang', 'en'));
+    await toggleLanguage(page);
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
   });
 
   test('jump to a vehicle by its plate or serial', async ({ page }) => {

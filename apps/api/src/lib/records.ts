@@ -432,6 +432,8 @@ export async function createRecord<K extends RecordKind>(
   kind: K,
   vehicle: VehicleRef,
   input: RecordInput<K>,
+  /** Set when the record comes from an Excel import: its events are marked "imported". */
+  importRunId: string | null = null,
 ) {
   const cfg = KINDS[kind] as KindConfig<K>;
   const ctx = { tx, vehicle };
@@ -439,7 +441,7 @@ export async function createRecord<K extends RecordKind>(
     data: { ...(await cfg.data(input, ctx)), vehicleId: vehicle.id, createdById: user.id },
     include: cfg.include,
   });
-  const base = { vehicleId: vehicle.id, userId: user.id, ...source(kind, row.id) };
+  const base = { vehicleId: vehicle.id, userId: user.id, importRunId, ...source(kind, row.id) };
   await tx.event.create({
     data: {
       ...base,

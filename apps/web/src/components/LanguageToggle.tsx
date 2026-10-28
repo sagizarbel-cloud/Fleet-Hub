@@ -5,7 +5,7 @@ import { prefersReducedMotion } from '@/lib/motion';
 import { Button } from './ui/button';
 
 /** Instant EN/HE switch with a short crossfade; no reload. */
-export function LanguageToggle() {
+export function LanguageToggle({ onChange }: { onChange?: (lang: Language) => void }) {
   const { t, i18n } = useTranslation();
   const next: Language = i18n.language === 'he' ? 'en' : 'he';
 
@@ -15,6 +15,7 @@ export function LanguageToggle() {
       root.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
     }
     await setLanguage(next);
+    onChange?.(next);
   }
 
   return (

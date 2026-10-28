@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { motion, useAnimate } from 'motion/react';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Pencil } from 'lucide-react';
 import type { DetailView } from '@fleet-hub/shared';
-import { DETAIL_VIEWS } from '@fleet-hub/shared';
+import { DETAIL_VIEWS, hasRole } from '@fleet-hub/shared';
+import { useSession } from '@/auth/session';
 import { HeroVisual, type HeroPose } from '@/drawings/HeroVisual';
 import { cn } from '@/lib/cn';
 import { prefersReducedMotion } from '@/lib/motion';
@@ -14,6 +15,7 @@ import { usePreferences, useSavePreferences, useVehicle } from '@/vehicle/data';
 import { CopyId, StartCodeChip } from '@/vehicle/Identity';
 import { ItemsTable } from '@/vehicle/ItemsTable';
 import { Records } from '@/vehicle/Records';
+import { attachmentUrl } from '@/vehicle/records/api';
 import { StatusControl } from '@/vehicle/StatusControl';
 import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
 import { VitalsBar } from '@/vehicle/VitalsBar';
@@ -21,6 +23,9 @@ import { lookupName, useLookups, type Tile } from './data';
 
 // The last view is cached here so the transition can pick its final pose at once;
 // the saved preference (per user, on the server) is the source of truth.
+const VehicleForm = lazy(() =>
+  import('@/vehicle/VehicleForm').then((m) => ({ default: m.VehicleForm })),
+);
 const VIEW_KEY = 'fh.vehicleView';
 
 // Timeline of the transition, in seconds (SPEC 5.2: all of it within 1.2 s).
@@ -103,6 +108,9 @@ export function VehicleStage({
   const prefs = usePreferences();
   const savePrefs = useSavePreferences();
   const [scope, animate] = useAnimate<HTMLDivElement>();
+  const { data: user } = useSession();
+  const canEdit = !!user && hasRole(user.role, 'EDITOR');
+  const [editing, setEditing] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
   const [heroPanelRef, heroPanelWidth] = useWidth<HTMLDivElement>();
@@ -282,6 +290,14 @@ export function VehicleStage({
     );
   const compactCallouts = heroPanelWidth < size * 1.35 + CALLOUT_ROOM;
   const showCallouts = pose === 'side' && !returning && !!vehicle;
+  const pictures =
+    vehicle && (vehicle.topPhotoId || vehicle.sidePhotoId || vehicle.customImageId)
+      ? {
+          top: vehicle.topPhotoId && attachmentUrl({ id: vehicle.topPhotoId }),
+          side: vehicle.sidePhotoId && attachmentUrl({ id: vehicle.sidePhotoId }),
+          drawing: vehicle.customImageId && attachmentUrl({ id: vehicle.customImageId }),
+        }
+      : undefined;
   const notFound = !loading && !tile;
 
   return (
@@ -320,6 +336,18 @@ export function VehicleStage({
                     </h1>
                   </div>
                   <StatusControl vehicle={vehicle} fallback={tile.status} />
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing(true)}
+                      className="border-border hover:bg-border grid size-9 place-items-center rounded-lg border"
+                      aria-label={t('vehicleForm.editTitle', { serial })}
+                      title={t('vehicleForm.editTitle', { serial })}
+                      data-testid="edit-vehicle"
+                    >
+                      <Pencil aria-hidden className="size-4" />
+                    </button>
+                  )}
                   <VehicleNav serial={serial} tiles={tiles} />
                 </>
               )}
@@ -364,8 +392,10 @@ export function VehicleStage({
                     status={vehicle?.status ?? tile.status}
                     pose={returning ? 'flat' : pose}
                     size={size}
+                    reduced={reduced}
+                    pictures={pictures}
                     sideOverlay={
-                      showCallouts
+                      showCallouts && !pictures
                         ? (box) => (
                             <CalloutOverlay
                               vehicle={vehicle}
@@ -409,7 +439,7 @@ export function VehicleStage({
                 </motion.div>
               )}
             </div>
-            {showCallouts && compactCallouts && <CalloutLegend vehicle={vehicle} />}
+            {showCallouts && (compactCallouts || !!pictures) && <CalloutLegend vehicle={vehicle} />}
           </div>
 
           {/* Mounted with the other panels so they arrive together; contents fill in as data loads. */}
@@ -448,6 +478,11 @@ export function VehicleStage({
           </motion.aside>
         )}
       </motion.div>
+      {editing && (
+        <Suspense>
+          <VehicleForm serial={serial} reduced={reduced} onClose={() => setEditing(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }
