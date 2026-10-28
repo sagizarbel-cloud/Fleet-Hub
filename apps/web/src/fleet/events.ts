@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { RECORD_KINDS, VEHICLE_FIELDS, type EventType, type VehicleField } from '@fleet-hub/shared';
 import { lookupName, type FleetEvent, type Lookups } from './data';
+import { numberFormat } from '@/lib/intl';
 
 /** Timeline filter chips. Each chip covers related event types. */
 export const EVENT_GROUPS = {
@@ -74,11 +75,14 @@ export const EVENT_ICON = Object.fromEntries(
 type NamedField = VehicleField | 'supplier';
 const NAMED_FIELDS = new Set<NamedField>([...VEHICLE_FIELDS, 'supplier']);
 
+/** Event types whose description is just their name, with nothing about the record itself. */
+const PLAIN = new Set<EventType>(['NOTE_ADDED', 'VEHICLE_CREATED']);
+
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 const num = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0);
 
 export function formatMoney(amount: number, lang: string) {
-  return new Intl.NumberFormat(lang === 'he' ? 'he-IL' : 'en-IL', {
+  return numberFormat(lang === 'he' ? 'he-IL' : 'en-IL', {
     style: 'currency',
     currency: 'ILS',
     maximumFractionDigits: 0,
@@ -108,7 +112,10 @@ export function describeEvent(
       return p.cleared
         ? t('events.STATUS_OVERRIDE_CLEARED', { to: status(p.to) })
         : str(p.reason)
-          ? t('events.STATUS_OVERRIDDEN_REASON', { to: status(p.to), reason: str(p.reason) })
+          ? t('events.STATUS_OVERRIDDEN_REASON', {
+              to: status(p.to),
+              reason: isolate(str(p.reason)),
+            })
           : t('events.STATUS_OVERRIDDEN', { to: status(p.to) });
     case 'RECORD_EDITED':
     case 'RECORD_DELETED':
@@ -116,8 +123,13 @@ export function describeEvent(
       // "Edited: Refueled 60 L", built from the record's own event template.
       const of = str(p.of) as EventType;
       const kind = RECORD_KINDS.find((k) => k === p.kind);
-      const detail = of && of !== e.type ? describeEvent(t, { ...e, type: of }, lookups, lang) : '';
-      return t(`events.${e.type}`, {
+      // A record whose own entry has no details (a note) reads "Note deleted", not "Note deleted:
+      // Note added".
+      const detail =
+        of && of !== e.type && !PLAIN.has(of)
+          ? describeEvent(t, { ...e, type: of }, lookups, lang)
+          : '';
+      return t(detail ? `events.${e.type}` : `events.${e.type}_plain`, {
         record: kind
           ? t(`vehicle.records.one.${kind}`)
           : p.kind === 'receipt'
@@ -129,14 +141,17 @@ export function describeEvent(
     case 'SERVICE':
     case 'MALFUNCTION_UPDATED':
     case 'MALFUNCTION_RESOLVED':
-      return t(`events.${e.type}`, { description: str(p.description) });
+      return t(`events.${e.type}`, { description: isolate(str(p.description)) });
     case 'MALFUNCTION_REPORTED': {
       const sev = str(p.severity);
       const severity =
         sev === 'LOW' || sev === 'MEDIUM' || sev === 'HIGH' || sev === 'CRITICAL'
           ? t(`severity.${sev}`)
           : '';
-      return t('events.MALFUNCTION_REPORTED', { severity, description: str(p.description) });
+      return t('events.MALFUNCTION_REPORTED', {
+        severity,
+        description: isolate(str(p.description)),
+      });
     }
     case 'FLUID_ADDED':
       return t('events.FLUID_ADDED', {
@@ -161,7 +176,7 @@ export function describeEvent(
     }
     case 'ITEM_ASSIGNED':
     case 'ITEM_REMOVED':
-      return t(`events.${e.type}`, { item: str(p.item) });
+      return t(`events.${e.type}`, { item: isolate(str(p.item)) });
     case 'DOCUMENT_ADDED': {
       // Category and amount are both optional on a receipt.
       const details = [

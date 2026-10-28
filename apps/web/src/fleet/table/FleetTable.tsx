@@ -123,7 +123,7 @@ function Cell({ col, row, ctx }: { col: FleetColumnDef; row: FleetRow; ctx: Form
       )}
       title={text}
     >
-      {isId ? <bdi dir="ltr">{text}</bdi> : text}
+      {isId ? <bdi dir="ltr">{text}</bdi> : col.kind === 'text' ? <bdi>{text}</bdi> : text}
     </span>
   );
 }
@@ -507,7 +507,8 @@ export default function FleetTable({ active, away }: { active: string | null; aw
                     ref={virtual.measureElement}
                     data-index={vi.index}
                     data-row={row.serial}
-                    onClick={() => open(row.serial)}
+                    // The second click of a double click would open the vehicle twice.
+                    onClick={(e) => e.detail < 2 && open(row.serial)}
                     className="group cursor-pointer hover:[&>td:not(:first-child)]:bg-border/40"
                   >
                     <td

@@ -25,7 +25,7 @@ export function UserMenu({ user }: { user: SessionUser }) {
           className="glass z-50 min-w-56 p-1.5 text-sm"
         >
           <div className="px-2.5 py-2">
-            <div className="font-medium">{user.name}</div>
+            <bdi className="block font-medium">{user.name}</bdi>
             <div className="text-muted text-xs">
               <bdi dir="ltr">{user.email}</bdi> · {t(`user.role.${user.role}`)}
             </div>

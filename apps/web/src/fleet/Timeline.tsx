@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
   type EventGroup,
 } from './events';
 import { useHover } from './hover';
+import { dateFormat, localeOf } from '@/lib/intl';
 
 function useDayLabel() {
   const { t, i18n } = useTranslation();
@@ -24,7 +25,7 @@ function useDayLabel() {
     if (key === dayKey(today.toISOString())) return t('dashboard.today');
     if (key === dayKey(yesterday.toISOString())) return t('dashboard.yesterday');
     const [y, m, d] = key.split('-').map(Number);
-    return new Intl.DateTimeFormat(i18n.language === 'he' ? 'he-IL' : 'en-GB', {
+    return dateFormat(localeOf(i18n.language), {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -52,10 +53,9 @@ export function EventRow({
   const Icon = EVENT_ICON[event.type];
   const text = describeEvent(t, event, lookups, i18n.language);
   const lit = highlighted || hover.serial === event.vehicle.serial;
-  const time = new Intl.DateTimeFormat(i18n.language === 'he' ? 'he-IL' : 'en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(event.occurredAt));
+  const time = dateFormat(localeOf(i18n.language), { hour: '2-digit', minute: '2-digit' }).format(
+    new Date(event.occurredAt),
+  );
 
   return (
     <li>
@@ -160,7 +160,8 @@ export function EventList({
 }
 
 /** Fleet-wide timeline with filter chips per event group. */
-export function Timeline({ first }: { first: EventPage }) {
+/** Memoized: opening a vehicle re-renders the stage around it, but the list itself is unchanged. */
+export const Timeline = memo(function Timeline({ first }: { first: EventPage }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [groups, setGroups] = useState<EventGroup[]>([]);
@@ -235,7 +236,7 @@ export function Timeline({ first }: { first: EventPage }) {
       </div>
     </section>
   );
-}
+});
 
 export function Chip({
   pressed,

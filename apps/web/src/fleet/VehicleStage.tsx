@@ -173,10 +173,11 @@ export function VehicleStage({
     } else {
       const start = fromDashboard ? offsetToTile() : null;
       if (start) {
-        void animate(hero, { ...start, opacity: 1 }, { duration: 0 });
+        // One animation with explicit start keyframes: a separate zero-length "jump to the tile"
+        // followed by the flight let the flight read the old position and finish at once.
         void animate(
           hero,
-          { x: 0, y: 0, scale: 1 },
+          { x: [start.x, 0], y: [start.y, 0], scale: [start.scale, 1], opacity: [1, 1] },
           { type: 'spring', duration: T.fly, bounce: 0.12 },
         );
       } else {
@@ -202,7 +203,9 @@ export function VehicleStage({
       return;
     }
     void animate('[data-panel]', { opacity: 0 }, { duration: 0.2 });
-    later(T.flatten, () => {
+    // Back pressed before the drawing tilted (mid fly-in): nothing to flatten, so turn straight
+    // round instead of hanging in the air.
+    later(pose === 'flat' ? 0 : T.flatten, () => {
       onReturnStart();
       const end = offsetToTile();
       const fly = end
@@ -220,7 +223,8 @@ export function VehicleStage({
     else navigate(home === 'fleet' ? '/fleet' : '/');
   }, [returning, fromDashboard, home, navigate]);
 
-  useEffect(() => {
+  // A layout effect, so an Esc pressed while the page is still being built isn't missed.
+  useLayoutEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !e.defaultPrevented && back();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

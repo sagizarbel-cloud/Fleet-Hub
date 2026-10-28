@@ -22,6 +22,7 @@ import { useDateFormat } from '@/fleet/FleetGrid';
 import { cn } from '@/lib/cn';
 import type { VehicleDetail } from './data';
 import { UndoProvider } from './records/Undo';
+import { localeOf, relativeFormat } from '@/lib/intl';
 
 const PanelBody = lazy(() => import('./records/PanelBody'));
 
@@ -66,9 +67,7 @@ function isRecordKey(s: string | null): s is RecordKey {
 function useSummary(v: VehicleDetail | undefined) {
   const { t, i18n } = useTranslation();
   const formatDate = useDateFormat();
-  const relative = new Intl.RelativeTimeFormat(i18n.language === 'he' ? 'he-IL' : 'en-GB', {
-    numeric: 'auto',
-  });
+  const relative = relativeFormat(localeOf(i18n.language), { numeric: 'auto' });
   return (key: RecordKey): { text: string; warn?: boolean } => {
     // Still loading: the cards are already in place, their counts follow.
     if (!v) return { text: '…' };

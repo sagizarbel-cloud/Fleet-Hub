@@ -229,7 +229,7 @@ function ItemSheet({
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-muted text-xs">{t('vehicle.items.model')}</dt>
-              <dd>{i.model ?? '—'}</dd>
+              <dd>{i.model ? <bdi>{i.model}</bdi> : '—'}</dd>
             </div>
             <div>
               <dt className="text-muted text-xs">{t('vehicle.items.serial')}</dt>
@@ -245,7 +245,7 @@ function ItemSheet({
             </div>
             <div className="col-span-2">
               <dt className="text-muted text-xs">{t('vehicle.items.spec')}</dt>
-              <dd>{i.spec ?? '—'}</dd>
+              <dd>{i.spec ? <bdi>{i.spec}</bdi> : '—'}</dd>
             </div>
             <div className="col-span-2">
               <dt className="text-muted text-xs">{t('equipment.vehicle')}</dt>
@@ -525,11 +525,11 @@ export function EquipmentPage() {
                       className="text-start font-medium hover:underline"
                       onClick={() => setOpen(i.id)}
                     >
-                      {i.name}
+                      <bdi>{i.name}</bdi>
                     </button>
                   </td>
-                  <td className="px-1.5 py-2">{i.model ?? '—'}</td>
-                  <td className="px-1.5 py-2">{i.spec ?? '—'}</td>
+                  <td className="px-1.5 py-2">{i.model ? <bdi>{i.model}</bdi> : '—'}</td>
+                  <td className="px-1.5 py-2">{i.spec ? <bdi>{i.spec}</bdi> : '—'}</td>
                   <td className="px-1.5 py-2">
                     {i.serial ? (
                       <bdi dir="ltr" className="num">

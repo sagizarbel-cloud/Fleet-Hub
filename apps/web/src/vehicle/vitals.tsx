@@ -5,6 +5,7 @@ import { lookupName, useLookups } from '@/fleet/data';
 import { formatMoney } from '@/fleet/events';
 import { useDateFormat } from '@/fleet/FleetGrid';
 import type { VehicleDetail } from './data';
+import { localeOf, numberFormat, relativeFormat } from '@/lib/intl';
 
 /** Every value the page can show about a vehicle: the A6 vitals plus a few callout-only ones. */
 export type InfoKey = VitalKey | 'vin' | 'licenseNo' | 'lastLocation' | 'lastFuel';
@@ -36,12 +37,8 @@ export function useVehicleInfo(v: VehicleDetail | undefined) {
   const { data: lookups } = useLookups();
   const formatDate = useDateFormat();
   const lang = i18n.language;
-  const num = new Intl.NumberFormat(lang === 'he' ? 'he-IL' : 'en-GB', {
-    maximumFractionDigits: 1,
-  });
-  const relative = new Intl.RelativeTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', {
-    numeric: 'auto',
-  });
+  const num = numberFormat(localeOf(lang), { maximumFractionDigits: 1 });
+  const relative = relativeFormat(localeOf(lang), { numeric: 'auto' });
   const [now] = useState(Date.now);
 
   const usage = (km: number | null, hours: number | null) => {

@@ -44,6 +44,7 @@ import {
   ViewToggle,
 } from './ui';
 import { VehicleTagChip } from './VehiclePicker';
+import { isolate } from '@/lib/bidi';
 
 const TABLE_KEYS = ['date', 'vehicles', 'vendor', 'category', 'amount'] as const;
 const FILTER_KEYS = ['vehicle', 'category', 'state', 'from', 'to', 'min', 'max', 'q'] as const;
@@ -213,7 +214,9 @@ function Card({ r, canReview, onEdit }: { r: Receipt; canReview: boolean; onEdit
         target="_blank"
         rel="noreferrer"
         className="bg-border/30 grid aspect-[4/3] place-items-center overflow-hidden"
-        aria-label={first ? first.fileName : t('receipts.noFile')}
+        aria-label={
+          first ? t('receipts.openFile', { name: isolate(first.fileName) }) : t('receipts.noFile')
+        }
       >
         {first?.hasThumb ? (
           <img
@@ -233,7 +236,9 @@ function Card({ r, canReview, onEdit }: { r: Receipt; canReview: boolean; onEdit
           </span>
           <StateBadge r={r} />
         </div>
-        <p className="truncate text-sm">{r.vendor ?? t('receipts.noVendor')}</p>
+        <p className="truncate text-sm">
+          {r.vendor ? <bdi>{r.vendor}</bdi> : t('receipts.noVendor')}
+        </p>
         <p className="text-muted flex flex-wrap items-center gap-x-2 text-xs">
           <span className="num">{ctx.date(r.date)}</span>
           {category && <span>{category}</span>}
@@ -317,7 +322,7 @@ function Table({
                 </td>
                 <td className="px-1.5 py-2">
                   <span className="flex items-center gap-2">
-                    {r.vendor ?? <span className="text-muted">—</span>}
+                    {r.vendor ? <bdi>{r.vendor}</bdi> : <span className="text-muted">—</span>}
                     <StateBadge r={r} />
                   </span>
                 </td>

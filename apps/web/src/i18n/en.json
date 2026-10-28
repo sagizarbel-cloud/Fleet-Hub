@@ -151,6 +151,9 @@
     "RECORD_EDITED": "{{record}} edited: {{detail}}",
     "RECORD_DELETED": "{{record}} deleted: {{detail}}",
     "RECORD_RESTORED": "{{record}} restored: {{detail}}",
+    "RECORD_EDITED_plain": "{{record}} edited",
+    "RECORD_DELETED_plain": "{{record}} deleted",
+    "RECORD_RESTORED_plain": "{{record}} restored",
     "QUOTE_UNLINKED": "Price quote from {{supplier}} unlinked",
     "VEHICLE_UPDATED_fields": "Vehicle details updated: {{fields}}",
     "imported": "Imported",
@@ -603,6 +606,7 @@
     "max": "Max ₪",
     "empty": "No receipts yet. Drop photos or PDFs here, or press Add receipt.",
     "dropHere": "Drop to add receipts",
+    "openFile": "Open {{name}}",
     "noFile": "No file",
     "noVendor": "No vendor"
   },

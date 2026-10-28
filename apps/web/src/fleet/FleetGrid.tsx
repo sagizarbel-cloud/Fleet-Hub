@@ -34,6 +34,7 @@ import { useHover } from './hover';
 import { STATUS_ICON } from './statusIcon';
 import type { PickedItem } from './EquipmentTray';
 import { Chip } from './Timeline';
+import { dateFormat, localeOf } from '@/lib/intl';
 
 // Both load only when used: a file dropped on a tile, or the equipment tray opened.
 const ReceiptForm = lazy(() =>
@@ -73,9 +74,7 @@ function loadCollapsed(): string[] {
 export function useDateFormat() {
   const { i18n } = useTranslation();
   return (iso: string) =>
-    new Intl.DateTimeFormat(i18n.language === 'he' ? 'he-IL' : 'en-GB', {
-      dateStyle: 'medium',
-    }).format(new Date(iso));
+    dateFormat(localeOf(i18n.language), { dateStyle: 'medium' }).format(new Date(iso));
 }
 
 function HoverCard({ tile }: { tile: Tile }) {
@@ -231,13 +230,15 @@ function TileButton({
         type="button"
         data-tile={tile.serial}
         aria-label={t('dashboard.openVehicle', { serial: tile.serial })}
-        onClick={() =>
-          drop.picking
-            ? drop.onPicked(tile.serial)
-            : navigate(`/vehicles/${encodeURIComponent(tile.serial)}`, {
-                state: { fromDashboard: true },
-              })
-        }
+        onClick={(e) => {
+          if (drop.picking) return drop.onPicked(tile.serial);
+          // A double click's second click lands while the vehicle is already opening: opening it
+          // twice would leave Back on the vehicle page.
+          if (away || e.detail > 1) return;
+          navigate(`/vehicles/${encodeURIComponent(tile.serial)}`, {
+            state: { fromDashboard: true },
+          });
+        }}
         onDragEnter={onDragEnter}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}

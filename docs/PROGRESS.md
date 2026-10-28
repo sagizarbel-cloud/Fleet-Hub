@@ -2,12 +2,21 @@
 
 ## Status
 
-- Current phase: 7 — Add / edit vehicle, settings, users and Excel import (built; waiting for Sagi's review in the PR)
-- Last completed phase: 6 — Receipts, quotes and equipment
+- Current phase: 8 — Translation audit and motion polish (built; waiting for Sagi's review in the PR)
+- Last completed phase: 7 — Add / edit vehicle, settings, users and Excel import
 
 ## Phase log
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
+
+### Phase 8 — 2026-10-28
+
+- Audit: every page, record panel, the add-vehicle steps, record / receipt / quote forms with their errors, quote and item sheets, menus and the Undo bar, in Hebrew and English, dark and light, 1440 px and 390 px. All 887 strings already had Hebrew and no physical left/right styling was left, so the findings were on screen: the shekel on the wrong side of "Spent this month"; VINs cut from their start in the phone callouts; typed text with numbers flipping in Hebrew ("20 t class" as "t class 20"); typed text inside event sentences not isolated; "הצעה מ" glued to an English supplier; the quote's line table cut off in its sheet; the reset link's time in the device's clock format; a deleted note reading "Note deleted: Note added".
+- Fixed: all of the above. Typed text (names, specs, models, notes, suppliers, vendors, file names) is shown in `<bdi>` so it keeps its own direction in either language; interpolated typed text uses the isolates from `lib/bidi.ts`, aria-labels and tooltips included. Quote lines show part number and condition under the item, so four columns fit a phone.
+- Motion: the vehicle had stopped flying out of its tile (a zero-length "jump to the tile" followed by the flight let the flight read the old position and end at once; now one animation with start keyframes). Opening a vehicle paused 120–220 ms before anything moved (about 4× that on a slow phone) while the activity list built a new date formatter per row: Intl formatters are now cached (`lib/intl.ts`) and the dashboard timeline is memoized, about 60–90 ms now. Esc pressed while the vehicle page is still being built goes back; Back before the drawing has tilted flies home at once instead of hanging for 0.35 s; a double click on a tile or table row opens the vehicle once (it used to leave Back on the vehicle page); quick Next / Prev presses each step on from the last one. The language switch is a real crossfade (view transition, with a short fade where the browser lacks it) instead of dimming the page in one frame.
+- Seed (Sagi, 2026-10-28): names, suppliers, notes, service and malfunction texts, items, parts and saved view names are Hebrew, like the real fleet; brands, models, codes and part numbers stay as written. The English generator still runs alongside, so the fleet's numbers, dates and statuses are the same as before.
+- Tests: 72 Playwright tests (12 new). `i18n-audit.spec.ts` visits every page and the main dialogs in Hebrew at both widths and fails on English words outside a short allowed list (brands, units, file types), raw translation keys, sideways scrolling or content spilling out of a sheet, and checks the shekel side. `motion.spec.ts` checks the fly-out and fly-back really move, Esc right after the click, Back mid-flight, double click, quick Next presses, reduced motion (nothing moves, panels only fade) and the language switch without a reload. Unit and api tests unchanged (174). Screenshots in `docs/screenshots/phase-8/` (EN and HE, desktop and phone, dark, plus light for the dashboard and a vehicle).
+- Deferred: date fields use the phone's own date picker, which shows MM/DD on a phone set to US English (Israeli phones show DD/MM); frame-rate budgets measured on a real phone (this build machine has no GPU, so only the pauses and jumps were measured).
 
 ### Phase 7 — 2026-10-27
 
@@ -114,6 +123,8 @@
 - The account's language and theme win over the device's, so a phone and a PC look the same; "follow this device" is the default until a user picks one.
 - Tile drop (2026-10-27, Sagi): the tilted, turning top view still looked flat, so a tile only grows about 10% and glows while a file or item is over it. (The 3D isometric drawings only model the side facing the viewer, so they can't spin a full turn either.)
 - Start codes stay out of the fleet table completely, including the "has a start code" flag (SPEC A7).
+- Phase 8 (2026-10-28, Sagi): the fake seed's typed text is Hebrew. Typed text is always shown with its own direction (`<bdi>`, or isolates inside translated sentences); only codes are forced left to right.
+- Intl formatters are built once per language and options (`lib/intl.ts`): lists format hundreds of dates per render.
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 
 ## Later
@@ -131,4 +142,6 @@
 - Compress photos and receipts, and auto-edit them to look scanned (crop, straighten, contrast), to save space (Sagi, 2026-10-27)
 - Import: when a row has a cell that can't be read (e.g. a bad date), show the other fields' checks too, not only the read error
 - Reset page: send `Referrer-Policy: no-referrer` so the token never leaves in a referrer
+- A date picker of our own (DD/MM everywhere) if phones set to US English turn out to be common
+- Measure transition frame rates on a real mid-range phone and tune the springs
 - Upgrade to newer majors (TypeScript 7, Vite 8, Prisma 7+, ESLint 10) once they settle

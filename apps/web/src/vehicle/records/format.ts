@@ -4,6 +4,7 @@ import type { UsageUnit } from '@fleet-hub/shared';
 import { useLookups } from '@/fleet/data';
 import type { Cell, Column, FormatCtx } from './kinds';
 import type { RecordRow } from './api';
+import { numberFormat } from '@/lib/intl';
 
 /** Dates as DD/MM/YYYY in both languages (SPEC A8). */
 const DATE = new Intl.DateTimeFormat('en-GB', {
@@ -30,7 +31,7 @@ export function useFormatCtx(unit: UsageUnit): FormatCtx {
       unit,
       date: (iso) => DATE.format(new Date(iso)),
       number: (value, digits = 0) =>
-        new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(value),
+        numberFormat(locale, { maximumFractionDigits: digits }).format(value),
       money: (value) => money.format(value),
     };
   }, [t, lang, lookups, unit]);

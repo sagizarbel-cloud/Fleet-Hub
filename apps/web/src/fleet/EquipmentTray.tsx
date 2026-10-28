@@ -57,7 +57,7 @@ export default function EquipmentTray({
                 data-testid="tray-item"
               >
                 <GripVertical aria-hidden className="text-muted size-3.5" />
-                <span>{i.name}</span>
+                <span dir="auto">{i.name}</span>
                 <span className="text-muted">
                   {item.from ? (
                     <bdi dir="ltr" className="num">

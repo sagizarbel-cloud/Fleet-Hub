@@ -55,7 +55,10 @@ function CellView({ col, row, ctx }: { col: Column; row: RecordRow; ctx: FormatC
   if (col.kind === 'bool') return <BoolCell col={col} row={row} ctx={ctx} />;
   const text = cellText(col, row, ctx);
   if (!text) return <span className="text-muted">—</span>;
-  if (col.kind === 'long') return <span className="line-clamp-2 whitespace-pre-line">{text}</span>;
+  // Typed text keeps its own direction (bdi), so "20 t class" never turns into "t class 20".
+  if (col.kind === 'long')
+    return <bdi className="line-clamp-2 block whitespace-pre-line">{text}</bdi>;
+  if (col.kind === 'text') return <bdi>{text}</bdi>;
   return (
     <span className={cn((col.kind === 'number' || col.kind === 'money') && 'num')}>{text}</span>
   );

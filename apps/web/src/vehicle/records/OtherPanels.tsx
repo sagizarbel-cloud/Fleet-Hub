@@ -156,7 +156,9 @@ export function OwnershipPanel({ vehicle, reduced }: { vehicle: VehicleDetail; r
           <div key={c.key} className={cn(c.kind === 'long' && 'sm:col-span-2')}>
             <dt className="text-muted text-xs">{t(c.header as never)}</dt>
             <dd className={cn('text-sm', c.kind === 'money' && 'num')}>
-              {cellText(c, row, ctx) || t('dashboard.notSet')}
+              <bdi className="whitespace-pre-line">
+                {cellText(c, row, ctx) || t('dashboard.notSet')}
+              </bdi>
             </dd>
           </div>
         ))}

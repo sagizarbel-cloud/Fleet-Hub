@@ -4,6 +4,7 @@ import { Camera, FileText, Loader2, Paperclip, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { ACCEPT, attachmentUrl, useAttachmentDelete, type Attachment } from './api';
 import { useOfferUndo } from './Undo';
+import { isolate } from '@/lib/bidi';
 
 const MAX_MB = 20;
 
@@ -31,7 +32,7 @@ export function AttachmentList({
             href={attachmentUrl(a)}
             target="_blank"
             rel="noreferrer"
-            title={a.fileName}
+            title={t('receipts.openFile', { name: isolate(a.fileName) })}
             className={cn(
               'border-border hover:border-border-strong bg-surface flex items-center gap-2 overflow-hidden rounded-lg border',
               compact ? 'size-10 justify-center' : 'h-14 max-w-56 pe-3',
@@ -64,14 +65,14 @@ export function AttachmentList({
                   { id: a.id, deleted: true },
                   {
                     onSuccess: () =>
-                      offerUndo(t('records.fileRemoved', { name: a.fileName }), () =>
+                      offerUndo(t('records.fileRemoved', { name: isolate(a.fileName) }), () =>
                         remove.mutateAsync({ id: a.id, deleted: false }),
                       ),
                   },
                 )
               }
-              aria-label={t('records.removeFile', { name: a.fileName })}
-              title={t('records.removeFile', { name: a.fileName })}
+              aria-label={t('records.removeFile', { name: isolate(a.fileName) })}
+              title={t('records.removeFile', { name: isolate(a.fileName) })}
               className="bg-surface-strong border-border text-muted hover:text-bad absolute -end-1.5 -top-1.5 grid size-6 place-items-center rounded-full border"
             >
               <X aria-hidden className="size-3.5" />
@@ -167,8 +168,8 @@ export function FilePicker({
               <button
                 type="button"
                 onClick={() => onChange(files.filter((_, j) => j !== i))}
-                aria-label={t('records.removeFile', { name: f.name })}
-                title={t('records.removeFile', { name: f.name })}
+                aria-label={t('records.removeFile', { name: isolate(f.name) })}
+                title={t('records.removeFile', { name: isolate(f.name) })}
                 className="text-muted hover:text-bad"
               >
                 <X aria-hidden className="size-3.5" />

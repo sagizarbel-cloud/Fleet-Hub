@@ -75,7 +75,7 @@ test.describe('record panels', () => {
 
     // The timeline shows the add, the edit, the delete and the restore.
     const activity = page.getByRole('complementary');
-    await expect(activity.getByText(`Service restored: Service: ${text}`)).toBeVisible();
+    await expect(activity.getByText(`Service restored: Service: \u2068${text}\u2069`)).toBeVisible();
 
     // Clean up so reruns start from the seed.
     await row.getByRole('button', { name: 'Delete' }).click();
