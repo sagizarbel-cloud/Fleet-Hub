@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Outlet, useLocation, useMatch } from 'react-router';
+import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { Loader2 } from 'lucide-react';
@@ -73,6 +73,21 @@ export function FleetStage() {
     if (!routeSerial && home === 'dashboard')
       document.title = `${t('nav.dashboard')} · ${t('app.name')}`;
   }, [routeSerial, home, t]);
+
+  // Esc pressed after the click but before the vehicle page exists (it is still being built, which
+  // takes a moment on a slow phone): the page's own Esc can't hear it yet, so go back from here.
+  const navigate = useNavigate();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (!window.location.pathname.startsWith('/vehicles/')) return;
+      if (document.querySelector('[data-testid=vehicle-stage]')) return;
+      const opened = (window.history.state as { usr?: { fromDashboard?: boolean } } | null)?.usr;
+      if (opened?.fromDashboard) navigate(-1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navigate]);
 
   // The stage scrolls on its own; keep the page underneath still.
   useEffect(() => {

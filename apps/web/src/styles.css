@@ -152,6 +152,13 @@
   letter-spacing: 0;
 }
 
+/* Language switch: the old page fades into the new one (LanguageToggle). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

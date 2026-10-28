@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
@@ -35,16 +35,24 @@ export function VehicleNav({ serial, tiles }: { serial: string; tiles: Tile[] })
   const order = useMemo(() => gridOrder(tiles), [tiles]);
   const index = order.findIndex((v) => v.serial === serial);
   const [query, setQuery] = useState('');
+  // Where the last press is taking us. Quick presses arrive before the page has moved, so each one
+  // steps on from there rather than from the vehicle still on screen.
+  const heading = useRef(serial);
+  useEffect(() => {
+    heading.current = serial;
+  }, [serial]);
 
   const go = (to: string, slide: SlideDirection) => {
-    if (to === serial) return;
+    if (to === heading.current) return;
+    heading.current = to;
     const state = (location.state as Record<string, unknown> | null) ?? {};
     // Replace, so Back still leaves the vehicle pages in one step.
     navigate(`/vehicles/${encodeURIComponent(to)}`, { replace: true, state: { ...state, slide } });
   };
   const step = (by: SlideDirection) => {
-    if (index === -1 || order.length < 2) return;
-    go(order[(index + by + order.length) % order.length]!.serial, by);
+    const from = order.findIndex((v) => v.serial === heading.current);
+    if (from === -1 || order.length < 2) return;
+    go(order[(from + by + order.length) % order.length]!.serial, by);
   };
 
   useEffect(() => {
