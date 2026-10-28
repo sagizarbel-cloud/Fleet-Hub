@@ -16,6 +16,7 @@
 - Database (migration `phase7_vehicles_import`, additive): `Vehicle.topPhotoId` / `sidePhotoId`, `Event.importRunId`, tables `ImportRun` and `ImportMapping`. New packages: `dompurify` and `jsdom` (api, approved by Sagi for SVG).
 - Tests: 123 api tests (30 new: lists, users and reset links, password change, vehicle add / edit / pictures / SVG cleaning, import dry run, commit, re-import and saved matching), 20 web unit tests (sheet reader), 59 Playwright tests (6 new: stepper, edit with photos, lists, users and reset link, import, viewer settings). Language switches in e2e now wait for the account save. Screenshots in `docs/screenshots/phase-7/`.
 - Deferred: trying the import on Sagi's own sheets (waiting for his blanked samples).
+- Follow-up (2026-10-28): Sagi has no sample sheets yet, so `pnpm samples` writes made-up ones to `docs/samples/` (a fleet list, the seven record types and equipment, shaped like hand-kept office sheets). Running them through the dry run led to: finding the header row under a title (and a picker to move it), finding a record's vehicle by its serial written loosely, its plate or its VIN, numbers with units typed next to them, dates with a time, more Hebrew word forms (גבוה, טופל, תקין, ביטוח חובה), list values matched loosely or by the name they contain, more header words, totals rows skipped, and the cell value shown in a row's problem. e2e now runs one test file at a time, since a language switch is saved to the shared test account.
 
 ### Phase 6 — 2026-10-27
 

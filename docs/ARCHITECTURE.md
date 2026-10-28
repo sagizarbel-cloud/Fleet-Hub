@@ -50,6 +50,8 @@ Admin-only **Import** page (`/settings/import`): upload .xlsx → pick sheet →
 
 - The browser reads the workbook with ExcelJS and sends rows as JSON (`POST /api/import/:target/preview` and `/commit`, at most 5,000 rows); the file itself is never uploaded or stored.
 - Rows match by serial (vehicles and records); equipment by its serial, or by name and model when it has none. A re-import only writes the cells the sheet fills, and a value equal to the stored one is not a change, so importing the same sheet twice changes nothing.
+- Hand-kept sheets: the header row is the first row with about as many text cells as the fullest top row (so a title above it is passed over; the user can pick another row). A record's vehicle is found by its serial written loosely ("ex 102"), its plate or its VIN. Numbers may carry units ("20 ל'", "₪ 1,250"), dates a time; choices and list values match loosely or by the one name they contain ("שמן מנוע 15W40" is engine oil). A totals row ("סה״כ") under the data is skipped.
+- Made-up sample sheets in that shape live in `docs/samples/` (`pnpm samples` rewrites them); a web test checks each one's headers are found and its must-have columns matched.
 - Each commit is one `ImportRun`; the events it writes point to it and show an "Imported" badge on the timeline. Vehicles first, then history records.
 
 ## Deployment
