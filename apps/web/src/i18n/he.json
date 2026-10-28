@@ -151,7 +151,10 @@
     "RECORD_EDITED": "עריכת {{record}}: {{detail}}",
     "RECORD_DELETED": "מחיקת {{record}}: {{detail}}",
     "RECORD_RESTORED": "שחזור {{record}}: {{detail}}",
-    "QUOTE_UNLINKED": "הצעת מחיר מ{{supplier}} נותקה",
+    "RECORD_EDITED_plain": "עריכת {{record}}",
+    "RECORD_DELETED_plain": "מחיקת {{record}}",
+    "RECORD_RESTORED_plain": "שחזור {{record}}",
+    "QUOTE_UNLINKED": "הצעת מחיר מאת {{supplier}} נותקה",
     "VEHICLE_UPDATED_fields": "פרטי הכלי עודכנו: {{fields}}",
     "imported": "מיובא",
     "importedHint": "נוסף בייבוא מאקסל"
@@ -603,6 +606,7 @@
     "max": "עד ₪",
     "empty": "אין עדיין קבלות. אפשר לגרור לכאן תמונות או קובצי PDF, או ללחוץ על הוספת קבלה.",
     "dropHere": "שחררו כדי להוסיף קבלות",
+    "openFile": "פתיחת {{name}}",
     "noFile": "אין קובץ",
     "noVendor": "ללא ספק"
   },
@@ -611,7 +615,7 @@
     "add": "הוספת הצעה",
     "addTitle": "הוספת הצעת מחיר",
     "editTitle": "עריכת הצעת מחיר",
-    "from": "הצעה מ{{supplier}}",
+    "from": "הצעת מחיר מאת {{supplier}}",
     "supplierHint": "בחרו ספק או הקלידו שם חדש.",
     "lines": "שורות",
     "item": "חלק או כלי",

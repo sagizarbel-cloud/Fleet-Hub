@@ -62,7 +62,7 @@ export function ItemsTable({ vehicle }: { vehicle: VehicleDetail }) {
               <option value="">{t('vehicle.items.choose')}</option>
               {free.data.items.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {[item.name, item.model, item.serial].filter(Boolean).join(' · ')}
+                  <bdi>{[item.name, item.model, item.serial].filter(Boolean).join(' · ')}</bdi>
                 </option>
               ))}
             </select>
@@ -109,11 +109,15 @@ export function ItemsTable({ vehicle }: { vehicle: VehicleDetail }) {
                   className="border-border border-b last:border-0"
                   data-item={item.id}
                 >
-                  <td className="px-1 py-1.5">{item.name}</td>
+                  <td className="px-1 py-1.5">
+                    <bdi>{item.name}</bdi>
+                  </td>
                   <td className="px-1 py-1.5">
                     {item.model ? <bdi dir="ltr">{item.model}</bdi> : DASH}
                   </td>
-                  <td className="text-muted px-1 py-1.5">{item.spec ?? DASH}</td>
+                  <td className="text-muted px-1 py-1.5">
+                    {item.spec ? <bdi>{item.spec}</bdi> : DASH}
+                  </td>
                   <td className="num px-1 py-1.5 text-xs">
                     {item.serial ? <bdi dir="ltr">{item.serial}</bdi> : DASH}
                   </td>

@@ -83,7 +83,7 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
           {t('dashboard.kpi.spendThisMonth')}
         </h2>
         <span className="num text-xl leading-none font-semibold">
-          <bdi dir="ltr">{formatMoney(kpis.spendThisMonth, i18n.language)}</bdi>
+          <bdi>{formatMoney(kpis.spendThisMonth, i18n.language)}</bdi>
         </span>
       </div>
     </section>

@@ -19,6 +19,7 @@ import {
   type ResetLink,
 } from './api';
 import { SettingsSkeleton } from './SettingsPage';
+import { dateFormat, localeOf } from '@/lib/intl';
 
 const COPIED_MS = 1500;
 const WHATSAPP = 'https://wa.me/';
@@ -92,7 +93,7 @@ export function UsersAdmin() {
               >
                 <div className="min-w-0 flex-1 basis-56">
                   <div className="truncate font-medium">
-                    {u.name}
+                    <bdi>{u.name}</bdi>
                     {self && (
                       <span className="text-muted ms-2 text-xs">{t('settings.users.you')}</span>
                     )}
@@ -299,16 +300,16 @@ function LinkSheet({
   reduced: boolean;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const formatDate = useDateFormat();
   const [copied, setCopied] = useState(false);
   const timer = useRef(0);
   useEffect(() => () => clearTimeout(timer.current), []);
   const url = `${window.location.origin}${link.path}`;
-  const expires = `${formatDate(link.expiresAt)} ${new Date(link.expiresAt).toLocaleTimeString(
-    undefined,
-    { hour: '2-digit', minute: '2-digit' },
-  )}`;
+  const expires = `${formatDate(link.expiresAt)} ${dateFormat(localeOf(i18n.language), {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(link.expiresAt))}`;
   const message = t(isNew ? 'settings.users.messageNew' : 'settings.users.messageReset', {
     name: user.name,
     app: t('app.name'),

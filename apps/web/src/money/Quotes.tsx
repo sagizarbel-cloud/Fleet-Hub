@@ -339,40 +339,42 @@ function QuoteDetail({
           </div>
         )}
 
-        <div className="-mx-1 overflow-x-auto">
-          <table className="w-full min-w-[30rem] text-sm">
-            <thead className="text-muted text-xs">
-              <tr className="border-border border-b">
-                <th className="px-1.5 py-2 text-start font-medium">{t('quotes.item')}</th>
-                <th className="px-1.5 py-2 text-start font-medium">{t('quotes.partNo')}</th>
-                <th className="px-1.5 py-2 text-start font-medium">{t('quotes.condition')}</th>
-                <th className="px-1.5 py-2 text-end font-medium">{t('quotes.quantity')}</th>
-                <th className="px-1.5 py-2 text-end font-medium">{t('quotes.unitPrice')}</th>
-                <th className="px-1.5 py-2 text-end font-medium">{t('records.col.total')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {q.lines.map((l) => (
-                <tr key={l.id} className="border-border border-b last:border-0">
-                  <td className="px-1.5 py-2">{l.item}</td>
-                  <td className="px-1.5 py-2">
-                    {l.partNo ? (
-                      <bdi dir="ltr" className="num">
-                        {l.partNo}
-                      </bdi>
-                    ) : (
-                      '—'
+        {/* Part number and condition sit under the item, so the lines fit the sheet on a phone. */}
+        <table className="w-full text-sm">
+          <thead className="text-muted text-xs">
+            <tr className="border-border border-b">
+              <th className="px-1.5 py-2 text-start font-medium">{t('quotes.item')}</th>
+              <th className="px-1.5 py-2 text-end font-medium">{t('quotes.quantity')}</th>
+              <th className="px-1.5 py-2 text-end font-medium">{t('quotes.unitPrice')}</th>
+              <th className="px-1.5 py-2 text-end font-medium">{t('records.col.total')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {q.lines.map((l) => (
+              <tr key={l.id} className="border-border border-b align-top last:border-0">
+                <td className="px-1.5 py-2">
+                  <bdi className="block">{l.item}</bdi>
+                  <span className="text-muted text-xs">
+                    {l.partNo && (
+                      <>
+                        <bdi dir="ltr" className="num">
+                          {l.partNo}
+                        </bdi>
+                        {' · '}
+                      </>
                     )}
-                  </td>
-                  <td className="px-1.5 py-2">{t(`quotes.conditions.${l.condition}`)}</td>
-                  <td className="num px-1.5 py-2 text-end">{ctx.number(l.quantity)}</td>
-                  <td className="num px-1.5 py-2 text-end">{ctx.money(l.unitPrice)}</td>
-                  <td className="num px-1.5 py-2 text-end">{ctx.money(l.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {t(`quotes.conditions.${l.condition}`)}
+                  </span>
+                </td>
+                <td className="num px-1.5 py-2 text-end">{ctx.number(l.quantity)}</td>
+                <td className="num px-1.5 py-2 text-end whitespace-nowrap">
+                  {ctx.money(l.unitPrice)}
+                </td>
+                <td className="num px-1.5 py-2 text-end whitespace-nowrap">{ctx.money(l.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
         {vehicles === null ? (
           <div className="space-y-1.5">
@@ -447,7 +449,9 @@ function QuoteDetail({
         {q.notes && (
           <div>
             <p className="text-muted text-xs">{t('records.col.notes')}</p>
-            <p className="text-sm whitespace-pre-line">{q.notes}</p>
+            <p dir="auto" className="text-sm whitespace-pre-line">
+              {q.notes}
+            </p>
           </div>
         )}
         <AttachmentList serial="" items={q.attachments} canEdit={q.canEdit} />
@@ -551,7 +555,7 @@ function PartCompare({ ctx }: { ctx: FormatCtx }) {
                 data-testid="compare-line"
               >
                 <div className="flex items-center gap-2">
-                  <span className="me-auto truncate font-medium">{l.quote.supplier.name}</span>
+                  <bdi className="me-auto truncate font-medium">{l.quote.supplier.name}</bdi>
                   {isBest && <Badge tone="ok">{t('quotes.cheapest')}</Badge>}
                 </div>
                 <p className="num text-xl font-semibold">{ctx.money(l.unitPrice)}</p>
@@ -600,7 +604,7 @@ function QuotesCompare({ ids, ctx }: { ids: string[]; ctx: FormatCtx }) {
             <th className="px-1.5 py-2" />
             {list.map((q) => (
               <th key={q.id} scope="col" className="px-1.5 py-2 text-start align-top font-medium">
-                <span className="block">{q.supplier.name}</span>
+                <bdi className="block">{q.supplier.name}</bdi>
                 <span className="text-muted num block text-xs font-normal">{ctx.date(q.date)}</span>
                 <StatusBadgeQ status={q.status} />
               </th>
@@ -810,7 +814,7 @@ export function QuotesView({ vehicle }: { vehicle?: string }) {
                   className="mt-1 size-4 shrink-0 accent-[var(--fh-accent)]"
                   checked={picked.includes(q.id)}
                   onChange={() => togglePick(q.id)}
-                  aria-label={t('quotes.pick', { supplier: q.supplier.name })}
+                  aria-label={t('quotes.pick', { supplier: isolate(q.supplier.name) })}
                   data-testid="quote-pick"
                 />
                 <button
@@ -821,14 +825,14 @@ export function QuotesView({ vehicle }: { vehicle?: string }) {
                 >
                   <span className="min-w-0 space-y-1">
                     <span className="flex flex-wrap items-center gap-2">
-                      <span className="truncate font-medium">{q.supplier.name}</span>
+                      <bdi className="truncate font-medium">{q.supplier.name}</bdi>
                       <StatusBadgeQ status={q.status} />
                       <VisibilityBadge level={q.visibility} />
                       {q.expired && <Badge tone="warn">{t('quotes.expired')}</Badge>}
                     </span>
-                    <span className="text-muted block truncate text-xs">
+                    <bdi className="text-muted block truncate text-xs">
                       {q.lines.map((l) => l.item).join(' · ')}
-                    </span>
+                    </bdi>
                     <span className="flex flex-wrap gap-1">
                       {q.vehicles.map((v) => (
                         <bdi key={v.serial} dir="ltr" className="num text-muted text-xs">

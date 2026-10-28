@@ -145,7 +145,8 @@ export function CalloutOverlay({
               transition={{ duration: 0.2, delay: delay(i) + 0.05 }}
             >
               <div className="text-muted truncate text-xs">{v.label}</div>
-              <div className="truncate text-sm font-medium">
+              {/* A code (VIN) runs left to right, so it loses its end, not its start, when cut. */}
+              <div dir={v.ltr ? 'ltr' : undefined} className="truncate text-sm font-medium">
                 <InfoValue info={v} />
               </div>
             </motion.div>
@@ -178,7 +179,10 @@ export function CalloutLegend({ vehicle }: { vehicle: VehicleDetail }) {
             </span>
             <div className="min-w-0">
               <dt className="text-muted truncate text-xs">{v.label}</dt>
-              <dd className="truncate text-sm">
+              <dd
+                dir={v.ltr ? 'ltr' : undefined}
+                className={cn('truncate text-sm', v.ltr && 'rtl:text-right')}
+              >
                 <InfoValue info={v} />
               </dd>
             </div>
