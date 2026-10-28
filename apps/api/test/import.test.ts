@@ -59,7 +59,11 @@ beforeAll(async () => {
     data: [
       { code: 'im_yard', nameEn: 'Yard', nameHe: 'מגרש' },
       { code: 'im_site', nameEn: 'North site', nameHe: 'אתר צפון' },
+      { code: 'im_site_a', nameEn: 'Site Alef', nameHe: 'אתר א׳' },
     ],
+  });
+  await app.db.fluidType.create({
+    data: { code: 'im_engine_oil', nameEn: 'Engine oil', nameHe: 'שמן מנוע' },
   });
 });
 afterAll(async () => {
@@ -76,6 +80,18 @@ describe('reading cells', () => {
     expect(readNumber('₪ 1,250.50')).toBe(1250.5);
     expect(readNumber('900 ש"ח')).toBe(900);
     expect(readNumber('abc')).toBeNull();
+  });
+
+  it('reads units typed next to numbers, and a time after the day', () => {
+    expect(readNumber("20 ל'")).toBe(20);
+    expect(readNumber('97,900 km')).toBe(97_900);
+    expect(readNumber('8,450 שעות')).toBe(8450);
+    expect(readNumber('NIS 640')).toBe(640);
+    expect(readNumber('₪430.50')).toBe(430.5);
+    expect(readNumber('12/03')).toBeNull();
+    expect(readNumber('1,25')).toBeNull();
+    expect(readDate('12/03/2026 08:30')?.toISOString().slice(0, 10)).toBe('2026-03-12');
+    expect(readDate('2026/03/12')?.toISOString().slice(0, 10)).toBe('2026-03-12');
   });
 
   it('guesses the matching from Hebrew headers and never offers a start-code field', () => {
@@ -104,12 +120,12 @@ describe('importing vehicles', () => {
       expect.objectContaining({
         row: 4,
         action: 'error',
-        errors: [{ field: 'type', code: 'unknown' }],
+        errors: [{ field: 'type', code: 'unknown', value: 'Spaceship' }],
       }),
       expect.objectContaining({
         row: 5,
         action: 'error',
-        errors: [{ field: 'annualTestExpiry', code: 'date' }],
+        errors: [{ field: 'annualTestExpiry', code: 'date', value: 'soon' }],
       }),
     ]);
     expect(await app.db.vehicle.count({ where: { serial: { startsWith: 'IM-' } } })).toBe(0);
@@ -195,7 +211,9 @@ describe('importing records and equipment', () => {
       'create',
       'error',
     ]);
-    expect(first.results[2].errors).toEqual([{ field: 'serial', code: 'unknown' }]);
+    expect(first.results[2].errors).toEqual([
+      { field: 'serial', code: 'unknown', value: 'ZZ-404' },
+    ]);
     const second = (await commit('fuel', fuel)).json();
     expect(second.results.map((r: { action: string }) => r.action)).toEqual([
       'duplicate',
@@ -249,5 +267,80 @@ describe('importing records and equipment', () => {
       'duplicate',
       'duplicate',
     ]);
+  });
+});
+
+// Shaped like the sample sheets in docs/samples: plates instead of serials, Hebrew word forms,
+// units in the cells and a totals row. All fake.
+describe('sheets kept by hand', () => {
+  it('finds the vehicle by plate or a loosely written serial, and skips the totals row', async () => {
+    const service = sheet(
+      'service',
+      ['תאריך', 'מספר רישוי', 'תיאור העבודה', 'מוסך', 'עלות (₪)', 'ק"מ'],
+      [
+        [
+          '12/03/2026 08:30',
+          '12-345-68',
+          'Oil and filters',
+          'Test garage',
+          '1,250 ₪',
+          '61,240 ק"מ',
+        ],
+        ['14/03/2026', 'im 1', 'Bucket teeth', 'Test garage', 900, null],
+        ['15/03/2026', '99-999-99', 'Brakes', 'Test garage', 400, null],
+        ['סה"כ', null, null, null, 2550, null],
+      ],
+    );
+    expect(service.mapping).toMatchObject({ serial: 1, date: 0, description: 2, cost: 4 });
+    const res = (await commit('service', service)).json();
+    expect(res.results.map((r: { action: string; key: string }) => [r.action, r.key])).toEqual([
+      ['create', 'IM-2'],
+      ['create', 'IM-1'],
+      ['error', '99-999-99'],
+      ['summary', null],
+    ]);
+    const v2 = await app.db.vehicle.findUniqueOrThrow({ where: { serial: 'IM-2' } });
+    const record = await app.db.serviceRecord.findFirstOrThrow({ where: { vehicleId: v2.id } });
+    expect(Number(record.cost)).toBe(1250);
+    expect(record.odometerKm).toBe(61_240);
+  });
+
+  it('reads the word forms people write: גבוה, טופל, ביטוח חובה, לא תקין, a longer fluid name', async () => {
+    const faults = sheet(
+      'malfunctions',
+      ['תאריך דיווח', 'כלי', 'תיאור התקלה', 'חומרה', 'סטטוס'],
+      [['03/02/2026', 'IM-1', 'Boom cylinder leak', 'גבוה', 'טופל']],
+    );
+    expect((await commit('malfunctions', faults)).json().results[0].action).toBe('create');
+    const fault = await app.db.malfunction.findFirstOrThrow({
+      where: { description: 'Boom cylinder leak' },
+    });
+    expect(fault).toMatchObject({ severity: 'HIGH', state: 'RESOLVED' });
+
+    const checks = sheet(
+      'inspections',
+      ['כלי', 'סוג בדיקה', 'תאריך בדיקה', 'בתוקף עד', 'תוצאה'],
+      [['IM-1', 'ביטוח חובה', '01/01/2026', '31/12/2026', 'לא תקין']],
+    );
+    expect((await commit('inspections', checks)).json().results[0].action).toBe('create');
+    const v1 = await app.db.vehicle.findUniqueOrThrow({ where: { serial: 'IM-1' } });
+    expect(
+      await app.db.inspection.findFirstOrThrow({ where: { vehicleId: v1.id, kind: 'INSURANCE' } }),
+    ).toMatchObject({ passed: false });
+
+    const oil = sheet(
+      'fluids',
+      ['תאריך', 'כלי', 'סוג שמן / נוזל', 'כמות (ליטר)'],
+      [['01/03/2026', 'IM-1', 'שמן מנוע 15W40', "8 ל'"]],
+    );
+    expect((await commit('fluids', oil)).json().results[0].action).toBe('create');
+
+    const moves = sheet(
+      'movements',
+      ['תאריך', 'כלי', 'מאתר', 'לאתר'],
+      [['12/01/2026', 'IM-1', 'אתר צפון', "אתר א'"]],
+    );
+    expect(moves.mapping).toMatchObject({ fromLocation: 2, toLocation: 3 });
+    expect((await commit('movements', moves)).json().results[0].action).toBe('create');
   });
 });

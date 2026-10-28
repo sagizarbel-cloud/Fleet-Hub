@@ -28,7 +28,8 @@ export interface RowResult {
   row: number;
   action: ImportAction;
   key: string | null;
-  errors: { field: string; code: string }[];
+  /** `value` is the cell as written, where showing it helps (a list value not found). */
+  errors: { field: string; code: string; value?: string }[];
   changes?: string[];
 }
 
@@ -43,8 +44,11 @@ export function readDate(v: Cell): Date | null {
     if (v > 20_000 && v < 80_000) return new Date(Date.UTC(1899, 11, 30) + v * 86_400_000);
     return null;
   }
-  const s = String(v).trim();
-  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  // A time after the day ("12/03/2026 08:30") is dropped.
+  const s = String(v)
+    .trim()
+    .replace(/[\sT]+\d{1,2}:\d{2}(:\d{2})?.*$/, '');
+  const iso = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(s) ?? /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
   if (iso) return new Date(Date.UTC(+iso[1]!, +iso[2]! - 1, +iso[3]!));
   const dmy = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/.exec(s);
   if (!dmy) return null;
@@ -54,16 +58,32 @@ export function readDate(v: Cell): Date | null {
   return date.getUTCDate() === d && date.getUTCMonth() === m - 1 ? date : null;
 }
 
-/** "1,250.50", "₪ 1250" and "1250 ש״ח" are all 1250.5 / 1250. */
+/**
+ * One number, with whatever unit people typed around it: "1,250.50", "₪ 1250", "1250 ש״ח",
+ * "20 ל'", "97,900 km" and "8,450 שעות" all read as their number.
+ */
 export function readNumber(v: Cell): number | null {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  const s = String(v).replace(/[₪$€,\s]|ש"ח|ש״ח|nis|ils/gi, '');
-  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
-  return Number(s);
+  const m = /^[^\d.-]*(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)[^\d]*$/.exec(String(v).trim());
+  return m ? Number(m[1]!.replace(/,/g, '')) : null;
 }
 
-const YES = ['yes', 'y', 'true', '1', 'כן', 'עבר', 'passed', 'pass', 'v', '✓'];
-const NO = ['no', 'n', 'false', '0', 'לא', 'נכשל', 'failed', 'fail', 'x'];
+const YES = ['yes', 'y', 'true', '1', 'כן', 'עבר', 'תקין', 'passed', 'pass', 'ok', 'v', '✓', '✔'];
+const NO = [
+  'no',
+  'n',
+  'false',
+  '0',
+  'לא',
+  'לא עבר',
+  'לא תקין',
+  'נכשל',
+  'failed',
+  'fail',
+  'x',
+  '✗',
+  '✘',
+];
 function readBool(v: Cell): boolean | null {
   if (typeof v === 'boolean') return v;
   const s = String(v).trim().toLowerCase();
@@ -73,24 +93,43 @@ function readBool(v: Cell): boolean | null {
 /** Fixed choices, matched by their code or by the words people write for them. */
 const CHOICES: Record<string, Record<string, string[]>> = {
   severity: {
-    LOW: ['low', 'נמוכה', 'קלה'],
-    MEDIUM: ['medium', 'בינונית'],
-    HIGH: ['high', 'גבוהה', 'חמורה'],
-    CRITICAL: ['critical', 'קריטית'],
+    LOW: ['low', 'minor', 'נמוכה', 'נמוך', 'קלה', 'קל'],
+    MEDIUM: ['medium', 'moderate', 'בינונית', 'בינוני'],
+    HIGH: ['high', 'major', 'גבוהה', 'גבוה', 'חמורה', 'חמור'],
+    CRITICAL: ['critical', 'קריטית', 'קריטי', 'מושבת'],
   },
   state: {
-    OPEN: ['open', 'פתוחה', 'פתוח'],
-    IN_PROGRESS: ['in progress', 'בטיפול', 'בתיקון'],
-    RESOLVED: ['resolved', 'fixed', 'closed', 'תוקנה', 'תוקן', 'סגורה', 'סגור'],
+    OPEN: ['open', 'new', 'פתוחה', 'פתוח', 'חדש', 'ממתין'],
+    IN_PROGRESS: ['in progress', 'בטיפול', 'בתיקון', 'בעבודה'],
+    RESOLVED: [
+      'resolved',
+      'fixed',
+      'closed',
+      'done',
+      'תוקנה',
+      'תוקן',
+      'סגורה',
+      'סגור',
+      'טופל',
+      'טופלה',
+      'בוצע',
+    ],
   },
   inspectionKind: {
     ANNUAL_TEST: ['annual test', 'test', 'טסט', 'טסט שנתי', 'רישוי'],
-    INSURANCE: ['insurance', 'ביטוח'],
+    INSURANCE: ['insurance', 'ביטוח', 'ביטוח חובה', 'ביטוח מקיף'],
     SAFETY_CHECK: ['safety', 'safety check', 'תסקיר', 'בטיחות', 'בדיקת בטיחות'],
   },
   itemKind: {
     bucket: ['bucket', 'כף'],
-    hydraulic_breaker: ['breaker', 'hammer', 'hydraulic breaker', 'פטיש', 'פטיש חציבה', 'פטיש הידראולי'],
+    hydraulic_breaker: [
+      'breaker',
+      'hammer',
+      'hydraulic breaker',
+      'פטיש',
+      'פטיש חציבה',
+      'פטיש הידראולי',
+    ],
     concrete_crusher: ['crusher', 'concrete crusher', 'מפצח', 'מרסק', 'מרסק בטון'],
     generator: ['generator', 'גנרטור'],
     equipment_box: ['box', 'equipment box', 'ארגז', 'ארגז ציוד'],
@@ -107,24 +146,57 @@ const CHOICE_CODES: Record<string, readonly string[]> = {
   itemKind: ITEM_KINDS,
 };
 
+/** Text compared loosely: case, quote marks (׳ ' ״ "), dashes and extra spaces aside. */
+const loose = (v: unknown) =>
+  String(v)
+    .toLowerCase()
+    .replace(/[׳'`"״’]/g, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * The one option whose word or name the value holds, longest first ("שמן מנוע 15W40" is
+ * engine oil, "ביטוח חובה" insurance). Null when nothing, or two options equally, fit.
+ */
+function containing<T>(s: string, options: [T, string[]][]): T | null {
+  let best: T | null = null;
+  let length = 0;
+  let tie = false;
+  for (const [option, words] of options)
+    for (const w of words) {
+      if (w.length < 2 || !s.includes(w)) continue;
+      if (w.length > length) [best, length, tie] = [option, w.length, false];
+      else if (w.length === length && option !== best) tie = true;
+    }
+  return tie ? null : best;
+}
+
 function readChoice(set: string, v: Cell): string | null {
-  const s = String(v).trim().toLowerCase();
-  const code = CHOICE_CODES[set]!.find((c) => c.toLowerCase() === s.replace(/\s+/g, '_'));
+  const s = loose(v);
+  const code = CHOICE_CODES[set]!.find(
+    (c) => loose(c) === s || c.toLowerCase() === s.replace(/\s+/g, '_'),
+  );
   if (code) return code;
-  return Object.entries(CHOICES[set]!).find(([, words]) => words.includes(s))?.[0] ?? null;
+  const options = Object.entries(CHOICES[set]!).map(
+    ([c, words]) => [c, words.map(loose)] as [string, string[]],
+  );
+  return options.find(([, words]) => words.includes(s))?.[0] ?? containing(s, options);
 }
 
 type ListName = 'vehicleTypes' | 'departments' | 'locations' | 'fluidTypes';
 type Lists = Record<ListName, { code: string; nameEn: string; nameHe: string }[]>;
 
-/** A settings list value, by its code or its English or Hebrew name. */
+/**
+ * A settings list value, by its code or its English or Hebrew name, compared loosely
+ * ("אתר א'" is "אתר א׳"); else the one value whose name the cell holds.
+ */
 function readList(lists: Lists, list: ListName, v: Cell): string | null {
-  const s = String(v).trim().toLowerCase();
-  return (
-    lists[list].find(
-      (o) => o.code === s || o.nameEn.toLowerCase() === s || o.nameHe.trim() === String(v).trim(),
-    )?.code ?? null
+  const s = loose(v);
+  const options = lists[list].map(
+    (o) => [o.code, [loose(o.code), loose(o.nameEn), loose(o.nameHe)]] as [string, string[]],
   );
+  return options.find(([, names]) => names.includes(s))?.[0] ?? containing(s, options);
 }
 
 const LIST_OF: Record<string, ListName> = {
@@ -162,11 +234,29 @@ function readRow(target: ImportTarget, lists: Lists, body: ImportBody, cells: Ce
     else if (f.kind === 'bool') out = readBool(v);
     else if (f.kind === 'list') out = readList(lists, LIST_OF[f.key]!, v);
     else out = readChoice(CHOICE_OF[target]![f.key]!, v);
-    if (out === null) errors.push({ field: f.key, code: f.kind === 'list' ? 'unknown' : f.kind });
+    if (out === null)
+      errors.push({
+        field: f.key,
+        code: f.kind === 'list' ? 'unknown' : f.kind,
+        value: String(v).slice(0, 80),
+      });
     else values[f.key] = out;
   }
   return { values, errors };
 }
+
+/** The words a totals row under the data starts with. */
+const TOTALS = new Set([
+  'סהכ',
+  'סה כ',
+  'סך הכל',
+  'סך הכול',
+  'סיכום',
+  'total',
+  'totals',
+  'sum',
+  'grand total',
+]);
 
 const issuesOf = (err: unknown) => {
   if (err instanceof HttpError && 'issues' in err)
@@ -207,16 +297,50 @@ async function vehicleRefOf(tx: Tx, serial: string): Promise<VehicleRef | null> 
   return { ...rest, usageUnit: type.usageUnit };
 }
 
+/**
+ * The fleet's numbers, to find a sheet's vehicle by its serial written loosely ("ex 102"),
+ * its plate ("60-519-82") or its VIN.
+ */
+class Fleet {
+  private bySerial = new Map<string, string>();
+  private byPlate = new Map<string, string>();
+  private byVin = new Map<string, string>();
+  static compact = (s: string) => s.toUpperCase().replace(/[^0-9A-Z]/g, '');
+
+  constructor(vehicles: { serial: string; licenseNo: string | null; vin: string | null }[]) {
+    for (const v of vehicles) this.add(v);
+  }
+  add(v: { serial: string; licenseNo?: string | null; vin?: string | null }) {
+    this.bySerial.set(Fleet.compact(v.serial), v.serial);
+    if (v.licenseNo) this.byPlate.set(v.licenseNo.replace(/\D/g, ''), v.serial);
+    if (v.vin) this.byVin.set(Fleet.compact(v.vin), v.serial);
+  }
+  /** The fleet serial a sheet's cell names, if any; `serialOnly` for a vehicle list's own key. */
+  find(raw: string, serialOnly = false): string | null {
+    const c = Fleet.compact(raw);
+    if (!c) return null;
+    if (serialOnly) return this.bySerial.get(c) ?? null;
+    return (
+      this.bySerial.get(c) ??
+      (/^\d{7,8}$/.test(c) ? this.byPlate.get(c) : undefined) ??
+      this.byVin.get(c) ??
+      null
+    );
+  }
+}
+
 interface Ctx {
   tx: Tx;
   user: SessionUser;
   runId: string;
   codeKey: string;
+  fleet: Fleet;
 }
 
 async function importVehicle(ctx: Ctx, values: Values): Promise<Omit<RowResult, 'row'>> {
   const { tx, user } = ctx;
-  const serial = String(values.serial).toUpperCase();
+  // "ex 102" is EX-102 when the fleet has one; a new serial is kept as written.
+  const serial = ctx.fleet.find(String(values.serial), true) ?? String(values.serial).toUpperCase();
   const key = serial;
   if (typeof values.licenseNo === 'string') values.licenseNo = normalizePlate(values.licenseNo);
   // Unique numbers are checked first: a failed insert would end the whole import transaction.
@@ -250,6 +374,7 @@ async function importVehicle(ctx: Ctx, values: Values): Promise<Omit<RowResult, 
       codeKey: ctx.codeKey,
       importRunId: ctx.runId,
     });
+    ctx.fleet.add({ serial, licenseNo: input.licenseNo, vin: input.vin });
     return {
       action: saved.created ? 'create' : saved.changed.length ? 'update' : 'unchanged',
       key,
@@ -267,10 +392,15 @@ async function importRecord(
   values: Values,
 ): Promise<Omit<RowResult, 'row'>> {
   const { tx, user } = ctx;
-  const serial = String(values.serial).toUpperCase();
+  const written = String(values.serial);
+  const serial = ctx.fleet.find(written) ?? written.toUpperCase();
   const vehicle = await vehicleRefOf(tx, serial);
   if (!vehicle)
-    return { action: 'error', key: serial, errors: [{ field: 'serial', code: 'unknown' }] };
+    return {
+      action: 'error',
+      key: written,
+      errors: [{ field: 'serial', code: 'unknown', value: written }],
+    };
   const { serial: _s, ...fields } = values;
   const body: Record<string, unknown> = { ...fields };
   for (const [k, v] of Object.entries(body)) if (v instanceof Date) body[k] = v.toISOString();
@@ -326,12 +456,17 @@ async function importItem(ctx: Ctx, values: Values): Promise<Omit<RowResult, 'ro
       errors: parsed.error.issues.map((i) => ({ field: i.path.join('.'), code: issueCode(i) })),
     };
   const input = parsed.data;
-  const vehicleSerial = typeof values.vehicle === 'string' ? values.vehicle.toUpperCase() : null;
+  const written = typeof values.vehicle === 'string' ? values.vehicle : null;
+  const vehicleSerial = written ? (ctx.fleet.find(written) ?? written.toUpperCase()) : null;
   const vehicle = vehicleSerial
     ? await tx.vehicle.findUnique({ where: { serial: vehicleSerial }, select: { id: true } })
     : null;
-  if (vehicleSerial && !vehicle)
-    return { action: 'error', key, errors: [{ field: 'vehicle', code: 'unknown' }] };
+  if (written && !vehicle)
+    return {
+      action: 'error',
+      key,
+      errors: [{ field: 'vehicle', code: 'unknown', value: written }],
+    };
 
   let item = input.serial
     ? await tx.item.findFirst({ where: { serial: input.serial } })
@@ -414,12 +549,19 @@ export async function runImport(
         userId: user.id,
       },
     });
-    const ctx: Ctx = { tx, user, runId: run.id, codeKey };
+    const fleet = new Fleet(
+      await tx.vehicle.findMany({ select: { serial: true, licenseNo: true, vin: true } }),
+    );
+    const ctx: Ctx = { tx, user, runId: run.id, codeKey, fleet };
     const results: RowResult[] = [];
     for (const [i, cells] of body.rows.entries()) {
       if (cells.every((c) => blank(c))) continue;
       const { values, errors } = readRow(target, lists, body, cells);
       const row = i + 2;
+      if (errors.length && cells.some((c) => typeof c === 'string' && TOTALS.has(loose(c)))) {
+        results.push({ row, action: 'summary', key: null, errors: [] });
+        continue;
+      }
       if (errors.length) {
         const key = values.serial ?? values.itemSerial ?? values.name ?? null;
         results.push({ row, action: 'error', key: key === null ? null : String(key), errors });
