@@ -1,5 +1,5 @@
 // Fake seed fleet (SPEC A2). Every value here is generated: no real VINs, plates, codes or people.
-import { faker } from '@faker-js/faker';
+import { faker, fakerHE } from '@faker-js/faker';
 import { hash } from '@node-rs/argon2';
 import {
   EventType,
@@ -28,6 +28,22 @@ const codeKey = process.env.FLEET_CODE_KEY ?? '';
 if (!codeKey) throw new Error('FLEET_CODE_KEY is not set. Run `pnpm env:init` first.');
 
 faker.seed(20261025);
+fakerHE.seed(20261025);
+// Text people would type is Hebrew, as in the real fleet (Sagi, 2026-10-28); brands, models, codes
+// and part numbers stay as written. Each helper still draws from the English generator, so the
+// numbers, dates and statuses of the fake fleet come out the same as before.
+function personHe() {
+  faker.person.fullName();
+  return fakerHE.person.fullName();
+}
+function companyHe() {
+  faker.company.name();
+  return fakerHE.company.name();
+}
+function noteHe() {
+  faker.lorem.sentence();
+  return fakerHE.helpers.arrayElement(noteTexts);
+}
 const db = new PrismaClient();
 const NOW = new Date();
 const DAY = 24 * 60 * 60 * 1000;
@@ -253,22 +269,30 @@ const fleet: {
 ];
 
 const serviceTexts = [
-  'Periodic service: oil and filters',
-  'Hydraulic hose replaced',
-  'Brake pads replaced',
-  'Air filter and fuel filter',
-  'Greased pivot points',
-  'Track tension adjusted',
-  'Battery replaced',
-  'Tire rotation and alignment',
+  'טיפול תקופתי: שמן ומסננים',
+  'הוחלף צינור הידראולי',
+  'הוחלפו רפידות בלמים',
+  'מסנן אוויר ומסנן סולר',
+  'גירוז נקודות ציר',
+  'כוונון מתיחת זחלים',
+  'הוחלף מצבר',
+  'החלפת צמיגים וכיוון פרונט',
 ];
 const malfunctionTexts = [
-  'Hydraulic leak at boom cylinder',
-  'Engine warning light',
-  'Starter motor intermittent',
-  'Cracked mirror',
-  'AC not cooling',
-  'Coolant temperature high',
+  'דליפה הידראולית בבוכנת הזרוע',
+  'נורת אזהרה של המנוע דולקת',
+  'המתנע לא מגיב לפעמים',
+  'מראה סדוקה',
+  'המזגן לא מקרר',
+  'טמפרטורת נוזל קירור גבוהה',
+];
+const noteTexts = [
+  'לבדוק את לחץ האוויר בצמיגים לפני היציאה לאתר',
+  'המפעיל דיווח על רעש חריג בהתנעה בבוקר',
+  'המפתח הרזרבי נמצא במשרד',
+  'לתאם טיפול עם המוסך לשבוע הבא',
+  'נשארו כ־20 ליטר שמן הידראולי במחסן',
+  'לא להשאיר באתר ב׳ בסוף השבוע',
 ];
 
 /** Fake Israeli-format license number: 7 or 8 digits, unique within the seed. */
@@ -352,9 +376,7 @@ async function main() {
       { email: 'admin@fleethub.test', role: 'ADMIN' as const, canViewStartCodes: true },
       { email: 'editor@fleethub.test', role: 'EDITOR' as const, canViewStartCodes: false },
       { email: 'viewer@fleethub.test', role: 'VIEWER' as const, canViewStartCodes: false },
-    ].map((u) =>
-      db.user.create({ data: { ...u, name: faker.person.fullName(), passwordHash: password } }),
-    ),
+    ].map((u) => db.user.create({ data: { ...u, name: personHe(), passwordHash: password } })),
   );
   const userIds = [admin!.id, editor!.id];
   const quoteAuthors = [admin!.id, editor!.id, viewer!.id];
@@ -385,7 +407,7 @@ async function main() {
 
   const suppliers = await Promise.all(
     Array.from({ length: 4 }, () =>
-      db.supplier.create({ data: { name: faker.company.name(), phone: faker.phone.number() } }),
+      db.supplier.create({ data: { name: companyHe(), phone: faker.phone.number() } }),
     ),
   );
 
@@ -439,7 +461,7 @@ async function main() {
         year: purchaseDate.getFullYear(),
         departmentId: deptBy[plan.dept]!.id,
         locationId: locBy[homeLoc]!.id,
-        operatorName: faker.person.fullName(),
+        operatorName: personHe(),
         annualTestExpiry,
         insuranceExpiry,
         safetyCheckExpiry: road ? null : daysAhead(faker.number.int({ min: 20, max: 300 })),
@@ -448,7 +470,7 @@ async function main() {
         purchaseDate,
         supplierId: faker.helpers.arrayElement(suppliers).id,
         purchasePrice: road ? money(150_000, 650_000) : money(250_000, 1_200_000),
-        warrantyTerms: '24 months / 3,000 hours',
+        warrantyTerms: '24 חודשים / 3,000 שעות מנוע',
         warrantyExpiry: new Date(purchaseDate.getTime() + 730 * DAY),
         createdAt: daysAgo(185),
       },
@@ -502,7 +524,7 @@ async function main() {
           vehicleId: vehicle.id,
           date: daysAgo(d),
           description,
-          vendor: faker.company.name(),
+          vendor: companyHe(),
           cost: money(600, 9_000),
           odometerKm: road ? usage - d * 120 : null,
           engineHours: road ? null : usage - d * 6,
@@ -577,7 +599,7 @@ async function main() {
         data: {
           vehicleId: vehicle.id,
           ...insp,
-          inspector: insp.kind === 'INSURANCE' ? null : faker.person.fullName(),
+          inspector: insp.kind === 'INSURANCE' ? null : personHe(),
           cost: money(300, 4_500),
         },
       });
@@ -645,7 +667,7 @@ async function main() {
     const note = await db.note.create({
       data: {
         vehicleId: vehicle.id,
-        body: faker.lorem.sentence(),
+        body: noteHe(),
         createdAt: daysAgo(faker.number.int({ min: 5, max: 90 })),
       },
     });
@@ -673,16 +695,16 @@ async function main() {
 
   // Items and their assignment history
   const itemDefs = [
-    { kind: 'bucket', name: 'Digging bucket 1.2 m³', model: 'GP-1200', spec: '1.2 m³' },
-    { kind: 'bucket', name: 'Grading bucket', model: 'GR-1800', spec: '1800 mm' },
-    { kind: 'hydraulic_breaker', name: 'Hydraulic breaker', model: 'HB-2000', spec: '2,000 kg' },
-    { kind: 'concrete_crusher', name: 'Concrete crusher', model: 'CC-25', spec: '25 t' },
-    { kind: 'generator', name: 'Generator', model: 'G-20', spec: '20 kVA' },
-    { kind: 'equipment_box', name: 'Equipment box', model: 'EB-L', spec: 'Large' },
-    { kind: 'equipment_box', name: 'Equipment box', model: 'EB-M', spec: 'Medium' },
-    { kind: 'adapter', name: 'Quick coupler', model: 'QC-20', spec: '20 t class' },
-    { kind: 'pallet_forks', name: 'Pallet forks', model: 'PF-1500', spec: '1,500 mm' },
-    { kind: 'tool', name: 'Diagnostic scanner', model: 'DS-4', spec: 'OBD / J1939' },
+    { kind: 'bucket', name: 'כף חפירה 1.2 מ״ק', model: 'GP-1200', spec: '1.2 מ״ק' },
+    { kind: 'bucket', name: 'כף יישור', model: 'GR-1800', spec: '1800 מ״מ' },
+    { kind: 'hydraulic_breaker', name: 'פטיש חציבה', model: 'HB-2000', spec: '2,000 ק״ג' },
+    { kind: 'concrete_crusher', name: 'מרסק בטון', model: 'CC-25', spec: '25 טון' },
+    { kind: 'generator', name: 'גנרטור', model: 'G-20', spec: '20 kVA' },
+    { kind: 'equipment_box', name: 'ארגז ציוד', model: 'EB-L', spec: 'גדול' },
+    { kind: 'equipment_box', name: 'ארגז ציוד', model: 'EB-M', spec: 'בינוני' },
+    { kind: 'adapter', name: 'מחבר מהיר', model: 'QC-20', spec: 'לכלים של 20 טון' },
+    { kind: 'pallet_forks', name: 'מזלגות משטחים', model: 'PF-1500', spec: '1,500 מ״מ' },
+    { kind: 'tool', name: 'סורק תקלות', model: 'DS-4', spec: 'OBD / J1939' },
   ];
   const hosts = [
     'EX-101',
@@ -743,7 +765,7 @@ async function main() {
       data: {
         kind: faker.helpers.arrayElement(['RECEIPT', 'RECEIPT', 'INVOICE'] as const),
         date,
-        vendor: faker.company.name(),
+        vendor: companyHe(),
         amount,
         categoryId: catBy[cat]!.id,
         createdById: author.id,
@@ -767,13 +789,13 @@ async function main() {
   // Price quotes with line items, linked to vehicles. Several suppliers quote the same parts,
   // so the comparison has something to compare. Part numbers are made up.
   const parts = [
-    { item: 'Hydraulic pump', partNo: 'HP-4410' },
-    { item: 'Bucket teeth set', partNo: 'BT-0920' },
-    { item: 'Track roller', partNo: 'TR-3301' },
-    { item: 'Alternator', partNo: 'AL-7712' },
-    { item: 'Tire 12R22.5', partNo: 'TY-1225' },
-    { item: 'Filter kit', partNo: 'FK-0500' },
-    { item: 'Seat', partNo: null },
+    { item: 'משאבה הידראולית', partNo: 'HP-4410' },
+    { item: 'סט שיני כף', partNo: 'BT-0920' },
+    { item: 'גלגלת זחל', partNo: 'TR-3301' },
+    { item: 'אלטרנטור', partNo: 'AL-7712' },
+    { item: 'צמיג 12R22.5', partNo: 'TY-1225' },
+    { item: 'ערכת מסננים', partNo: 'FK-0500' },
+    { item: 'מושב מפעיל', partNo: null },
   ];
   const quotePlans = [
     { status: 'REQUESTED', visibility: 'STANDARD', author: 0, parts: [0, 5] },
@@ -881,12 +903,12 @@ async function main() {
   await db.savedView.createMany({
     data: [
       {
-        name: 'Due within 30 days',
+        name: 'מועד בתוך 30 יום',
         createdById: admin!.id,
         settings: viewSettings({ due: true, sort: [{ id: 'nextExpiry', desc: false }] }),
       },
       {
-        name: 'Machines by department',
+        name: 'כלים כבדים לפי מחלקה',
         createdById: editor!.id,
         settings: viewSettings({
           groupBy: 'department',

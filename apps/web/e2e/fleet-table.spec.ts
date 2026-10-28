@@ -214,8 +214,8 @@ test.describe('as a viewer', () => {
   test('sees everyone’s views but can only change their own', async ({ page }) => {
     await openTable(page);
     await page.getByTestId('views-menu').click();
-    await page.getByTestId('view-option').filter({ hasText: 'Due within 30 days' }).click();
-    await expect(page.getByTestId('views-menu')).toContainText('Due within 30 days');
+    await page.getByTestId('view-option').filter({ hasText: 'מועד בתוך 30 יום' }).click();
+    await expect(page.getByTestId('views-menu')).toContainText('מועד בתוך 30 יום');
     await page.getByTestId('views-menu').click();
     await expect(page.getByTestId('view-delete')).toHaveCount(0);
     await expect(page.getByTestId('view-save-new')).toBeVisible();
