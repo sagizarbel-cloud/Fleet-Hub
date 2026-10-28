@@ -18,16 +18,25 @@ import { cn } from '@/lib/cn';
 import { INPUT } from '@/money/form';
 import { fetchSavedMapping, useRunImport, type ImportResult, type ImportRow } from './api';
 import { Panel } from './MySettings';
-import { readWorkbook, type SheetData } from './readSheet';
+import { atHeaderRow, readWorkbook, type SheetData } from './readSheet';
 
 const XLSX = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const ACTION_TONE: Record<ImportAction, string> = {
   create: 'text-ok border-ok/40',
   update: 'text-accent-ink border-accent/50',
   unchanged: 'text-muted border-border',
+  summary: 'text-muted border-border',
   duplicate: 'text-muted border-border',
   error: 'text-bad border-bad/50',
 };
+/** The first few cells of a sheet row, to tell rows apart in the header-row picker. */
+const rowText = (sheet: SheetData, n: number) =>
+  (sheet.cells.get(n) ?? [])
+    .filter((c) => c !== null)
+    .slice(0, 3)
+    .map((c) => String(c).slice(0, 24))
+    .join(' · ');
+
 const KNOWN_ERRORS = new Set([
   'required',
   'unknown',
@@ -208,7 +217,7 @@ export default function ImportPage() {
 
       {sheets && (
         <Panel title={t('import.sheet.title')}>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="space-y-1 text-xs font-medium">
               <span>{t('import.sheet.sheet')}</span>
               <select
@@ -228,6 +237,27 @@ export default function ImportPage() {
                 ))}
               </select>
             </label>
+            {sheet && sheet.headerChoices.length > 1 && (
+              <label className="space-y-1 text-xs font-medium">
+                <span>{t('import.sheet.headerRow')}</span>
+                <select
+                  value={sheet.headerRow}
+                  onChange={(e) => {
+                    const next = atHeaderRow(sheet, Number(e.target.value));
+                    setSheets(sheets.map((s, i) => (i === sheetIndex ? next : s)));
+                    void rematch(next, target);
+                  }}
+                  className={INPUT}
+                  data-testid="import-header-row"
+                >
+                  {sheet.headerChoices.map((n) => (
+                    <option key={n} value={n}>
+                      {t('import.sheet.headerOption', { n, text: rowText(sheet, n) })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="space-y-1 text-xs font-medium">
               <span>{t('import.sheet.holds')}</span>
               <select
@@ -314,6 +344,9 @@ export default function ImportPage() {
           </div>
           {target === 'vehicles' && (
             <p className="text-muted text-xs">{t('import.match.vehiclesNote')}</p>
+          )}
+          {target !== 'vehicles' && target !== 'equipment' && (
+            <p className="text-muted text-xs">{t('import.match.vehicleNote')}</p>
           )}
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={dryRun} disabled={!canRun} data-testid="import-preview">
@@ -457,17 +490,20 @@ function Results({
                 {r.errors.length
                   ? r.errors
                       .map((e) =>
-                        t('import.error.line', {
+                        t(e.value ? 'import.error.lineValue' : 'import.error.line', {
                           field: e.field ? fieldLabel(e.field) : t('import.error.row'),
+                          value: e.value,
                           problem: t(
                             `import.error.${KNOWN_ERRORS.has(e.code) ? e.code : 'invalid'}` as never,
                           ),
                         }),
                       )
                       .join(' · ')
-                  : r.changes?.length
-                    ? r.changes.map((f) => t(`vehicleForm.field.${f}` as never)).join(', ')
-                    : null}
+                  : r.action === 'summary'
+                    ? t('import.result.summary')
+                    : r.changes?.length
+                      ? r.changes.map((f) => t(`vehicleForm.field.${f}` as never)).join(', ')
+                      : null}
               </td>
             </tr>
           ))}

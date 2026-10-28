@@ -38,48 +38,111 @@ const serial: ImportField = {
     'מס סידורי',
     'סידורי',
     'כלי',
+    'מס׳ כלי',
+    'מספר כלי',
+    'קוד כלי',
+    'unit no',
+    'unit number',
+    'asset',
+    'fleet no',
+  ],
+};
+/**
+ * The vehicle a record belongs to. Old sheets name it by serial, plate or VIN, and the
+ * import finds it by any of them.
+ */
+const vehicleRef: ImportField = {
+  ...serial,
+  aliases: [
+    ...serial.aliases,
+    'vehicle',
+    'רכב',
+    'מספר רכב',
+    'מס׳ רכב',
+    'plate',
+    'license',
+    'license no',
+    'רישוי',
+    'מספר רישוי',
+    'מס׳ רישוי',
+    'vin',
+    'שלדה',
   ],
 };
 const date = (key = 'date', extra: string[] = []): ImportField => ({
   key,
   kind: 'date',
   required: true,
-  aliases: ['date', 'תאריך', ...extra],
+  aliases: ['date', 'תאריך', 'day', 'יום', ...extra],
 });
 const hours: ImportField = {
   key: 'engineHours',
   kind: 'number',
-  aliases: ['hours', 'engine hours', 'שעות', 'שעות מנוע', 'מונה שעות'],
+  aliases: ['hours', 'engine hours', 'hour meter', 'hrs', 'שעות', 'שעות מנוע', 'מונה שעות', 'ש״מ'],
 };
 const km: ImportField = {
   key: 'odometerKm',
   kind: 'number',
-  aliases: ['km', 'odometer', 'mileage', 'ק"מ', 'קילומטרים', 'מד אוץ'],
+  aliases: ['km', 'odometer', 'mileage', 'ק"מ', 'קילומטרים', 'קילומטראז׳', 'מד אוץ', 'מונה ק"מ'],
 };
 const cost: ImportField = {
   key: 'cost',
   kind: 'number',
-  aliases: ['cost', 'price', 'amount', 'total', 'עלות', 'מחיר', 'סכום', 'סה"כ'],
+  aliases: [
+    'cost',
+    'price',
+    'amount',
+    'total',
+    'nis',
+    '₪',
+    'עלות',
+    'מחיר',
+    'סכום',
+    'סה"כ',
+    'תשלום',
+  ],
 };
-const notes: ImportField = { key: 'notes', kind: 'text', aliases: ['notes', 'remarks', 'הערות'] };
+const notes: ImportField = {
+  key: 'notes',
+  kind: 'text',
+  aliases: ['notes', 'remarks', 'comments', 'הערות', 'הערה'],
+};
 
 /** Each target's fields, in the order the matching screen lists them. */
 export const IMPORT_FIELDS: Record<ImportTarget, ImportField[]> = {
   vehicles: [
     serial,
-    { key: 'type', kind: 'list', required: true, aliases: ['type', 'סוג', 'סוג כלי'] },
-    { key: 'make', kind: 'text', required: true, aliases: ['make', 'manufacturer', 'יצרן'] },
+    {
+      key: 'type',
+      kind: 'list',
+      required: true,
+      aliases: ['type', 'vehicle type', 'סוג', 'סוג כלי', 'סוג רכב'],
+    },
+    {
+      key: 'make',
+      kind: 'text',
+      required: true,
+      aliases: ['make', 'manufacturer', 'brand', 'יצרן', 'תוצרת'],
+    },
     { key: 'model', kind: 'text', required: true, aliases: ['model', 'דגם'] },
-    { key: 'year', kind: 'number', aliases: ['year', 'שנה', 'שנת ייצור'] },
-    { key: 'vin', kind: 'text', aliases: ['vin', 'chassis', 'pin', 'שלדה', 'מספר שלדה'] },
+    { key: 'year', kind: 'number', aliases: ['year', 'model year', 'שנה', 'שנת ייצור', 'שנתון'] },
+    {
+      key: 'vin',
+      kind: 'text',
+      aliases: ['vin', 'chassis', 'pin', 'שלדה', 'מספר שלדה', 'מס׳ שלדה'],
+    },
     {
       key: 'licenseNo',
       kind: 'text',
-      aliases: ['license', 'plate', 'licence', 'רישוי', 'מספר רישוי', 'לוחית'],
+      aliases: ['license', 'plate', 'licence', 'רישוי', 'מספר רישוי', 'מס׳ רישוי', 'לוחית'],
     },
-    { key: 'department', kind: 'list', aliases: ['department', 'מחלקה'] },
-    { key: 'location', kind: 'list', aliases: ['location', 'site', 'מיקום', 'אתר'] },
-    { key: 'operatorName', kind: 'text', aliases: ['operator', 'driver', 'מפעיל', 'נהג'] },
+    { key: 'department', kind: 'list', aliases: ['department', 'dept', 'מחלקה', 'אגף'] },
+    {
+      key: 'location',
+      kind: 'list',
+      aliases: ['location', 'site', 'yard', 'מיקום', 'אתר', 'מיקום נוכחי'],
+    },
+    { key: 'operatorName', kind: 'text', aliases: ['operator', 'driver', 'מפעיל', 'נהג', 'אחראי'] },
     km,
     hours,
     {
@@ -90,7 +153,7 @@ export const IMPORT_FIELDS: Record<ImportTarget, ImportField[]> = {
     {
       key: 'annualTestExpiry',
       kind: 'date',
-      aliases: ['annual test', 'test', 'טסט', 'רישיון רכב', 'טסט שנתי'],
+      aliases: ['annual test', 'test', 'טסט', 'רישיון רכב', 'טסט שנתי', 'רישיון שנתי'],
     },
     { key: 'insuranceExpiry', kind: 'date', aliases: ['insurance', 'ביטוח'] },
     { key: 'safetyCheckExpiry', kind: 'date', aliases: ['safety', 'תסקיר', 'בטיחות'] },
@@ -103,36 +166,44 @@ export const IMPORT_FIELDS: Record<ImportTarget, ImportField[]> = {
     { key: 'warrantyExpiry', kind: 'date', aliases: ['warranty', 'אחריות'] },
   ],
   service: [
-    serial,
+    vehicleRef,
     date(),
     {
       key: 'description',
       kind: 'text',
       required: true,
-      aliases: ['description', 'work', 'service', 'תיאור', 'עבודה', 'טיפול'],
+      aliases: ['description', 'work', 'service', 'details', 'תיאור', 'עבודה', 'טיפול', 'פירוט'],
     },
-    { key: 'vendor', kind: 'text', aliases: ['vendor', 'garage', 'supplier', 'מוסך', 'ספק'] },
+    {
+      key: 'vendor',
+      kind: 'text',
+      aliases: ['vendor', 'garage', 'supplier', 'workshop', 'מוסך', 'ספק', 'נותן שירות'],
+    },
     cost,
     km,
     hours,
   ],
   malfunctions: [
-    serial,
+    vehicleRef,
     date('reportedAt', ['reported']),
     {
       key: 'description',
       kind: 'text',
       required: true,
-      aliases: ['description', 'fault', 'problem', 'תיאור', 'תקלה'],
+      aliases: ['description', 'fault', 'problem', 'issue', 'תיאור', 'תקלה', 'פירוט'],
     },
     { key: 'severity', kind: 'choice', aliases: ['severity', 'חומרה'] },
-    { key: 'state', kind: 'choice', aliases: ['status', 'state', 'מצב', 'סטטוס'] },
+    { key: 'state', kind: 'choice', aliases: ['status', 'state', 'מצב', 'סטטוס', 'טופל'] },
     cost,
-    { key: 'downtimeHours', kind: 'number', aliases: ['downtime', 'השבתה', 'שעות השבתה'] },
+    {
+      key: 'downtimeHours',
+      kind: 'number',
+      aliases: ['downtime', 'השבתה', 'שעות השבתה', 'זמן השבתה'],
+    },
     { key: 'resolvedAt', kind: 'date', aliases: ['resolved', 'fixed', 'תוקן', 'תאריך תיקון'] },
   ],
   fluids: [
-    serial,
+    vehicleRef,
     date(),
     {
       key: 'fluidType',
@@ -149,7 +220,7 @@ export const IMPORT_FIELDS: Record<ImportTarget, ImportField[]> = {
     notes,
   ],
   fuel: [
-    serial,
+    vehicleRef,
     date(),
     {
       key: 'liters',
@@ -162,19 +233,23 @@ export const IMPORT_FIELDS: Record<ImportTarget, ImportField[]> = {
     hours,
   ],
   movements: [
-    serial,
+    vehicleRef,
     date(),
     {
       key: 'toLocation',
       kind: 'list',
       required: true,
-      aliases: ['to', 'destination', 'אל', 'יעד'],
+      aliases: ['to', 'to site', 'destination', 'אל', 'יעד', 'לאתר', 'למיקום', 'לאן'],
     },
-    { key: 'fromLocation', kind: 'list', aliases: ['from', 'origin', 'מ', 'מקור'] },
+    {
+      key: 'fromLocation',
+      kind: 'list',
+      aliases: ['from', 'from site', 'origin', 'מ', 'מקור', 'מאתר', 'ממיקום', 'מאיפה'],
+    },
     notes,
   ],
   inspections: [
-    serial,
+    vehicleRef,
     {
       key: 'kind',
       kind: 'choice',
@@ -186,15 +261,15 @@ export const IMPORT_FIELDS: Record<ImportTarget, ImportField[]> = {
       key: 'validUntil',
       kind: 'date',
       required: true,
-      aliases: ['valid until', 'expiry', 'expires', 'בתוקף עד', 'תוקף'],
+      aliases: ['valid until', 'expiry', 'expires', 'due', 'בתוקף עד', 'תוקף', 'תפוגה'],
     },
     { key: 'inspector', kind: 'text', aliases: ['inspector', 'בודק'] },
-    { key: 'passed', kind: 'bool', aliases: ['passed', 'result', 'עבר', 'תוצאה'] },
+    { key: 'passed', kind: 'bool', aliases: ['passed', 'result', 'עבר', 'תוצאה', 'תקין'] },
     cost,
     notes,
   ],
   notes: [
-    serial,
+    vehicleRef,
     {
       key: 'body',
       kind: 'text',
@@ -203,12 +278,25 @@ export const IMPORT_FIELDS: Record<ImportTarget, ImportField[]> = {
     },
   ],
   equipment: [
-    { key: 'name', kind: 'text', required: true, aliases: ['item', 'name', 'פריט', 'שם'] },
+    {
+      key: 'name',
+      kind: 'text',
+      required: true,
+      aliases: ['item', 'name', 'description', 'פריט', 'שם', 'שם פריט', 'תיאור'],
+    },
     { key: 'kind', kind: 'choice', aliases: ['kind', 'type', 'סוג'] },
     { key: 'model', kind: 'text', aliases: ['model', 'דגם'] },
     { key: 'spec', kind: 'text', aliases: ['spec', 'size', 'מפרט', 'גודל'] },
-    { key: 'itemSerial', kind: 'text', aliases: ['item serial', 'serial', 'מספר סידורי', 'מק"ט'] },
-    { key: 'vehicle', kind: 'text', aliases: ['vehicle', 'on', 'assigned to', 'כלי', 'משויך'] },
+    {
+      key: 'itemSerial',
+      kind: 'text',
+      aliases: ['item serial', 'serial', 'serial no', 'sn', 'מספר סידורי', 'מס׳ סידורי', 'מק"ט'],
+    },
+    {
+      key: 'vehicle',
+      kind: 'text',
+      aliases: ['vehicle', 'on', 'assigned to', 'כלי', 'משויך', 'משויך לכלי', 'על כלי', 'רכב'],
+    },
   ],
 };
 
@@ -217,7 +305,7 @@ export const normHeader = (h: string) =>
   h
     .toLowerCase()
     .replace(/[֑-ׇ]/g, '')
-    .replace(/[׳'`"״]/g, '"')
+    .replace(/[׳'`"״’]/g, '"')
     .replace(/[_\-./:()]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -225,24 +313,38 @@ export const normHeader = (h: string) =>
 /** The same sheet layout gives the same signature, so its saved matching comes back. */
 export const headerSignature = (headers: string[]) => headers.map(normHeader).join('|');
 
-/** A first guess at the matching: each field takes the header that best equals one of its aliases. */
+/**
+ * A first guess at the matching. Exact header matches go first for every field, so a field
+ * that only partly matches can't take a column another field names exactly; then each field
+ * left takes the header holding its longest alias.
+ */
 export function guessMapping(
   target: ImportTarget,
   headers: string[],
 ): Record<string, number | null> {
   const normed = headers.map(normHeader);
+  const fields = IMPORT_FIELDS[target].map((f) => ({ f, aliases: f.aliases.map(normHeader) }));
   const taken = new Set<number>();
   const out: Record<string, number | null> = {};
-  for (const f of IMPORT_FIELDS[target]) {
-    const aliases = f.aliases.map(normHeader);
-    let pick = normed.findIndex((h, i) => !taken.has(i) && aliases.includes(h));
-    if (pick === -1)
-      pick = normed.findIndex(
-        (h, i) =>
-          !taken.has(i) && h.length > 1 && aliases.some((a) => a.length > 2 && h.includes(a)),
-      );
+  for (const { f, aliases } of fields) {
+    const pick = normed.findIndex((h, i) => !taken.has(i) && aliases.includes(h));
     out[f.key] = pick === -1 ? null : pick;
     if (pick !== -1) taken.add(pick);
+  }
+  for (const { f, aliases } of fields) {
+    if (out[f.key] !== null) continue;
+    let best = -1;
+    let bestLength = 0;
+    normed.forEach((h, i) => {
+      if (taken.has(i) || h.length < 2) return;
+      for (const a of aliases)
+        if (a.length > 2 && a.length > bestLength && h.includes(a)) {
+          best = i;
+          bestLength = a.length;
+        }
+    });
+    out[f.key] = best === -1 ? null : best;
+    if (best !== -1) taken.add(best);
   }
   return out;
 }
@@ -268,5 +370,13 @@ export const importMappingQuery = z.object({
   signature: z.string().max(10_000),
 });
 
-export const IMPORT_ACTIONS = ['create', 'update', 'unchanged', 'duplicate', 'error'] as const;
+export const IMPORT_ACTIONS = [
+  'create',
+  'update',
+  'unchanged',
+  'duplicate',
+  /** A totals row ("סה״כ") under the data: skipped. */
+  'summary',
+  'error',
+] as const;
 export type ImportAction = (typeof IMPORT_ACTIONS)[number];

@@ -4,6 +4,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
+  // One at a time: the tests share the seeded accounts, and a language switch is saved to the
+  // account, so two files in parallel would see each other's language.
+  workers: 1,
   retries: 0,
   reporter: [['list']],
   use: {

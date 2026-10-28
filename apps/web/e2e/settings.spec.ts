@@ -177,12 +177,24 @@ test.describe('settings', () => {
     await page.getByTestId('import-preview').click();
     const results = page.getByTestId('import-results');
     await expect(results.locator('[data-action=create]')).toHaveCount(1);
-    await expect(results.locator('[data-action=error]')).toContainText('Serial No.: not found');
+    await expect(results.locator('[data-action=error]')).toContainText(': not found');
     await page.getByTestId('import-commit').click();
     await expect(page.getByTestId('import-done')).toBeVisible();
 
     await page.goto('/vehicles/PU-902');
     await expect(page.locator('[data-imported]').first()).toBeVisible();
+  });
+
+  test('import: a hand-kept sheet with a title, plates and a totals row', async ({ page }) => {
+    await page.goto('/settings/import');
+    await page.getByTestId('import-file').setInputFiles('../../docs/samples/service-log.xlsx');
+    await page.getByTestId('import-target').selectOption('service');
+    await expect(page.getByTestId('import-header-row')).toHaveValue('3');
+    await page.getByTestId('import-preview').click();
+    const results = page.getByTestId('import-results');
+    await expect(results.locator('[data-action=create]')).toHaveCount(4);
+    await expect(results.locator('[data-action=summary]')).toHaveCount(1);
+    await expect(results.locator('[data-action=error]')).toContainText('11-111-11');
   });
 });
 
