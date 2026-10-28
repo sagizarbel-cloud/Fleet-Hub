@@ -16,7 +16,7 @@
 - Motion: the vehicle had stopped flying out of its tile (a zero-length "jump to the tile" followed by the flight let the flight read the old position and end at once; now one animation with start keyframes). Opening a vehicle paused 120–220 ms before anything moved (about 4× that on a slow phone) while the activity list built a new date formatter per row: Intl formatters are now cached (`lib/intl.ts`) and the dashboard timeline is memoized, about 60–90 ms now. Esc pressed while the vehicle page is still being built goes back; Back before the drawing has tilted flies home at once instead of hanging for 0.35 s; a double click on a tile or table row opens the vehicle once (it used to leave Back on the vehicle page); quick Next / Prev presses each step on from the last one. The language switch is a real crossfade (view transition, with a short fade where the browser lacks it) instead of dimming the page in one frame.
 - Seed (Sagi, 2026-10-28): names, suppliers, notes, service and malfunction texts, items, parts and saved view names are Hebrew, like the real fleet; brands, models, codes and part numbers stay as written. The English generator still runs alongside, so the fleet's numbers, dates and statuses are the same as before.
 - Tests: 72 Playwright tests (12 new). `i18n-audit.spec.ts` visits every page and the main dialogs in Hebrew at both widths and fails on English words outside a short allowed list (brands, units, file types), raw translation keys, sideways scrolling or content spilling out of a sheet, and checks the shekel side. `motion.spec.ts` checks the fly-out and fly-back really move, Esc right after the click, Back mid-flight, double click, quick Next presses, reduced motion (nothing moves, panels only fade) and the language switch without a reload. Unit and api tests unchanged (174). Screenshots in `docs/screenshots/phase-8/` (EN and HE, desktop and phone, dark, plus light for the dashboard and a vehicle).
-- Deferred: date fields use the phone's own date picker, which shows MM/DD on a phone set to US English (Israeli phones show DD/MM); frame-rate budgets measured on a real phone (this build machine has no GPU, so only the pauses and jumps were measured).
+- Deferred: date fields use the phone's own date picker, which shows MM/DD on a phone set to US English (Israeli phones show DD/MM); frame-rate budgets measured on a real phone, a 3–4-year-old Android being the target (this build machine has no GPU, so only the pauses and jumps were measured).
 
 ### Phase 7 — 2026-10-27
 
@@ -125,6 +125,8 @@
 - Start codes stay out of the fleet table completely, including the "has a start code" flag (SPEC A7).
 - Phase 8 (2026-10-28, Sagi): the fake seed's typed text is Hebrew. Typed text is always shown with its own direction (`<bdi>`, or isolates inside translated sentences); only codes are forced left to right.
 - Intl formatters are built once per language and options (`lib/intl.ts`): lists format hundreds of dates per render.
+- Hebrew tone is neutral everywhere (SPEC A8); the remaining plural instructions ("נסו שוב", "בחרו"…) were rewritten after Phase 8.
+- Phones to tune for: Android 3–4 years old and iPhones 2–3 years old (Sagi, 2026-10-28).
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
 
 ## Later

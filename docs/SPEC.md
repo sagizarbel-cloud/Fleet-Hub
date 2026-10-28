@@ -225,6 +225,8 @@ Switching to Hebrew must translate at least 95% of on-screen words and mirror th
 - Format with Intl: dates as DD/MM/YYYY, relative times, ₪ amounts, km and liters.
 - Excel exports use the active language; Hebrew exports set the sheet to right-to-left.
 - Use the glossary in A9 for Hebrew terms.
+- Hebrew addresses no one directly: neutral forms ("אפשר לנסות שוב", "יש לבחור"), buttons as nouns ("שמירה"), never plural or masculine imperatives (Sagi, 2026-10-28).
+- English words such as PDF, Excel, VIN and Shift may stay in English inside Hebrew text. Raise the share of Hebrew wording in later revisions where it reads naturally.
 
 ## A9. Hebrew glossary
 
