@@ -11,7 +11,7 @@
 
 ### Quality pass — 2026-10-29
 
-- Drawings: all 12 (11 types plus the generic one) checked in top, side and isometric views, dark and light. Fixed: the pickup's front door line ran down into the front wheel arch, its mirror stuck out past the windscreen pillar, and its tail light hung half outside the tailgate; the trailer's jockey wheel floated under the drawbar (now on a post); the wheeled excavator's dozer blade floated in front of the chassis (now on a push frame); the truck's tipper body hovered above the chassis.
+- Drawings: all 12 (11 types plus the generic one) checked in top, side and isometric views, dark and light. Fixed: the pickup's front door line ran down into the front wheel arch and its mirror stuck out past the windscreen pillar; the trailer's jockey wheel floated under the drawbar (now on a post); the wheeled excavator's dozer blade floated in front of the chassis (now on a push frame); the truck's tipper body hovered above the chassis.
 - New tests: every detail line stays on its own part, no part floats free of the rest (`drawings/geometry.test.ts`), and no two modules in a folder differ only by case (`filenames.test.ts`). `vehicle/callouts.ts` is now `calloutLines.ts`, since next to `Callouts.tsx` it broke imports on a Mac checkout.
 - Walked 31 pages and record panels in English and Hebrew at 1440 and 390 px: no console errors, no page-wide sideways scroll, no raw keys. Lint, typecheck, i18n check, 202 unit and api tests and 72 e2e tests pass.
 

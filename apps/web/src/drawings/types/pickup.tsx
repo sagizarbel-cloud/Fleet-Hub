@@ -47,7 +47,7 @@ export const pickup: VehicleDrawingSource = {
         <>
           <path d="M18 104 V72 Q18 68 22 68 H118 L122 34 Q123 30 128 30 H176 Q181 30 184 34 L206 62 L244 66 Q252 67 252 76 V100 Q252 104 248 104 H234 A26 26 0 0 0 182 104 H88 A26 26 0 0 0 36 104 Z" />
           <rect x="244" y="72" width="6" height="7" rx="1.5" />
-          <rect x="20" y="74" width="4" height="12" rx="1" />
+          <rect x="18" y="74" width="4" height="12" rx="1" />
         </>
       ),
       bed: <path d="M118 68 V100 M22 78 H114" />,
