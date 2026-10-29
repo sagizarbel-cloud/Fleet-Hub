@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/cn';
-import { anchorFor, CALLOUTS } from './callouts';
+import { anchorFor, CALLOUTS } from './calloutLines';
 import type { VehicleDetail } from './data';
 import { InfoValue } from './VitalsBar';
 import { useVehicleInfo, type InfoKey } from './vitals';
