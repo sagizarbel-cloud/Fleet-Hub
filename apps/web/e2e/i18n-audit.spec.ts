@@ -13,7 +13,7 @@ const ALLOWED = new Set(
     'Caterpillar Komatsu Volvo Bobcat Toyota Mitsubishi Ford Humbaur Atlas Copco Mercedes-Benz',
     'John Deere Hilux Triton Transit Actros EW160 PC210 S650 FH 8FD25 XAS HS',
     // Units, file types and keys
-    'MB KB kVA OBD J1939 PDF JPEG PNG WebP SVG PIN xlsx Shift AdBlue',
+    'MB KB kVA OBD J1939 PDF Excel JPEG PNG WebP SVG PIN VIN xlsx Shift AdBlue',
   ]
     .join(' ')
     .split(/\s+/),
