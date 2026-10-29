@@ -65,6 +65,8 @@ export const trailer: VehicleDrawingSource = {
       ],
       y: [W / 2 - 0.25, W / 2 + 0.25],
     },
+    // Jockey wheel on a post that reaches up to the drawbar.
+    box('body', [3.11, 3.19], [W / 2 - 0.04, W / 2 + 0.04], [0.2, 0.47]),
     wheel('wheels', 3.15, 0.12, 0.12, [W / 2 - 0.05, W / 2 + 0.05]),
     wheel('wheels', -0.55, 0.33, 0.33, [W - 0.02, W + 0.2]),
     wheel('wheels', 0.35, 0.33, 0.33, [W - 0.02, W + 0.2]),
