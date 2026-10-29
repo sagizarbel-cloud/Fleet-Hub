@@ -1,0 +1,64 @@
+# Production stack: postgres, api and caddy. Run from deploy/: `docker compose up -d --build`
+# (deploy/.env sets COMPOSE_FILE to this file; create it with deploy/init-env.sh). See docs/RUNBOOK.md.
+name: fleet-hub
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: 10m, max-file: '5' }
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fleethub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run deploy/init-env.sh}
+      POSTGRES_DB: fleethub
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U fleethub -d fleethub']
+      interval: 5s
+      retries: 20
+    logging: *logging
+
+  api:
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    image: fleet-hub-api
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://fleethub:${POSTGRES_PASSWORD}@postgres:5432/fleethub
+      APP_ORIGIN: https://${DOMAIN:?run deploy/init-env.sh}
+      SESSION_SECRET: ${SESSION_SECRET:?run deploy/init-env.sh}
+      FLEET_CODE_KEY: ${FLEET_CODE_KEY:?run deploy/init-env.sh}
+      UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-20}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - uploads:/data/uploads
+    logging: *logging
+
+  caddy:
+    build: { context: .., dockerfile: deploy/Dockerfile.web }
+    image: fleet-hub-web
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    logging: *logging
+
+# The data lives here. Backups come in Phase 10; never run `docker compose down -v`.
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

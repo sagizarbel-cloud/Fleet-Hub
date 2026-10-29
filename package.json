@@ -21,7 +21,7 @@
     "i18n:check": "node scripts/i18n-check.mjs",
     "check:arm64": "node scripts/check-arm64.mjs",
     "samples": "node scripts/sample-sheets.mjs",
-    "docker:arm64": "docker buildx build --platform linux/arm64 -f apps/api/Dockerfile.arm64-check -t fleet-hub-api:arm64-check ."
+    "docker:arm64": "docker buildx build --platform linux/arm64 -f apps/api/Dockerfile -t fleet-hub-api:arm64 ."
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
