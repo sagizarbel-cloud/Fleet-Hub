@@ -23,7 +23,7 @@ const select = {
 export async function createResetLink(
   tx: Prisma.TransactionClient,
   userId: string,
-  createdById: string,
+  createdById: string | null,
 ) {
   const { token, hash: tokenHash } = newToken();
   const now = new Date();

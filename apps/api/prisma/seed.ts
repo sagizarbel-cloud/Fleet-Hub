@@ -8,7 +8,6 @@ import {
   MalfunctionState,
   Prisma,
   PrismaClient,
-  type VehicleCategory,
 } from '@prisma/client';
 import {
   DEFAULT_FLEET_VIEW,
@@ -20,6 +19,7 @@ import { encryptStartCode } from '@fleet-hub/shared/crypto';
 import { rm } from 'node:fs/promises';
 import sharp from 'sharp';
 import { resolveStored, storeUpload } from '../src/lib/uploads';
+import { addBaseLists, receiptCategories } from '../src/lib/base-lists';
 
 if (process.env.NODE_ENV === 'production') {
   throw new Error('Refusing to seed a production database.');
@@ -65,57 +65,6 @@ const locations = [
   { code: 'site_a', nameEn: 'Site A', nameHe: 'אתר א׳' },
   { code: 'site_b', nameEn: 'Site B', nameHe: 'אתר ב׳' },
   { code: 'workshop', nameEn: 'Workshop', nameHe: 'מוסך' },
-];
-
-const vehicleTypes: {
-  code: VehicleTypeCode;
-  nameEn: string;
-  nameHe: string;
-  category: VehicleCategory;
-}[] = [
-  {
-    code: 'tracked_excavator',
-    nameEn: 'Tracked excavator',
-    nameHe: 'מחפר זחלי',
-    category: 'EQUIPMENT',
-  },
-  {
-    code: 'wheeled_excavator',
-    nameEn: 'Wheeled excavator',
-    nameHe: 'מחפר גלגלי',
-    category: 'EQUIPMENT',
-  },
-  { code: 'backhoe_loader', nameEn: 'Backhoe loader', nameHe: 'מחפרון', category: 'EQUIPMENT' },
-  { code: 'wheel_loader', nameEn: 'Wheel loader', nameHe: 'שופל', category: 'EQUIPMENT' },
-  { code: 'skid_steer', nameEn: 'Skid-steer', nameHe: 'בובקט', category: 'EQUIPMENT' },
-  { code: 'tractor', nameEn: 'Tractor', nameHe: 'טרקטור', category: 'EQUIPMENT' },
-  { code: 'forklift', nameEn: 'Forklift', nameHe: 'מלגזה', category: 'EQUIPMENT' },
-  { code: 'truck', nameEn: 'Truck', nameHe: 'משאית', category: 'ROAD' },
-  { code: 'pickup', nameEn: 'Pickup', nameHe: 'טנדר', category: 'ROAD' },
-  { code: 'van', nameEn: 'Van', nameHe: 'מסחרית', category: 'ROAD' },
-  { code: 'trailer', nameEn: 'Equipment trailer', nameHe: 'נגרר ציוד', category: 'ROAD' },
-  { code: 'compressor', nameEn: 'Mobile compressor', nameHe: 'מדחס נייד', category: 'EQUIPMENT' },
-  { code: 'other', nameEn: 'Other', nameHe: 'אחר', category: 'EQUIPMENT' },
-];
-
-const fluidTypes = [
-  { code: 'engine_oil', nameEn: 'Engine oil', nameHe: 'שמן מנוע' },
-  { code: 'hydraulic_oil', nameEn: 'Hydraulic oil', nameHe: 'שמן הידראולי' },
-  { code: 'coolant', nameEn: 'Coolant', nameHe: 'נוזל קירור' },
-  { code: 'brake_fluid', nameEn: 'Brake fluid', nameHe: 'נוזל בלמים' },
-  { code: 'adblue', nameEn: 'AdBlue', nameHe: 'AdBlue' },
-  { code: 'grease', nameEn: 'Grease', nameHe: 'גריז' },
-];
-
-const receiptCategories = [
-  { code: 'fuel', nameEn: 'Fuel', nameHe: 'דלק' },
-  { code: 'service', nameEn: 'Service', nameHe: 'טיפול' },
-  { code: 'parts', nameEn: 'Parts', nameHe: 'חלקים' },
-  { code: 'tools', nameEn: 'Tools', nameHe: 'כלים' },
-  { code: 'tires', nameEn: 'Tires', nameHe: 'צמיגים' },
-  { code: 'inspection', nameEn: 'Inspection', nameHe: 'בדיקה' },
-  { code: 'insurance', nameEn: 'Insurance', nameHe: 'ביטוח' },
-  { code: 'other', nameEn: 'Other', nameHe: 'אחר' },
 ];
 
 // ---------- Fleet plan: 16 vehicles, 10 green / 4 amber / 2 red ----------
@@ -384,18 +333,7 @@ async function main() {
   // Lookups
   await db.department.createMany({ data: departments.map((d, i) => ({ ...d, sortOrder: i })) });
   await db.location.createMany({ data: locations.map((d, i) => ({ ...d, sortOrder: i })) });
-  await db.vehicleType.createMany({
-    data: vehicleTypes.map((t, i) => ({
-      ...t,
-      usageUnit: t.category === 'ROAD' ? 'KM' : 'HOURS',
-      defaultHasStartCode: t.code === 'pickup',
-      sortOrder: i,
-    })),
-  });
-  await db.fluidType.createMany({ data: fluidTypes.map((d, i) => ({ ...d, sortOrder: i })) });
-  await db.receiptCategory.createMany({
-    data: receiptCategories.map((d, i) => ({ ...d, sortOrder: i })),
-  });
+  await addBaseLists(db);
 
   const byCode = async <T extends { id: string; code: string }>(rows: Promise<T[]>) =>
     Object.fromEntries((await rows).map((r) => [r.code, r]));
