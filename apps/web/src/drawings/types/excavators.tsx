@@ -168,6 +168,8 @@ const wheeled = (folded: boolean) =>
     wheel('wheels', -1.35, 0.55, 0.55, [0, 0.5]),
     wheel('wheels', 1.35, 0.55, 0.55, [0, 0.5]),
     box('body', [-2.0, 2.0], [0.4, 2.1], [0.6, 1.2]),
+    // Push frame from the chassis to the dozer blade.
+    box('body', [1.9, 2.2], [0.6, 1.9], [0.35, 0.65]),
     // Dozer blade at the front.
     {
       part: 'bucket',
