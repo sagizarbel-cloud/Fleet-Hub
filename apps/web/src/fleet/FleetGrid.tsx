@@ -515,7 +515,9 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
       </motion.div>
 
       {sections.length === 0 && (
-        <p className="text-muted py-10 text-center text-sm">{t('dashboard.noVehicles')}</p>
+        <p className="text-muted py-10 text-center text-sm">
+          {t(tiles.length === 0 ? 'dashboard.emptyFleet' : 'dashboard.noVehicles')}
+        </p>
       )}
       <div className="flex flex-wrap gap-x-6 gap-y-3">
         {sections.map(([code, list]) => {
