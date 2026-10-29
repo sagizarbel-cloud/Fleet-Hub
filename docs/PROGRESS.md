@@ -9,6 +9,12 @@
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
 
+### Quality pass — 2026-10-29
+
+- Drawings: all 12 (11 types plus the generic one) checked in top, side and isometric views, dark and light. Fixed: the pickup's front door line ran down into the front wheel arch, its mirror stuck out past the windscreen pillar, and its tail light hung half outside the tailgate; the trailer's jockey wheel floated under the drawbar (now on a post); the wheeled excavator's dozer blade floated in front of the chassis (now on a push frame); the truck's tipper body hovered above the chassis.
+- New tests: every detail line stays on its own part, no part floats free of the rest (`drawings/geometry.test.ts`), and no two modules in a folder differ only by case (`filenames.test.ts`). `vehicle/callouts.ts` is now `calloutLines.ts`, since next to `Callouts.tsx` it broke imports on a Mac checkout.
+- Walked 31 pages and record panels in English and Hebrew at 1440 and 390 px: no console errors, no page-wide sideways scroll, no raw keys. Lint, typecheck, i18n check, 202 unit and api tests and 72 e2e tests pass.
+
 ### Phase 9 — 2026-10-29 (repo side; server install pending)
 
 - Shipped: production images and stack in `deploy/`. `apps/api/Dockerfile` (multi-stage, production packages only, non-root, applies migrations on start and never resets, fails its own build if argon2, sharp or Prisma don't load on that machine, health check); `deploy/Dockerfile.web` (the web build baked into `caddy:2`, no source maps); `deploy/docker-compose.prod.yml` (postgres, api, caddy; volumes `pgdata`, `uploads`, `caddy_data`, `caddy_config`; only Caddy publishes ports; restarts with the server; log rotation); `deploy/Caddyfile` (automatic Let's Encrypt for `DOMAIN`, HTTP→HTTPS, `/api/*` to the api, zstd/gzip, a year's cache for hashed assets and none for `index.html`, HSTS, `Referrer-Policy: same-origin` so reset tokens never leave in a referrer). `deploy/init-env.sh <domain>` writes `deploy/.env` with fresh secrets (plain shell and openssl, so the server needs no Node).
