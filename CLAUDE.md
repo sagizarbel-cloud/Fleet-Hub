@@ -26,8 +26,9 @@ Bilingual (English/Hebrew, RTL) fleet-management web app, self-hosted on our own
 - `pnpm db:migrate` · `pnpm db:seed` (wipes and reloads the fake fleet) · `pnpm db:reset`
 - `pnpm samples` (rewrites the fake Excel sheets in `docs/samples/` used to try the import)
 - `pnpm i18n:check` (fails on any key without a Hebrew value; also the hidden `/i18n-check` page)
-- `pnpm check:arm64` (static: arm64 Prisma engine + argon2 and sharp prebuilts) · `pnpm docker:arm64` (full: installs and loads the api in a linux/arm64 container; needs an ARM host or QEMU)
+- `pnpm check:arm64` (static: arm64 Prisma engine + argon2 and sharp prebuilts) · `pnpm docker:arm64` (full: builds the production api image for linux/arm64, which checks its native modules; needs an ARM host or QEMU)
 - Seed logins: `admin@`, `editor@`, `viewer@fleethub.test`, password `SEED_PASSWORD` from `.env`
+- Prod (from `deploy/`, see `docs/RUNBOOK.md`): `./init-env.sh <domain>` · `docker compose up -d --build` · `docker compose exec api node dist/create-admin.js --email … --name …` · `./smoke.sh <domain>`
 - Screenshots: `SCREENSHOTS=1 pnpm --filter @fleet-hub/web exec playwright test screenshots` → `docs/screenshots/`
 
 ## How we work

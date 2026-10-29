@@ -17,7 +17,7 @@ fleet-hub/
   apps/api/          Fastify + Prisma (REST under /api, auth, files, import/export)
     prisma/          schema, migrations, seed
   packages/shared/   zod schemas + TS types used by both
-  deploy/            docker-compose.prod.yml, Caddyfile (Phase 9)
+  deploy/            docker-compose.prod.yml, Caddyfile, web Dockerfile, init-env.sh, smoke.sh
   docs/              SPEC, PHASES, PROGRESS, ARCHITECTURE, RUNBOOK
   docker-compose.dev.yml   Postgres for local dev (Phase 1)
 ```
@@ -56,4 +56,4 @@ Admin-only **Import** page (`/settings/import`): upload .xlsx → pick sheet →
 
 ## Deployment
 
-Production compose: `postgres` (volume `pgdata`), `api` (volume `uploads`), `caddy` (volume `caddy_data`). Config only in `.env`. Backups are designed in Phase 10.
+Production compose (`deploy/docker-compose.prod.yml`): `postgres` (volume `pgdata`), `api` (`apps/api/Dockerfile`, volume `uploads`), `caddy` (`deploy/Dockerfile.web`: the web build baked into `caddy:2`; volumes `caddy_data`, `caddy_config`). Only Caddy publishes ports (80, 443). Config only in `deploy/.env` (from `deploy/init-env.sh`). Images are built on the server, so they are arm64 there. The api applies migrations on every start (`prisma migrate deploy`, forward only). A new install starts empty; `create-admin` adds the base lists and the first admin. Operating steps: `docs/RUNBOOK.md`. Backups are designed in Phase 10.
