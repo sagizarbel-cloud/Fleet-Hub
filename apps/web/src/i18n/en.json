@@ -117,6 +117,7 @@
       "clear": "Clear filters"
     },
     "addVehicle": "Add vehicle",
+    "emptyFleet": "No vehicles yet. Add the first one, or import your sheets from Settings.",
     "noVehicles": "No vehicles match these filters.",
     "sectionCount": "{{count}} vehicles",
     "location": "Current location",

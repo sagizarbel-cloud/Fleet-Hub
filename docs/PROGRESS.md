@@ -2,12 +2,22 @@
 
 ## Status
 
-- Current phase: 8 — Translation audit and motion polish (built; waiting for Sagi's review in the PR)
-- Last completed phase: 7 — Add / edit vehicle, settings, users and Excel import
+- Current phase: 9 — Deploy (repo side built and verified; installing on the server is handed off to the server IT team, waiting for the server)
+- Last completed phase: 8 — Translation audit and motion polish
 
 ## Phase log
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
+
+### Phase 9 — 2026-10-29 (repo side; server install pending)
+
+- Shipped: production images and stack in `deploy/`. `apps/api/Dockerfile` (multi-stage, production packages only, non-root, applies migrations on start and never resets, fails its own build if argon2, sharp or Prisma don't load on that machine, health check); `deploy/Dockerfile.web` (the web build baked into `caddy:2`, no source maps); `deploy/docker-compose.prod.yml` (postgres, api, caddy; volumes `pgdata`, `uploads`, `caddy_data`, `caddy_config`; only Caddy publishes ports; restarts with the server; log rotation); `deploy/Caddyfile` (automatic Let's Encrypt for `DOMAIN`, HTTP→HTTPS, `/api/*` to the api, zstd/gzip, a year's cache for hashed assets and none for `index.html`, HSTS, `Referrer-Policy: same-origin` so reset tokens never leave in a referrer). `deploy/init-env.sh <domain>` writes `deploy/.env` with fresh secrets (plain shell and openssl, so the server needs no Node).
+- First admin: `docker compose exec api node dist/create-admin.js --email … --name …` adds the base lists (vehicle types, fluids, receipt categories, now in `apps/api/src/lib/base-lists.ts` and shared with the seed) and the first admin with the start-code permission, and prints a one-time set-password link; run again for the same admin it only issues a new link, and it refuses once another admin exists. The fleet starts empty: no departments, locations or vehicles. The empty dashboard and fleet table now say so ("No vehicles yet…") instead of "No vehicles match these filters".
+- `deploy/smoke.sh <domain>` (curl only): redirect, certificate, app page and asset caching and compression, deep links, api and database health, sign-in required, wrong password refused, and with `SMOKE_EMAIL` / `SMOKE_PASSWORD` a real sign-in with a secure cookie and the dashboard.
+- `docs/RUNBOOK.md`: requirements (ports, DNS, outbound hosts), installing Docker, deploy key and clone, configure, start, first admin, smoke test, everyday commands, update, roll back, a manual backup until Phase 10, and troubleshooting (certificate, 502, busy ports, memory, Cloudflare Tunnel fallback).
+- Verified here: both images built, the stack started with `DOMAIN=localhost` (Caddy's local certificate), migrations ran on an empty database, create-admin → reset link → sign-in in the browser, a vehicle with a start code (reveal works with the production key), a photo upload with its thumbnail written to the `uploads` volume, data kept across `down` / `up`, and the smoke test passing (it fails as it should on an untrusted certificate or a wrong password). This build machine is x86 and can't run arm64 containers, so the arm64 build is first proven on the server (the api image checks its native modules while building).
+- Tests: 129 api tests (3 new for the first-run admin). `prisma` moved to the api's dependencies, since the image runs `prisma migrate deploy`.
+- Server (handed off to the IT team, Sagi 2026-10-29): Docker check / install, ports 80 and 443, DNS for the domain (fleet.tfisolutions.com for now), deploy, first admin and the smoke test from outside. Not done yet; the acceptance items that need the server stay open until then.
 
 ### Phase 8 — 2026-10-28
 
@@ -128,10 +138,16 @@
 - Hebrew tone is neutral everywhere (SPEC A8); the remaining plural instructions ("נסו שוב", "בחרו"…) were rewritten after Phase 8.
 - Phones to tune for: Android 3–4 years old and iPhones 2–3 years old (Sagi, 2026-10-28).
 - API is bundled with esbuild (workspace code inlined, npm packages external) so `packages/shared` stays plain TypeScript with no build step.
+- Phase 9 (2026-10-29, Sagi): the server isn't available yet; installing it is handed off to the server IT team, so this phase delivers everything in the repo plus a handoff. Domain for now: fleet.tfisolutions.com. The server has at least 2 GB of RAM. The first admin is Sagi.
+- Images are built on the server itself (no registry), so they come out arm64 there; a private repo is cloned with a read-only deploy key.
+- The first admin gets a one-time set-password link from `create-admin`, so no password passes through a terminal or chat.
 
 ## Later
 
 <!-- Ideas and out-of-scope findings, to revisit after Phase 9. -->
+
+- Dashboard KPI cards at 390 px: "Open malfunctions" and "Spent this month" sit tight against their numbers, and the shekel sign touches the digit (seen on the empty fleet)
+- A content security policy for the web app (the api already has a strict one)
 
 - Auto-fill receipt date, vendor and total from the photo (SPEC 5.5)
 - Installable PWA (home-screen icon on phones)

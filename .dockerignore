@@ -1,6 +1,8 @@
 **/node_modules
 **/dist
-.env
+**/.env
+**/uploads
+**/test-results
+**/playwright-report
 .git
 docs
-uploads

@@ -593,7 +593,7 @@ export default function FleetTable({ active, away }: { active: string | null; aw
           </table>
           {items.length === 0 && (
             <p className="text-muted sticky start-0 py-10 text-center text-sm">
-              {t('dashboard.noVehicles')}
+              {t(table.data?.length === 0 ? 'dashboard.emptyFleet' : 'dashboard.noVehicles')}
             </p>
           )}
         </div>
