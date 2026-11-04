@@ -151,6 +151,16 @@ model FluidType {
   additions FluidAddition[]
 }
 
+model FuelType {
+  id        String      @id @default(cuid())
+  code      String      @unique
+  nameEn    String
+  nameHe    String
+  sortOrder Int         @default(0)
+  active    Boolean     @default(true)
+  entries   FuelEntry[]
+}
+
 model ReceiptCategory {
   id        String     @id @default(cuid())
   code      String     @unique
@@ -294,6 +304,8 @@ model Malfunction {
   description   String
   downtimeHours Int?
   cost          Decimal?            @db.Decimal(12, 2)
+  /// What was done about it (Revisions 1: the report's "What happened").
+  resolution    String?
   createdById   String?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
@@ -329,6 +341,14 @@ model FuelEntry {
   odometerKm  Int?
   engineHours Int?
   cost        Decimal?  @db.Decimal(12, 2)
+  /// Where it was fueled: free text, suggested from the locations list (Revisions 1).
+  place       String?
+  /// Who fueled: free text, suggested from user names.
+  fueledBy    String?
+  fuelTypeId  String?
+  fuelType    FuelType? @relation(fields: [fuelTypeId], references: [id])
+  /// Who provided the fuel (station, company, tanker).
+  provider    String?
   createdById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -650,4 +670,12 @@ model ImportRun {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   events    Event[]
+}
+
+/// App-wide settings an admin changes, by key (e.g. "fuel.required"). Changes go to AuditLog.
+model AppSetting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
 }

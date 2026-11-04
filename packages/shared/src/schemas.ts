@@ -104,6 +104,8 @@ export const malfunctionBody = z
     downtimeHours: nullable(z.number().int().min(0).max(100_000)),
     cost: money,
     resolvedAt: nullable(day),
+    /** What was done about it. */
+    resolution: optText(2000),
   })
   .refine((m) => !m.resolvedAt || m.resolvedAt >= m.reportedAt, {
     path: ['resolvedAt'],
@@ -123,6 +125,11 @@ export const fuelBody = z.object({
   odometerKm: reading,
   engineHours: reading,
   cost: money,
+  // Revisions 1. Each is optional here; an admin can make them mandatory (checked by the API).
+  place: optText(120),
+  fueledBy: optText(120),
+  fuelType: nullable(code),
+  provider: optText(120),
 });
 
 export const movementBody = z
@@ -185,6 +192,7 @@ export const recordsQuery = z.object({
   severity: z.enum(MALFUNCTION_SEVERITIES).optional(),
   accident: flag,
   fluid: code.optional(),
+  fuelType: code.optional(),
   location: code.optional(),
   inspection: z.enum(INSPECTION_KINDS).optional(),
   drops: flag,

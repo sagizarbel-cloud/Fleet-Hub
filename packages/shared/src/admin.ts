@@ -9,6 +9,7 @@ export const LOOKUP_KINDS = [
   'locations',
   'vehicleTypes',
   'fluidTypes',
+  'fuelTypes',
   'receiptCategories',
 ] as const;
 export type LookupKind = (typeof LOOKUP_KINDS)[number];
@@ -213,3 +214,34 @@ export const vehiclePictureParams = z.object({
   serial: z.string().min(1).max(40),
   slot: z.enum(VEHICLE_PICTURES),
 });
+
+// ---------- App settings (admin) ----------
+
+/** Fuel entry fields an admin can make mandatory (Revisions 1). */
+export const FUEL_DETAIL_FIELDS = ['place', 'fueledBy', 'fuelType', 'provider'] as const;
+export type FuelDetailField = (typeof FUEL_DETAIL_FIELDS)[number];
+
+export const fuelRequiredSchema = z.object({
+  place: z.boolean().default(false),
+  fueledBy: z.boolean().default(false),
+  fuelType: z.boolean().default(false),
+  provider: z.boolean().default(false),
+});
+export type FuelRequired = z.output<typeof fuelRequiredSchema>;
+
+/** Every app setting with its value; each key is stored as one AppSetting row. */
+export const appSettingsBody = z.object({ fuelRequired: fuelRequiredSchema });
+export type AppSettings = z.output<typeof appSettingsBody>;
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  fuelRequired: { place: false, fueledBy: false, fuelType: false, provider: false },
+};
+
+/** The mandatory fuel fields this input leaves empty. */
+export function missingFuelFields(
+  required: FuelRequired,
+  input: Partial<Record<FuelDetailField, unknown>>,
+): FuelDetailField[] {
+  return FUEL_DETAIL_FIELDS.filter(
+    (f) => required[f] && (input[f] === null || input[f] === undefined || input[f] === ''),
+  );
+}

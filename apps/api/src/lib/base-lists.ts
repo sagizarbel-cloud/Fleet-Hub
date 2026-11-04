@@ -1,4 +1,4 @@
-// The lists every install starts with: the drawn vehicle types, fluids and receipt categories.
+// The lists every install starts with: the drawn vehicle types, fluids, fuel types and receipt categories.
 // Shared by the fake seed and the production first-run setup. Departments and locations are the
 // fleet's own, so a new install starts without them.
 import type { PrismaClient, VehicleCategory } from '@prisma/client';
@@ -44,6 +44,12 @@ const fluidTypes = [
   { code: 'grease', nameEn: 'Grease', nameHe: 'גריז' },
 ];
 
+/** Fuel types for fuel entries (Revisions 1). The migration adds the same two to older installs. */
+const fuelTypes = [
+  { code: 'diesel', nameEn: 'Diesel', nameHe: 'סולר' },
+  { code: 'petrol_95', nameEn: 'Petrol 95', nameHe: 'בנזין 95' },
+];
+
 export const receiptCategories = [
   { code: 'fuel', nameEn: 'Fuel', nameHe: 'דלק' },
   { code: 'service', nameEn: 'Service', nameHe: 'טיפול' },
@@ -68,6 +74,10 @@ export async function addBaseLists(db: PrismaClient) {
   });
   await db.fluidType.createMany({
     data: fluidTypes.map((d, i) => ({ ...d, sortOrder: i })),
+    skipDuplicates: true,
+  });
+  await db.fuelType.createMany({
+    data: fuelTypes.map((d, i) => ({ ...d, sortOrder: i })),
     skipDuplicates: true,
   });
   await db.receiptCategory.createMany({

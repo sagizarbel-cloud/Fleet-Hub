@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { Prisma } from '@prisma/client';
 import {
+  appSettingsBody,
   LOOKUP_KINDS,
   lookupBody,
   lookupItemParams,
@@ -9,10 +10,12 @@ import {
   type LookupKind,
 } from '@fleet-hub/shared';
 import { HttpError, parse } from '../lib/http';
-import { requireRole } from '../plugins/auth';
+import { readAppSettings, writeAppSettings } from '../lib/app-settings';
+import { requireRole, requireUser } from '../plugins/auth';
 
 type Tx = Prisma.TransactionClient;
-type Model = 'department' | 'location' | 'vehicleType' | 'fluidType' | 'receiptCategory';
+type Model =
+  'department' | 'location' | 'vehicleType' | 'fluidType' | 'fuelType' | 'receiptCategory';
 
 /** The slice of a lookup model the generic list code uses. */
 interface Delegate {
@@ -28,6 +31,7 @@ const LISTS: Record<LookupKind, { model: Model; uses: string[] }> = {
   locations: { model: 'location', uses: ['vehicles', 'movesFrom', 'movesTo'] },
   vehicleTypes: { model: 'vehicleType', uses: ['vehicles'] },
   fluidTypes: { model: 'fluidType', uses: ['additions'] },
+  fuelTypes: { model: 'fuelType', uses: ['entries'] },
   receiptCategories: { model: 'receiptCategory', uses: ['documents'] },
 };
 
@@ -64,6 +68,14 @@ function duplicate(err: unknown): never {
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
   const editor = { preHandler: requireRole('EDITOR') };
   const tx = app.db as unknown as Tx;
+
+  // App settings (Revisions 1): everyone reads them (forms need the mandatory fields); admins change them.
+  app.get('/app', { preHandler: requireUser }, async () => readAppSettings(tx));
+
+  app.put('/app', { preHandler: requireRole('ADMIN') }, async (req) => {
+    const body = parse(appSettingsBody, req.body);
+    return app.db.$transaction((t) => writeAppSettings(t, req.user!.id, body));
+  });
 
   app.get('/lookups', editor, async () => {
     const entries = await Promise.all(LOOKUP_KINDS.map(async (k) => [k, await list(tx, k)]));

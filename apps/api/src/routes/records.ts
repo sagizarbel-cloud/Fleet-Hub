@@ -17,6 +17,7 @@ import {
   canCreate,
   createRecord,
   fuelEconomy,
+  getRecord,
   listRecords,
   serializeOne,
   setDeleted,
@@ -24,6 +25,7 @@ import {
   type VehicleRef,
 } from '../lib/records';
 import { refreshStatus } from '../lib/status';
+import { checkFuelRequired } from '../lib/app-settings';
 import { requireRole, requireUser } from '../plugins/auth';
 
 type Db = FastifyInstance['db'] | Prisma.TransactionClient;
@@ -64,12 +66,20 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
     return listRecords(app.db as unknown as Prisma.TransactionClient, req.user!, kind, vehicle, q);
   });
 
+  // One record with its history, for the record report (Revisions 1). Anyone signed in may read.
+  app.get('/:serial/records/:kind/:id', { preHandler: requireUser }, async (req) => {
+    const { serial, kind, id } = parse(recordIdParams, req.params);
+    const tx = app.db as unknown as Prisma.TransactionClient;
+    return getRecord(tx, kind, await vehicleRef(tx, serial), id);
+  });
+
   app.post('/:serial/records/:kind', { preHandler: requireUser }, async (req, reply) => {
     const { serial, kind } = parse(recordParams, req.params);
     const user = req.user!;
     if (!canCreate(user, kind)) throw new HttpError(403, 'forbidden');
     const input = parse(RECORD_BODIES[kind], req.body);
     const result = await app.db.$transaction(async (tx) => {
+      if (kind === 'fuel') await checkFuelRequired(tx, input as object);
       const vehicle = await vehicleRef(tx, serial);
       const row = await createRecord(tx, user, kind as RecordKind, vehicle, input as never);
       const status = await refreshStatus(tx, vehicle.id, user.id);
@@ -83,6 +93,7 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
     const user = req.user!;
     const input = parse(RECORD_BODIES[kind], req.body);
     return app.db.$transaction(async (tx) => {
+      if (kind === 'fuel') await checkFuelRequired(tx, input as object);
       const vehicle = await vehicleRef(tx, serial);
       const row = await updateRecord(tx, user, kind as RecordKind, vehicle, id, input as never);
       const status = await refreshStatus(tx, vehicle.id, user.id);

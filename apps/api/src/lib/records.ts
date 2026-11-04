@@ -55,6 +55,7 @@ export interface ListFilters {
   severity?: string;
   accident: boolean;
   fluid?: string;
+  fuelType?: string;
   location?: string;
   inspection?: string;
   mine: boolean;
@@ -83,14 +84,17 @@ const code = (v: unknown) => (v as { code?: string } | null)?.code ?? null;
 
 async function lookupId(
   tx: Tx,
-  list: 'fluidType' | 'location',
+  list: 'fluidType' | 'fuelType' | 'location',
   value: string,
   field: string,
 ): Promise<string> {
+  const where = { where: { code: value }, select: { id: true } };
   const row =
     list === 'fluidType'
-      ? await tx.fluidType.findUnique({ where: { code: value }, select: { id: true } })
-      : await tx.location.findUnique({ where: { code: value }, select: { id: true } });
+      ? await tx.fluidType.findUnique(where)
+      : list === 'fuelType'
+        ? await tx.fuelType.findUnique(where)
+        : await tx.location.findUnique(where);
   if (!row) {
     const err = new HttpError(400, 'validation_failed');
     Object.assign(err, { issues: [{ path: field, code: 'unknown' }] });
@@ -179,9 +183,14 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     sourceType: 'FuelEntry',
     dateField: 'date',
     createType: 'FUEL_ADDED',
-    search: [],
-    data: async (input) => input,
+    search: ['place', 'fueledBy', 'provider'],
+    include: { fuelType: { select: { code: true } } },
+    data: async ({ fuelType, ...rest }, ctx) => ({
+      ...rest,
+      fuelTypeId: fuelType ? await lookupId(ctx.tx, 'fuelType', fuelType, 'fuelType') : null,
+    }),
     params: (row) => ({ liters: num(row.liters) as number }),
+    filters: (f) => (f.fuelType ? [{ fuelType: { code: f.fuelType } }] : []),
     after: async (ctx, input) => {
       if (input) await bumpUsage(ctx, input);
     },
@@ -276,14 +285,15 @@ export function canChange(user: SessionUser, kind: RecordKind, row: Row) {
   return hasRole(user.role, 'EDITOR') || (kind === 'notes' && row.createdById === user.id);
 }
 
-const LOOKUP_IDS = new Set(['fluidTypeId', 'fromLocationId', 'toLocationId']);
+const LOOKUP_IDS = new Set(['fluidTypeId', 'fuelTypeId', 'fromLocationId', 'toLocationId']);
+const LOOKUP_KEYS = new Set(['fluidType', 'fuelType', 'fromLocation', 'toLocation']);
 
 /** A row as the API returns it: decimals as numbers, lookups as codes. */
 function serialize(row: Row) {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(row)) {
     if (key === 'vehicleId' || key === 'deletedAt') continue;
-    if (key === 'fluidType' || key === 'fromLocation' || key === 'toLocation') {
+    if (LOOKUP_KEYS.has(key)) {
       out[key] = code(value);
       continue;
     }
@@ -409,7 +419,7 @@ export async function listRecords(
   };
 }
 
-async function findRow(tx: Tx, kind: RecordKind, vehicle: VehicleRef, id: string) {
+export async function findRow(tx: Tx, kind: RecordKind, vehicle: VehicleRef, id: string) {
   const row = await delegate(tx, kind).findFirst({
     where: { id, vehicleId: vehicle.id },
     include: KINDS[kind].include,
@@ -560,4 +570,39 @@ export async function setDeleted(
 export async function serializeOne(tx: Tx, kind: RecordKind, vehicle: VehicleRef, row: Row) {
   const [item] = await decorate(tx, kind, vehicle, [row]);
   return item!;
+}
+
+/**
+ * One record for its report (Revisions 1): the row as the list returns it, plus every timeline
+ * entry about it (reported, updated, resolved, edited, restored) with who wrote it, oldest first.
+ */
+export async function getRecord(tx: Tx, kind: RecordKind, vehicle: VehicleRef, id: string) {
+  const row = await findRow(tx, kind, vehicle, id);
+  if (row.deletedAt) throw new HttpError(404, 'not_found');
+  const [item, events] = await Promise.all([
+    serializeOne(tx, kind, vehicle, row),
+    tx.event.findMany({
+      where: { ...source(kind, id), hiddenAt: null },
+      orderBy: [{ occurredAt: 'asc' }, { createdAt: 'asc' }],
+      take: 200,
+      select: {
+        id: true,
+        type: true,
+        occurredAt: true,
+        params: true,
+        sourceType: true,
+        sourceId: true,
+        importRunId: true,
+        user: { select: { name: true } },
+      },
+    }),
+  ]);
+  return {
+    item,
+    history: events.map(({ user, importRunId, ...e }) => ({
+      ...e,
+      imported: importRunId !== null,
+      by: user?.name ?? null,
+    })),
+  };
 }

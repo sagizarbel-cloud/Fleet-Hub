@@ -235,6 +235,19 @@ const malfunctionTexts = [
   'המזגן לא מקרר',
   'טמפרטורת נוזל קירור גבוהה',
 ];
+// Fuel details and malfunction fixes (Revisions 1). Picked by position, not by the random
+// generators, so every other value of the fake fleet stays the same.
+const fuelPlaces = ['אתר א׳', 'אתר ב׳', 'חצר צפון', 'תחנת דלק בצומת', 'תחנת דלק בכביש הראשי'];
+const fuelers = ['יוסי אברהמי', 'מיכל דוד', 'אורי לוי', 'נועה כהן'];
+const fuelProviders = ['ספק דלק א׳', 'ספק דלק ב׳', 'מכלית שירות'];
+const fixTexts = [
+  'הוחלף צינור הידראולי ונבדק לחץ',
+  'נמצא חיבור רופף, חוזק ונבדק',
+  'הוחלף חלק והמערכת נבדקה בנסיעת מבחן',
+  'נוקה ונבדק, לא נמצאה תקלה נוספת',
+];
+const pick = <T>(list: T[], i: number) => list[Math.abs(i) % list.length]!;
+
 const noteTexts = [
   'לבדוק את לחץ האוויר בצמיגים לפני היציאה לאתר',
   'המפעיל דיווח על רעש חריג בהתנעה בבוקר',
@@ -341,6 +354,7 @@ async function main() {
   const locBy = await byCode(db.location.findMany());
   const typeBy = await byCode(db.vehicleType.findMany());
   const fluidList = await db.fluidType.findMany();
+  const fuelTypeBy = await byCode(db.fuelType.findMany());
   const catBy = await byCode(db.receiptCategory.findMany());
 
   const suppliers = await Promise.all(
@@ -373,7 +387,7 @@ async function main() {
   const vehicleIds: Record<string, string> = {};
   const locCodes = locations.map((l) => l.code);
 
-  for (const plan of fleet) {
+  for (const [vehicleIndex, plan] of fleet.entries()) {
     const type = typeBy[plan.type]!;
     const road = type.category === 'ROAD';
     const isPickup = plan.type === 'pickup';
@@ -449,6 +463,10 @@ async function main() {
           odometerKm: road ? usage : null,
           engineHours: road ? null : usage,
           cost: new Prisma.Decimal(Math.round(liters * 7.4)),
+          place: pick(fuelPlaces, d + vehicleIndex),
+          fueledBy: pick(fuelers, d),
+          fuelTypeId: plan.type === 'van' ? fuelTypeBy.petrol_95!.id : fuelTypeBy.diesel!.id,
+          provider: pick(fuelProviders, vehicleIndex),
         },
       });
       event('FUEL_ADDED', vehicle.id, entry.date, { liters }, { type: 'FuelEntry', id: entry.id });
@@ -589,6 +607,7 @@ async function main() {
           description,
           downtimeHours: m.state === 'RESOLVED' ? faker.number.int({ min: 2, max: 72 }) : null,
           cost: m.state === 'RESOLVED' ? money(200, 12_000) : null,
+          resolution: m.state === 'RESOLVED' ? pick(fixTexts, m.daysAgo) : null,
         },
       });
       const src = { type: 'Malfunction', id: row.id };
