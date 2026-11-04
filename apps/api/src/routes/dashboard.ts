@@ -77,4 +77,26 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
       recent,
     };
   });
+
+  /** Every open or in-progress malfunction in the fleet, worst first (Revisions 1: the KPI opens it). */
+  app.get('/open-malfunctions', { preHandler: requireUser }, async () => {
+    const rows = await app.db.malfunction.findMany({
+      where: { state: { not: 'RESOLVED' }, deletedAt: null },
+      orderBy: [{ reportedAt: 'desc' }],
+      take: 200,
+      select: {
+        id: true,
+        reportedAt: true,
+        severity: true,
+        state: true,
+        isAccident: true,
+        description: true,
+        vehicle: { select: { serial: true } },
+      },
+    });
+    const rank = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 } as const;
+    return rows
+      .map(({ vehicle, ...m }) => ({ ...m, serial: vehicle.serial }))
+      .sort((a, b) => rank[a.severity] - rank[b.severity]);
+  });
 };

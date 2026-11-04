@@ -51,6 +51,7 @@ async function ctxFor(lang: 'en' | 'he'): Promise<FormatCtx> {
         },
       ],
       fluidTypes: [],
+      fuelTypes: [],
       receiptCategories: [],
     },
     unit: 'KM',

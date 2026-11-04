@@ -15,6 +15,7 @@ import {
   type EventGroup,
 } from './events';
 import { useHover } from './hover';
+import { recordOfEvent, recordParam } from '@/vehicle/records/recordLink';
 import { dateFormat, localeOf } from '@/lib/intl';
 
 function useDayLabel() {
@@ -112,12 +113,15 @@ export function EventRow({
 export function EventList({
   pages,
   onOpen,
+  canOpen,
   highlightId,
   linkable,
   showSerial,
 }: {
   pages: EventPage[];
   onOpen?: (e: FleetEvent) => void;
+  /** Which entries open something; the others are plain lines. Default: all of them. */
+  canOpen?: (e: FleetEvent) => boolean;
   highlightId?: string | null;
   linkable?: boolean;
   showSerial?: boolean;
@@ -146,7 +150,7 @@ export function EventList({
               <EventRow
                 key={e.id}
                 event={e}
-                onOpen={onOpen ? () => onOpen(e) : undefined}
+                onOpen={onOpen && (!canOpen || canOpen(e)) ? () => onOpen(e) : undefined}
                 highlighted={e.id === highlightId}
                 linkable={linkable}
                 showSerial={showSerial}
@@ -214,11 +218,16 @@ export const Timeline = memo(function Timeline({ first }: { first: EventPage }) 
         ) : (
           <EventList
             pages={pages}
-            onOpen={(e) =>
-              navigate(`/vehicles/${encodeURIComponent(e.vehicle.serial)}?event=${e.id}`, {
+            onOpen={(e) => {
+              // A record's entry also opens its report on the vehicle page (Revisions 1).
+              const rec = recordOfEvent(e);
+              const report = rec
+                ? `&record=${encodeURIComponent(recordParam(rec.kind, rec.id))}`
+                : '';
+              navigate(`/vehicles/${encodeURIComponent(e.vehicle.serial)}?event=${e.id}${report}`, {
                 state: { fromDashboard: true },
-              })
-            }
+              });
+            }}
           />
         )}
         {events.hasNextPage && (

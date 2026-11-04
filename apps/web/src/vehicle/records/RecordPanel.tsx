@@ -31,6 +31,7 @@ import { createdByCol, KIND_UI, type Column, type FormatCtx } from './kinds';
 import { RecordForm } from './RecordForm';
 import { useExport } from './useExport';
 import { useOfferUndo } from './Undo';
+import { useRecordLink } from './recordLink';
 
 const FuelChart = lazy(() => import('./FuelChart'));
 
@@ -89,6 +90,9 @@ export default function RecordPanel({
   const exporter = useExport();
   const [editing, setEditing] = useState<RecordRow | 'new' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const report = useRecordLink();
+  /** Table columns: everything except the report-only ones (e.g. what was done, who fueled). */
+  const tableCols = useMemo(() => ui.columns.filter((c) => !c.report), [ui.columns]);
 
   const isEditor = !!user && hasRole(user.role, 'EDITOR');
   const canAdd = !!user && (isEditor || kind === 'notes');
@@ -107,7 +111,7 @@ export default function RecordPanel({
 
   const columns = useMemo<ColumnDef<RecordRow>[]>(
     () => [
-      ...ui.columns.map((col): ColumnDef<RecordRow> => ({
+      ...tableCols.map((col): ColumnDef<RecordRow> => ({
         id: col.sort ?? col.key,
         header: () => t(col.header as never),
         enableSorting: !!col.sort,
@@ -129,7 +133,7 @@ export default function RecordPanel({
           ) : null,
       },
     ],
-    [ui.columns, ctx, t, serial],
+    [tableCols, ctx, t, serial],
   );
 
   // TanStack Table returns fresh functions each render; this component simply opts out of memoizing.
@@ -169,6 +173,13 @@ export default function RecordPanel({
       columns: [...ui.columns, ...(kind === 'notes' ? [] : [createdByCol])],
       ctx,
     });
+
+  /** A click anywhere on a row opens its report, except on its own buttons and file links. */
+  const openFromRow = (e: React.MouseEvent, row: RecordRow) => {
+    if ((e.target as HTMLElement).closest('button, a, input, select')) return;
+    if (window.getSelection()?.toString()) return; // selecting text to copy isn't a click
+    report.open(kind, row.id);
+  };
 
   const actions = (row: RecordRow) =>
     canChange(row) && (
@@ -356,10 +367,11 @@ export default function RecordPanel({
                 {table.getRowModel().rows.map((r) => (
                   <tr
                     key={r.id}
-                    className="border-border hover:bg-border/40 border-b align-top last:border-0"
+                    className="border-border hover:bg-border/40 cursor-pointer border-b align-top last:border-0"
                     data-row={r.id}
+                    onClick={(e) => openFromRow(e, r.original)}
                   >
-                    {r.getVisibleCells().map((c) => {
+                    {r.getVisibleCells().map((c, i) => {
                       const col = c.column.columnDef.meta as Column | undefined;
                       const numeric = col?.kind === 'number' || col?.kind === 'money';
                       return (
@@ -367,11 +379,26 @@ export default function RecordPanel({
                           key={c.id}
                           className={cn(
                             'px-1.5 py-2',
-                            numeric && 'text-end',
+                            numeric && 'text-end whitespace-nowrap',
+                            col?.kind === 'date' && 'whitespace-nowrap',
                             col?.kind === 'long' && 'min-w-48 max-w-96',
                           )}
                         >
-                          {flexRender(c.column.columnDef.cell, c.getContext())}
+                          {i === 0 ? (
+                            // The row's keyboard way into its report.
+                            <button
+                              type="button"
+                              className="hover:text-accent-ink text-start underline-offset-2 hover:underline"
+                              onClick={() => report.open(kind, r.original.id)}
+                              aria-label={t('report.open', {
+                                record: t(`vehicle.records.one.${kind}`),
+                              })}
+                            >
+                              {flexRender(c.column.columnDef.cell, c.getContext())}
+                            </button>
+                          ) : (
+                            flexRender(c.column.columnDef.cell, c.getContext())
+                          )}
                         </td>
                       );
                     })}
@@ -385,9 +412,14 @@ export default function RecordPanel({
           {/* Phones: one card per record, main values only. */}
           <ul className="space-y-2 sm:hidden" data-testid="record-cards-list">
             {rows.map((row) => (
-              <li key={row.id} className="border-border rounded-lg border p-3" data-row={row.id}>
+              <li
+                key={row.id}
+                className="border-border active:bg-border/40 cursor-pointer rounded-lg border p-3"
+                data-row={row.id}
+                onClick={(e) => openFromRow(e, row)}
+              >
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-                  {ui.columns
+                  {tableCols
                     .filter((c) => !c.minor)
                     .map((col) => (
                       <div key={col.key} className={cn(col.kind === 'long' && 'col-span-2')}>
@@ -405,6 +437,13 @@ export default function RecordPanel({
                       <span className="num">{row.attachments.length}</span>
                     </span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => report.open(kind, row.id)}
+                    className="text-accent-ink text-xs font-medium"
+                  >
+                    {t('report.view')}
+                  </button>
                   <div className="ms-auto">{actions(row)}</div>
                 </div>
               </li>
@@ -436,6 +475,7 @@ export default function RecordPanel({
           unit={vehicle.usageUnit}
           location={vehicle.location}
           row={editing === 'new' ? undefined : editing}
+          last={filters.sort ? undefined : rows[0]}
           canEdit={editing === 'new' || canChange(editing)}
           reduced={reduced}
           onClose={() => setEditing(null)}

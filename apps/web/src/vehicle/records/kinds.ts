@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import {
+  type FuelDetailField,
   INSPECTION_KINDS,
   MALFUNCTION_SEVERITIES,
   MALFUNCTION_STATES,
@@ -37,6 +38,8 @@ export interface Column {
   numFmt?: string;
   /** Hidden on phones' row cards. */
   minor?: boolean;
+  /** Shown only in the record report and the export, not as a table column. */
+  report?: boolean;
 }
 
 export type FieldType =
@@ -56,6 +59,10 @@ export interface Field {
   /** Decimal places allowed for numbers. */
   step?: number;
   hint?: string;
+  /** A fuel detail an admin can make mandatory (Revisions 1). */
+  adminRequired?: FuelDetailField;
+  /** Typed text with suggestions: which suggestion list feeds it. */
+  suggest?: 'place' | 'fueledBy' | 'provider';
 }
 
 export type FormValues = Record<string, string | boolean>;
@@ -75,8 +82,16 @@ export interface KindUi {
   filters: Filter[];
   /** The text search is offered only when the server searches some column. */
   searchable: boolean;
-  /** Blank form for a new record. */
-  defaults: (ctx: { unit: UsageUnit; location: string | null }) => FormValues;
+  /** Blank form for a new record. `last` is the newest record of this kind on the vehicle. */
+  defaults: (ctx: DefaultsCtx) => FormValues;
+}
+
+export interface DefaultsCtx {
+  unit: UsageUnit;
+  location: string | null;
+  /** The vehicle's location in the active language, for typed place fields. */
+  locationName?: string | null;
+  last?: RecordRow;
 }
 
 /** A local calendar day as YYYY-MM-DD, the value of a date input. */
@@ -87,12 +102,13 @@ const s = (v: unknown) => (typeof v === 'string' ? v : null);
 const n = (v: unknown) => (typeof v === 'number' ? v : null);
 const d = (v: unknown) => (typeof v === 'string' ? new Date(v) : null);
 
-const lookupOptions = (list: 'locations' | 'fluidTypes') => (ctx: FormatCtx) =>
+type ListKey = 'locations' | 'fluidTypes' | 'fuelTypes';
+const lookupOptions = (list: ListKey) => (ctx: FormatCtx) =>
   (ctx.lookups?.[list] ?? []).map((i) => ({
     value: i.code,
     label: lookupName(i, ctx.lang) ?? i.code,
   }));
-const lookupText = (list: 'locations' | 'fluidTypes', code: unknown, ctx: FormatCtx) =>
+const lookupText = (list: ListKey, code: unknown, ctx: FormatCtx) =>
   typeof code === 'string'
     ? (lookupName(
         ctx.lookups?.[list].find((i) => i.code === code),
@@ -238,6 +254,13 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
       },
       { key: 'isAccident', label: 'records.col.accident', type: 'bool' },
       { key: 'description', label: 'records.col.description', type: 'textarea', required: true },
+      {
+        key: 'resolution',
+        label: 'records.col.resolution',
+        type: 'textarea',
+        when: (v) => v.state !== 'OPEN',
+        hint: 'records.field.resolutionHint',
+      },
       { key: 'downtimeHours', label: 'records.col.downtime', type: 'number' },
       costField,
     ],
@@ -281,6 +304,7 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
       },
       moneyCol(),
       { ...dateCol('resolvedAt', 'records.col.resolvedAt'), sort: undefined, minor: true },
+      textCol('resolution', 'records.col.resolution', { kind: 'long', minor: true, report: true }),
     ],
     filters: [
       {
@@ -344,12 +368,40 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
   fuel: {
     ownerType: 'FuelEntry',
     dateKey: 'date',
-    searchable: false,
+    searchable: true,
     fields: [
       dateField(),
       { key: 'liters', label: 'records.col.liters', type: 'number', required: true, step: 1 },
+      {
+        key: 'fuelType',
+        label: 'records.col.fuelType',
+        type: 'select',
+        options: lookupOptions('fuelTypes'),
+        adminRequired: 'fuelType',
+      },
       { ...readingField, hint: 'records.field.readingHint' },
       costField,
+      {
+        key: 'place',
+        label: 'records.col.place',
+        type: 'text',
+        suggest: 'place',
+        adminRequired: 'place',
+      },
+      {
+        key: 'fueledBy',
+        label: 'records.col.fueledBy',
+        type: 'text',
+        suggest: 'fueledBy',
+        adminRequired: 'fueledBy',
+      },
+      {
+        key: 'provider',
+        label: 'records.col.provider',
+        type: 'text',
+        suggest: 'provider',
+        adminRequired: 'provider',
+      },
     ],
     columns: [
       dateCol('date', 'records.col.date'),
@@ -378,9 +430,33 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
         minor: true,
       },
       moneyCol(),
+      {
+        key: 'fuelType',
+        header: 'records.col.fuelType',
+        kind: 'text',
+        value: (r, ctx) => lookupText('fuelTypes', r.fuelType, ctx),
+        minor: true,
+      },
+      textCol('place', 'records.col.place'),
+      textCol('fueledBy', 'records.col.fueledBy', { minor: true, report: true }),
+      textCol('provider', 'records.col.provider', { minor: true, report: true }),
     ],
-    filters: [{ key: 'drops', label: 'records.filter.drops', type: 'toggle' }],
-    defaults: () => ({ date: today() }),
+    filters: [
+      {
+        key: 'fuelType',
+        label: 'records.col.fuelType',
+        type: 'select',
+        options: lookupOptions('fuelTypes'),
+      },
+      { key: 'drops', label: 'records.filter.drops', type: 'toggle' },
+    ],
+    // A new fill-up starts where the vehicle is, with the fuel and provider it had last time.
+    defaults: ({ locationName, last }) => ({
+      date: today(),
+      place: locationName ?? '',
+      fuelType: s(last?.fuelType) ?? '',
+      provider: s(last?.provider) ?? '',
+    }),
   },
   movements: {
     ownerType: 'Movement',

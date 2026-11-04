@@ -41,14 +41,24 @@ export const lookupRoutes: FastifyPluginAsync = async (app) => {
       recent('place'),
       recent('fueledBy'),
       recent('provider'),
-      app.db.user.findMany({ where: { active: true }, select: { name: true }, orderBy: { name: 'asc' } }),
+      app.db.user.findMany({
+        where: { active: true },
+        select: { name: true },
+        orderBy: { name: 'asc' },
+      }),
       app.db.supplier.findMany({ select: { name: true }, orderBy: { name: 'asc' } }),
     ]);
     const uniq = (...lists: string[][]) => [...new Set(lists.flat().filter(Boolean))];
     return {
       place: uniq(places.map((r) => r.place!)),
-      fueledBy: uniq(fueledBy.map((r) => r.fueledBy!), users.map((u) => u.name)),
-      provider: uniq(providers.map((r) => r.provider!), suppliers.map((s) => s.name)),
+      fueledBy: uniq(
+        fueledBy.map((r) => r.fueledBy!),
+        users.map((u) => u.name),
+      ),
+      provider: uniq(
+        providers.map((r) => r.provider!),
+        suppliers.map((s) => s.name),
+      ),
     };
   });
 };

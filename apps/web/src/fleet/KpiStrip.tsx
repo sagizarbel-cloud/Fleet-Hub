@@ -1,9 +1,13 @@
+import { lazy, Suspense, useState } from 'react';
 import { CalendarClock, CircleCheck, CircleX, TriangleAlert, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { prefersReducedMotion } from '@/lib/motion';
 import { VEHICLE_STATUSES, type VehicleStatus } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
 import type { Dashboard } from './data';
 import { formatMoney } from './events';
+
+const OpenMalfunctionsSheet = lazy(() => import('./OpenMalfunctionsSheet'));
 
 const STATUS_STYLE: Record<VehicleStatus, { icon: typeof CircleCheck; tone: string }> = {
   GREEN: { icon: CircleCheck, tone: 'text-ok' },
@@ -21,6 +25,7 @@ const DUE_KEYS = [
 export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
   const { t, i18n } = useTranslation();
   const due = kpis.dueWithin30Days;
+  const [showOpen, setShowOpen] = useState(false);
 
   return (
     <section
@@ -63,20 +68,35 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
           </dl>
         </div>
       </div>
-      <div className="glass p-3" data-testid="kpi-malfunctions">
-        <h2 className="text-muted mb-1 inline-flex items-center gap-1.5 text-xs font-medium">
+      {/* Revisions 1: the box opens the list of open malfunctions, each with its report. */}
+      <button
+        type="button"
+        onClick={() => setShowOpen(true)}
+        className="glass hover:border-border-strong block p-3 text-start"
+        data-testid="kpi-malfunctions"
+        aria-label={t('report.fleetOpenTitle')}
+      >
+        <span className="text-muted mb-1 inline-flex items-center gap-1.5 text-xs font-medium">
           <TriangleAlert aria-hidden className="size-3.5" />
           {t('dashboard.kpi.openMalfunctions')}
-        </h2>
+        </span>
         <span
           className={cn(
-            'num text-2xl leading-none font-semibold',
+            'num block text-2xl leading-none font-semibold',
             kpis.openMalfunctions > 0 && 'text-warn',
           )}
         >
           {kpis.openMalfunctions}
         </span>
-      </div>
+      </button>
+      {showOpen && (
+        <Suspense>
+          <OpenMalfunctionsSheet
+            onClose={() => setShowOpen(false)}
+            reduced={prefersReducedMotion()}
+          />
+        </Suspense>
+      )}
       <div className="glass p-3" data-testid="kpi-spend">
         <h2 className="text-muted mb-1 inline-flex items-center gap-1.5 text-xs font-medium">
           <Wallet aria-hidden className="size-3.5" />

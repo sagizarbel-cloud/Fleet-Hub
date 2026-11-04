@@ -40,7 +40,12 @@ describe('start codes', () => {
 
   it('never appear in the vehicle list, even for a user allowed to view them', async () => {
     const cookie = await login(app, await createUser(app, 'ADMIN', { canViewStartCodes: true }));
-    const res = await app.inject({ method: 'GET', url: '/api/vehicles', headers: { cookie } });
+    // Other test files add vehicles to the same database: ask for a page big enough for all.
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/vehicles?limit=200',
+      headers: { cookie },
+    });
     expect(res.statusCode).toBe(200);
     const vehicle = res.json().items.find((v: { serial: string }) => v.serial === 'ZZ-001');
     expect(vehicle).toBeDefined();

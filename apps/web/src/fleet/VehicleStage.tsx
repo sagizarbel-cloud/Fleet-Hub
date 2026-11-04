@@ -17,6 +17,7 @@ import { ItemsTable } from '@/vehicle/ItemsTable';
 import { Records } from '@/vehicle/Records';
 import { attachmentUrl } from '@/vehicle/records/api';
 import { StatusControl } from '@/vehicle/StatusControl';
+import { ReportHost } from '@/vehicle/ReportHost';
 import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
 import { VitalsBar } from '@/vehicle/VitalsBar';
 import { lookupName, useLookups, type Tile } from './data';
@@ -487,6 +488,7 @@ export function VehicleStage({
           <VehicleForm serial={serial} reduced={reduced} onClose={() => setEditing(false)} />
         </Suspense>
       )}
+      <ReportHost vehicle={vehicle} reduced={reduced} />
     </div>
   );
 }

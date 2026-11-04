@@ -66,7 +66,11 @@ describe('fuel details', () => {
     });
     expect(res.json().item).not.toHaveProperty('fuelTypeId');
 
-    const list = await req('GET', `/api/vehicles/${serial}/records/fuel?fuelType=r1_diesel`, viewer);
+    const list = await req(
+      'GET',
+      `/api/vehicles/${serial}/records/fuel?fuelType=r1_diesel`,
+      viewer,
+    );
     expect(list.json().total).toBe(1);
     const search = await req('GET', `/api/vehicles/${serial}/records/fuel?q=tanker`, viewer);
     expect(search.json().total).toBe(1);
@@ -166,9 +170,9 @@ describe('record report', () => {
     const other = await vehicle();
     const url = `/api/vehicles/${serial}/records/notes`;
     const id = (await req('POST', url, editor, { body: 'Spare key in office' })).json().item.id;
-    expect((await req('GET', `/api/vehicles/${other}/records/notes/${id}`, viewer)).statusCode).toBe(
-      404,
-    );
+    expect(
+      (await req('GET', `/api/vehicles/${other}/records/notes/${id}`, viewer)).statusCode,
+    ).toBe(404);
     await req('DELETE', `${url}/${id}`, editor);
     expect((await req('GET', `${url}/${id}`, viewer)).statusCode).toBe(404);
   });

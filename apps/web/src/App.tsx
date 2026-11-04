@@ -26,6 +26,7 @@ const SettingsPage = lazy(() =>
 const SETTINGS = [
   ['mine', '/settings'],
   ['lists', '/settings/lists'],
+  ['required', '/settings/required'],
   ['users', '/settings/users'],
   ['import', '/settings/import'],
 ] as const;

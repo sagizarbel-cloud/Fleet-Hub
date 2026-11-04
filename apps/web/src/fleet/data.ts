@@ -51,6 +51,7 @@ export interface Lookups {
   locations: LookupItem[];
   vehicleTypes: (LookupItem & { category: VehicleCategory; usageUnit: string })[];
   fluidTypes: LookupItem[];
+  fuelTypes: LookupItem[];
   receiptCategories: LookupItem[];
 }
 

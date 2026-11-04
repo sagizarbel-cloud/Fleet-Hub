@@ -2,12 +2,20 @@
 
 ## Status
 
-- Current phase: 9 — Deploy (repo side built and verified; installing on the server is handed off to the server IT team, waiting for the server)
+- Current phase: Revisions 1 — changes asked for by the fleet manager (built on branch `claude/project-thread-8av7uv`, no PR yet; more items may join). Phase 9's server install is still handed off to the server IT team.
 - Last completed phase: 8 — Translation audit and motion polish
 
 ## Phase log
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
+
+### Revisions 1 — 2026-11-04 (in progress; plan: https://claude.ai/artifact/2TfufphQqRhAAXcngmJnw8)
+
+- Record report: every row (desktop) or card (phone) in the seven record tables opens a report of that record: all its fields, photos large, and its history from the activity log with who and when. Malfunctions read as "The issue" and "What happened", with a new "What was done" text (`Malfunction.resolution`). It also opens from record lines in the vehicle's Activity and in the dashboard's Recent activity, from a new "Open malfunctions: N" chip next to the vehicle's status (non-admins can also click the status itself; admins keep the override popover), and from the dashboard's "Open malfunctions" box, which lists the fleet's open ones worst first. One open malfunction opens directly; several show a list first. The report is in the URL (`?record=<kind>.<id>`), so Back closes it.
+- Resizable (`components/ResizableSheet.tsx`): on computers the inner edge drags wider or narrower (arrow keys too; double-click or the button for full screen), remembered per device; on phones a bottom sheet that switches between about 60% and full height.
+- Fuel: where fueled, who fueled, fuel type (new "Fuel types" list in Settings, Diesel and Petrol 95 to start) and fuel provider. Place, who and provider are typed with suggestions (locations, user and supplier names, earlier entries); a new fill-up starts with the vehicle's location and last time's fuel type and provider. The fuel table searches them and filters by fuel type; Excel import and export carry them.
+- Admins can make each of the four mandatory (Settings → Required fields, stored in the new `AppSetting` table, each change in the audit log). The API refuses an add or edit without them; Excel imports are exempt.
+- Tests: 7 new api tests (`test/revisions1.test.ts`) and 3 e2e tests (`e2e/report.spec.ts`). The start-codes api test now asks for a page of 200 vehicles, since other test files' vehicles had pushed its vehicle past the first 50. The "Back mid-flight" motion e2e test misses its 1.5 s budget by about 0.1 s in this container with and without these changes.
 
 ### Quality pass — 2026-10-29
 
@@ -147,6 +155,7 @@
 - Phase 9 (2026-10-29, Sagi): the server isn't available yet; installing it is handed off to the server IT team, so this phase delivers everything in the repo plus a handoff. Domain for now: fleet.tfisolutions.com. The server has at least 2 GB of RAM. The first admin is Sagi.
 - Images are built on the server itself (no registry), so they come out arm64 there; a private repo is cloned with a read-only deploy key.
 - The first admin gets a one-time set-password link from `create-admin`, so no password passes through a terminal or chat.
+- Revisions 1 (2026-11-04, from the fleet manager via Sagi; assumptions in brackets until Sagi answers the plan's questions): "malfunction icons" = the vehicle's status and the dashboard's Open malfunctions box; "resize" = the report window; fuel place, who and provider are free text with suggestions (not fixed lists); fuel types start as Diesel and Petrol 95; mandatory switches don't apply to Excel imports.
 
 ## Later
 

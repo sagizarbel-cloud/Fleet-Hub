@@ -1,12 +1,25 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RECORD_BODIES, type RecordKind, type UsageUnit } from '@fleet-hub/shared';
+import {
+  missingFuelFields,
+  RECORD_BODIES,
+  type RecordKind,
+  type UsageUnit,
+} from '@fleet-hub/shared';
+import { lookupName } from '@/fleet/data';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useQueryClient } from '@tanstack/react-query';
-import { refreshAfterWrite, uploadFiles, useSaveRecord, type RecordRow } from './api';
+import {
+  refreshAfterWrite,
+  uploadFiles,
+  useAppSettings,
+  useFuelSuggestions,
+  useSaveRecord,
+  type RecordRow,
+} from './api';
 import { AttachmentList, FilePicker } from './Attachments';
 import { useFormatCtx } from './format';
 import { fieldOfPath, KIND_UI, toBody, toForm, type Field, type FormValues } from './kinds';
@@ -34,6 +47,7 @@ export function RecordForm({
   unit,
   location,
   row,
+  last,
   canEdit,
   reduced,
   onClose,
@@ -45,6 +59,8 @@ export function RecordForm({
   location: string | null;
   /** The record being edited; absent when adding. */
   row?: RecordRow;
+  /** The newest record of this kind, for defaults (e.g. last time's fuel type). */
+  last?: RecordRow;
   canEdit: boolean;
   reduced: boolean;
   onClose: () => void;
@@ -55,8 +71,25 @@ export function RecordForm({
   const ui = KIND_UI[kind];
   const isNew = !row;
   const [values, setValues] = useState<FormValues>(() =>
-    row ? toForm(kind, row, unit) : ui.defaults({ unit, location }),
+    row
+      ? toForm(kind, row, unit)
+      : ui.defaults({
+          unit,
+          location,
+          last,
+          locationName: location
+            ? (lookupName(
+                ctx.lookups?.locations.find((l) => l.code === location),
+                ctx.lang,
+              ) ?? null)
+            : null,
+        }),
   );
+  const { data: settings } = useAppSettings();
+  const suggestions = useFuelSuggestions(ui.fields.some((f) => f.suggest)).data;
+  /** Required by the form itself, or made mandatory by an admin (fuel details). */
+  const isRequired = (f: Field) =>
+    !!f.required || (!!f.adminRequired && !!settings?.fuelRequired[f.adminRequired]);
   const [errors, setErrors] = useState<Errors>({});
   const [files, setFiles] = useState<File[]>([]);
   const [failed, setFailed] = useState<string | null>(null);
@@ -88,6 +121,13 @@ export function RecordForm({
       setErrors(next);
       return;
     }
+    if (kind === 'fuel' && settings) {
+      const missing = missingFuelFields(settings.fuelRequired, parsed.data as object);
+      if (missing.length) {
+        setErrors(Object.fromEntries(missing.map((f) => [f, 'records.error.required'])));
+        return;
+      }
+    }
     try {
       const { item } = await save.mutateAsync({ id: row?.id ?? savedId ?? undefined, body });
       setSavedId(item.id);
@@ -112,7 +152,17 @@ export function RecordForm({
       onSaved(t(isNew ? 'records.added' : 'records.saved'));
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) setFailed('records.error.forbidden');
-      else setFailed('records.error.save');
+      else if (err instanceof ApiError && err.issues.length) {
+        // E.g. an admin made a fuel field mandatory while this form was open.
+        setErrors(
+          Object.fromEntries(
+            err.issues.map((i) => [
+              fieldOfPath(i.path),
+              i.code === 'required' ? 'records.error.required' : 'records.error.invalid',
+            ]),
+          ),
+        );
+      } else setFailed('records.error.save');
     }
   };
 
@@ -145,7 +195,17 @@ export function RecordForm({
         {visible.map((f) => (
           <FieldInput
             key={f.key}
-            field={f}
+            field={{ ...f, required: isRequired(f) }}
+            suggestions={
+              f.suggest
+                ? [
+                    ...(f.suggest === 'place'
+                      ? (ctx.lookups?.locations ?? []).map((l) => lookupName(l, ctx.lang) ?? l.code)
+                      : []),
+                    ...(suggestions?.[f.suggest] ?? []),
+                  ]
+                : undefined
+            }
             value={values[f.key]}
             error={errors[f.key]}
             unit={unit}
@@ -172,6 +232,7 @@ function FieldInput({
   error,
   unit,
   options,
+  suggestions,
   onChange,
 }: {
   field: Field;
@@ -179,6 +240,8 @@ function FieldInput({
   error: string | undefined;
   unit: UsageUnit;
   options?: { value: string; label: string }[];
+  /** Typed values offered as you type (a datalist); any other text is fine too. */
+  suggestions?: string[];
   onChange: (value: string | boolean) => void;
 }) {
   const { t } = useTranslation();
@@ -265,10 +328,19 @@ function FieldInput({
                   : '1'
           }
           min={field.type === 'date' || field.type === 'text' ? undefined : 0}
+          list={suggestions?.length ? `${id}-list` : undefined}
+          autoComplete={suggestions ? 'off' : undefined}
           value={str}
           onChange={(e) => onChange(e.target.value)}
           className={cn(INPUT, 'h-9', field.type !== 'text' && 'num')}
         />
+      )}
+      {suggestions && suggestions.length > 0 && (
+        <datalist id={`${id}-list`}>
+          {[...new Set(suggestions)].map((v) => (
+            <option key={v} value={v} />
+          ))}
+        </datalist>
       )}
       {field.hint && !error && (
         <p id={`${id}-hint`} className="text-muted text-xs">

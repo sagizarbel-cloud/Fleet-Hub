@@ -376,13 +376,19 @@
       "lines": "שורות",
       "total": "סה״כ",
       "purchasePrice": "מחיר רכישה",
-      "warrantyTerms": "תנאי אחריות"
+      "warrantyTerms": "תנאי אחריות",
+      "resolution": "מה בוצע",
+      "fuelType": "סוג דלק",
+      "place": "מקום התדלוק",
+      "fueledBy": "מי תדלק",
+      "provider": "ספק הדלק"
     },
     "field": {
       "nextServiceDate": "תאריך הטיפול הבא (לא חובה)",
       "nextServiceReading": "הטיפול הבא ב־{{unit}} (לא חובה)",
       "readingHint": "הקריאה בתדלוק הזה; לפיה מחושבת הצריכה.",
-      "resolvedHint": "ריק = היום."
+      "resolvedHint": "ריק = היום.",
+      "resolutionHint": "מה נמצא ומה נעשה כדי לתקן."
     },
     "filter": {
       "accidents": "תאונות בלבד",
@@ -731,7 +737,8 @@
       "mine": "ההגדרות שלי",
       "lists": "רשימות",
       "users": "משתמשים והרשאות",
-      "import": "ייבוא מאקסל"
+      "import": "ייבוא מאקסל",
+      "required": "שדות חובה"
     },
     "loadFailed": "לא הצלחנו לטעון. אפשר לנסות שוב.",
     "mine": {
@@ -764,7 +771,8 @@
         "locations": "מיקומים",
         "vehicleTypes": "סוגי כלים",
         "fluidTypes": "סוגי נוזלים",
-        "receiptCategories": "קטגוריות קבלות"
+        "receiptCategories": "קטגוריות קבלות",
+        "fuelTypes": "סוגי דלק"
       },
       "add": "הוספת ערך",
       "addTitle": "הוספה ל{{list}}",
@@ -827,6 +835,13 @@
       "done": "סיום",
       "messageNew": "שלום {{name}}, זה הקישור שלך להגדרת סיסמה ב־{{app}}: {{url}}",
       "messageReset": "שלום {{name}}, זה הקישור שלך להגדרת סיסמה חדשה ב־{{app}}: {{url}}"
+    },
+    "required": {
+      "fuel": "רישומי תדלוק",
+      "fuelHint": "שדות מסומנים יהיו חובה בהוספה או בעריכה של תדלוק.",
+      "importNote": "ייבוא מ-Excel של גיליונות ישנים אינו נבדק.",
+      "saved": "נשמר.",
+      "saveFailed": "השמירה נכשלה. אפשר לנסות שוב."
     }
   },
   "reset": {
@@ -1078,7 +1093,35 @@
       "name": "פריט",
       "spec": "מפרט",
       "itemSerial": "מספר סידורי של הפריט",
-      "vehicle": "על הכלי"
+      "vehicle": "על הכלי",
+      "place": "מקום התדלוק",
+      "fueledBy": "מי תדלק",
+      "fuelType": "סוג דלק",
+      "provider": "ספק הדלק"
     }
+  },
+  "report": {
+    "title": "דוח {{record}}",
+    "open": "פתיחת דוח {{record}}",
+    "view": "הצגת הדוח",
+    "issue": "התקלה",
+    "whatHappened": "מה קרה",
+    "details": "פרטים",
+    "history": "היסטוריה",
+    "noHistory": "אין עדיין היסטוריה.",
+    "noFiles": "אין קבצים.",
+    "by": "על ידי {{name}}",
+    "addedBy": "נוסף על ידי {{name}}",
+    "stillOpen": "עדיין פתוחה",
+    "notFound": "הרישום הזה כבר לא קיים. ייתכן שנמחק.",
+    "backToList": "חזרה לרשימה",
+    "openTitle": "תקלות פתוחות",
+    "fleetOpenTitle": "תקלות פתוחות בצי",
+    "noneOpen": "אין תקלות פתוחות.",
+    "expand": "מסך מלא",
+    "restore": "הקטנה",
+    "resize": "שינוי גודל",
+    "resizeHint": "גרירה משנה את הגודל, לחיצה כפולה למסך מלא",
+    "openCount": "תקלות פתוחות: {{count}}"
   }
 }

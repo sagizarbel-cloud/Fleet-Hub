@@ -376,13 +376,19 @@
       "lines": "Lines",
       "total": "Total",
       "purchasePrice": "Purchase price",
-      "warrantyTerms": "Warranty terms"
+      "warrantyTerms": "Warranty terms",
+      "resolution": "What was done",
+      "fuelType": "Fuel type",
+      "place": "Where fueled",
+      "fueledBy": "Who fueled",
+      "provider": "Fuel provider"
     },
     "field": {
       "nextServiceDate": "Next service date (optional)",
       "nextServiceReading": "Next service at, {{unit}} (optional)",
       "readingHint": "The reading at this fill-up; it's what economy is worked out from.",
-      "resolvedHint": "Leave empty for today."
+      "resolvedHint": "Leave empty for today.",
+      "resolutionHint": "What was found and what was done to fix it."
     },
     "filter": {
       "accidents": "Accidents only",
@@ -731,7 +737,8 @@
       "mine": "My settings",
       "lists": "Lists",
       "users": "Users and roles",
-      "import": "Excel import"
+      "import": "Excel import",
+      "required": "Required fields"
     },
     "loadFailed": "Couldn't load this. Try again.",
     "mine": {
@@ -764,7 +771,8 @@
         "locations": "Locations",
         "vehicleTypes": "Vehicle types",
         "fluidTypes": "Fluid types",
-        "receiptCategories": "Receipt categories"
+        "receiptCategories": "Receipt categories",
+        "fuelTypes": "Fuel types"
       },
       "add": "Add value",
       "addTitle": "Add to {{list}}",
@@ -827,6 +835,13 @@
       "done": "Done",
       "messageNew": "Hi {{name}}, here is your link to set a password for {{app}}: {{url}}",
       "messageReset": "Hi {{name}}, here is your link to set a new password for {{app}}: {{url}}"
+    },
+    "required": {
+      "fuel": "Fuel entries",
+      "fuelHint": "Ticked fields must be filled when a fill-up is added or edited.",
+      "importNote": "Excel imports of old sheets are not checked.",
+      "saved": "Saved.",
+      "saveFailed": "Couldn't save. Try again."
     }
   },
   "reset": {
@@ -1078,7 +1093,35 @@
       "name": "Item",
       "spec": "Spec",
       "itemSerial": "Item serial",
-      "vehicle": "On vehicle"
+      "vehicle": "On vehicle",
+      "place": "Where fueled",
+      "fueledBy": "Who fueled",
+      "fuelType": "Fuel type",
+      "provider": "Fuel provider"
     }
+  },
+  "report": {
+    "title": "{{record}} report",
+    "open": "Open the {{record}} report",
+    "view": "View report",
+    "issue": "The issue",
+    "whatHappened": "What happened",
+    "details": "Details",
+    "history": "History",
+    "noHistory": "No history yet.",
+    "noFiles": "No files.",
+    "by": "by {{name}}",
+    "addedBy": "Added by {{name}}",
+    "stillOpen": "Still open",
+    "notFound": "This record is no longer here. It may have been deleted.",
+    "backToList": "Back to the list",
+    "openTitle": "Open malfunctions",
+    "fleetOpenTitle": "Open malfunctions in the fleet",
+    "noneOpen": "No open malfunctions.",
+    "expand": "Full screen",
+    "restore": "Smaller",
+    "resize": "Resize",
+    "resizeHint": "Drag to resize, double-click for full screen",
+    "openCount": "Open malfunctions: {{count}}"
   }
 }
