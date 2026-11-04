@@ -282,6 +282,7 @@ function TileButton({
           <div data-tile-visual={tile.serial} style={{ opacity: carried ? 0 : 1 }}>
             <VehicleVisual
               type={tile.type}
+              tool={tile.tool}
               view="top"
               status={tile.status}
               size={tileSize(tile.type)}

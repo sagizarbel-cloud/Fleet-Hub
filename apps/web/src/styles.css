@@ -183,3 +183,26 @@
     align-items: start;
   }
 }
+
+/* Printed vehicle report (Revisions 1): white paper, black ink, whatever the theme. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    color-scheme: light !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .vreport .vr-part {
+    break-inside: auto;
+  }
+  .vreport h2 {
+    break-after: avoid;
+  }
+  .vreport thead {
+    display: table-header-group;
+  }
+}

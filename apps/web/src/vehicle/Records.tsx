@@ -5,6 +5,8 @@ import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import {
   ArrowLeftRight,
   ClipboardCheck,
+  ClipboardList,
+  HardHat,
   Droplet,
   FileText,
   Fuel,
@@ -28,6 +30,8 @@ const PanelBody = lazy(() => import('./records/PanelBody'));
 
 export const RECORD_KEYS = [
   'service',
+  'workCards',
+  'contracted',
   'malfunctions',
   'fluids',
   'fuel',
@@ -42,6 +46,8 @@ export type RecordKey = (typeof RECORD_KEYS)[number];
 
 const RECORDS: Record<RecordKey, { icon: LucideIcon; types: EventType[] }> = {
   service: { icon: Wrench, types: ['SERVICE'] },
+  workCards: { icon: ClipboardList, types: ['WORK_CARD'] },
+  contracted: { icon: HardHat, types: ['WORK_CARD'] },
   malfunctions: {
     icon: TriangleAlert,
     types: ['MALFUNCTION_REPORTED', 'MALFUNCTION_UPDATED', 'MALFUNCTION_RESOLVED'],
@@ -203,7 +209,7 @@ export function Records({
             </motion.section>
           )}
         </AnimatePresence>
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-5" data-testid="record-cards">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-6" data-testid="record-cards">
           {RECORD_KEYS.map((key, i) => {
             const Icon = RECORDS[key].icon;
             const s = summary(key);

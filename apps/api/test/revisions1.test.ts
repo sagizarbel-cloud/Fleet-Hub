@@ -275,3 +275,33 @@ describe('excavator tool', () => {
     ).toBe(400);
   });
 });
+
+describe('company logo', () => {
+  // A 1×1 transparent PNG.
+  const PNG =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+  it('lets admins set and remove it, and every user read it', async () => {
+    expect((await req('PUT', '/api/settings/logo', editor, { dataUrl: PNG })).statusCode).toBe(403);
+    expect((await req('PUT', '/api/settings/logo', admin, { dataUrl: PNG })).statusCode).toBe(200);
+    const got = await req('GET', '/api/settings/logo', viewer);
+    expect(got.statusCode).toBe(200);
+    expect(got.headers['content-type']).toBe('image/png');
+    expect(got.rawPayload.subarray(1, 4).toString()).toBe('PNG');
+    // The logo never shows up in the general settings.
+    expect(Object.keys((await req('GET', '/api/settings/app', viewer)).json())).toEqual([
+      'fuelRequired',
+    ]);
+    expect((await req('DELETE', '/api/settings/logo', admin)).statusCode).toBe(200);
+    expect((await req('GET', '/api/settings/logo', viewer)).statusCode).toBe(404);
+  });
+
+  it('refuses SVG and anything that is not an image', async () => {
+    const svg = `data:image/svg+xml;base64,${Buffer.from('<svg/>').toString('base64')}`;
+    expect((await req('PUT', '/api/settings/logo', admin, { dataUrl: svg })).statusCode).toBe(400);
+    expect(
+      (await req('PUT', '/api/settings/logo', admin, { dataUrl: 'javascript:alert(1)' }))
+        .statusCode,
+    ).toBe(400);
+  });
+});

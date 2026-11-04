@@ -53,6 +53,8 @@ export type RecordFilters = Partial<
     | 'accident'
     | 'drops'
     | 'mine'
+    | 'performedBy'
+    | 'workType'
     | 'sort'
     | 'dir',
     string
@@ -86,6 +88,42 @@ export function useRecords(serial: string, kind: RecordKind, filters: RecordFilt
 
 /** A timeline entry about one record, with who wrote it. */
 export type RecordHistoryEntry = Omit<FleetEvent, 'vehicle'> & { by: string | null };
+
+/** One "what was done so far" update on a malfunction (Revisions 1). */
+export interface ProgressEntry {
+  id: string;
+  at: string;
+  body: string;
+  createdById: string | null;
+  createdBy: string | null;
+}
+
+/** Adds or removes a malfunction progress update; the report and timelines refresh. */
+export function useProgress(serial: string, malfunctionId: string) {
+  const qc = useQueryClient();
+  const base = `/vehicles/${enc(serial)}/records/malfunctions/${enc(malfunctionId)}/progress`;
+  const add = useMutation({
+    mutationFn: (body: { at: string | null; body: string }) =>
+      api<{ progress: ProgressEntry[] }>(base, { method: 'POST', json: body }),
+    onSuccess: () => refreshAfterWrite(qc, serial),
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) =>
+      api<{ progress: ProgressEntry[] }>(`${base}/${enc(id)}`, { method: 'DELETE' }),
+    onSuccess: () => refreshAfterWrite(qc, serial),
+  });
+  return { add, remove };
+}
+
+/** Changes an excavator's tool (Revisions 1). */
+export function useSetTool(serial: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tool: string) =>
+      api<{ tool: string }>(`/vehicles/${enc(serial)}/tool`, { method: 'PUT', json: { tool } }),
+    onSuccess: () => refreshAfterWrite(qc, serial),
+  });
+}
 
 /** One record and its history, for the record report (Revisions 1). */
 export function useRecord(serial: string, kind: RecordKind, id: string) {
@@ -241,6 +279,9 @@ export interface DocumentRow {
   amount: number | null;
   category: string | null;
   notes: string | null;
+  approved: boolean;
+  linkedRecordType: string | null;
+  linkedRecordId: string | null;
   attachments: Attachment[];
 }
 export const useDocuments = (serial: string) =>

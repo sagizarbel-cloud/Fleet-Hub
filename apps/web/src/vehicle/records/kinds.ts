@@ -6,6 +6,8 @@ import {
   MALFUNCTION_STATES,
   type RecordKind,
   type UsageUnit,
+  WORK_PERFORMERS,
+  WORK_TYPES,
 } from '@fleet-hub/shared';
 import { lookupName, type Lookups } from '@/fleet/data';
 import type { RecordFilters, RecordRow } from './api';
@@ -43,7 +45,16 @@ export interface Column {
 }
 
 export type FieldType =
-  'date' | 'number' | 'money' | 'text' | 'textarea' | 'select' | 'bool' | 'reading';
+  | 'date'
+  | 'number'
+  | 'money'
+  | 'text'
+  | 'textarea'
+  | 'select'
+  | 'bool'
+  | 'reading'
+  /** The vehicle's approved receipts to link (work cards); the value is comma-separated ids. */
+  | 'receipts';
 
 export interface Field {
   key: string;
@@ -116,7 +127,10 @@ const lookupText = (list: ListKey, code: unknown, ctx: FormatCtx) =>
       ) ?? code)
     : '';
 const enumOptions =
-  (values: readonly string[], prefix: 'severity' | 'malfunctionState' | 'inspection') =>
+  (
+    values: readonly string[],
+    prefix: 'severity' | 'malfunctionState' | 'inspection' | 'workCard.type' | 'workCard.performer',
+  ) =>
   (ctx: FormatCtx) =>
     values.map((value) => ({
       value,
@@ -254,13 +268,6 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
       },
       { key: 'isAccident', label: 'records.col.accident', type: 'bool' },
       { key: 'description', label: 'records.col.description', type: 'textarea', required: true },
-      {
-        key: 'resolution',
-        label: 'records.col.resolution',
-        type: 'textarea',
-        when: (v) => v.state !== 'OPEN',
-        hint: 'records.field.resolutionHint',
-      },
       { key: 'downtimeHours', label: 'records.col.downtime', type: 'number' },
       costField,
     ],
@@ -304,7 +311,6 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
       },
       moneyCol(),
       { ...dateCol('resolvedAt', 'records.col.resolvedAt'), sort: undefined, minor: true },
-      textCol('resolution', 'records.col.resolution', { kind: 'long', minor: true, report: true }),
     ],
     filters: [
       {
@@ -567,6 +573,94 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
     filters: [{ key: 'mine', label: 'records.filter.mine', type: 'toggle' }],
     defaults: () => ({}),
   },
+  workCards: {
+    ownerType: 'WorkCard',
+    dateKey: 'date',
+    searchable: true,
+    fields: [
+      dateField(),
+      {
+        key: 'workType',
+        label: 'records.col.workType',
+        type: 'select',
+        required: true,
+        options: enumOptions(WORK_TYPES, 'workCard.type'),
+      },
+      {
+        key: 'performedBy',
+        label: 'records.col.performedBy',
+        type: 'select',
+        required: true,
+        options: enumOptions(WORK_PERFORMERS, 'workCard.performer'),
+      },
+      { key: 'description', label: 'records.col.workDone', type: 'textarea', required: true },
+      {
+        key: 'doneBy',
+        label: 'records.col.doneBy',
+        type: 'text',
+        suggest: 'provider',
+        hint: 'records.field.doneByHint',
+      },
+      { key: 'place', label: 'records.col.workPlace', type: 'text', suggest: 'place' },
+      { key: 'laborHours', label: 'records.col.laborHours', type: 'number', step: 1 },
+      readingField,
+      costField,
+      notesField,
+      { key: 'receiptIds', label: 'records.col.receipts', type: 'receipts' },
+    ],
+    columns: [
+      dateCol('date', 'records.col.date'),
+      {
+        key: 'workType',
+        header: 'records.col.workType',
+        kind: 'text',
+        value: (r) => s(r.workType),
+        text: (r, ctx) => label(ctx.t, 'workCard.type', s(r.workType) ?? ''),
+        minor: true,
+      },
+      {
+        key: 'performedBy',
+        header: 'records.col.performedBy',
+        kind: 'text',
+        value: (r) => s(r.performedBy),
+        text: (r, ctx) => label(ctx.t, 'workCard.performer', s(r.performedBy) ?? ''),
+      },
+      textCol('description', 'records.col.workDone', { kind: 'long' }),
+      textCol('doneBy', 'records.col.doneBy'),
+      textCol('place', 'records.col.workPlace', { minor: true }),
+      {
+        key: 'laborHours',
+        header: 'records.col.laborHours',
+        sort: 'laborHours',
+        kind: 'number',
+        value: (r) => n(r.laborHours),
+        text: (r, ctx) => {
+          const v = n(r.laborHours);
+          return v === null ? '' : ctx.t('vehicle.units.hours', { value: ctx.number(v, 1) });
+        },
+        minor: true,
+        report: true,
+      },
+      { ...readingCol, minor: true, report: true },
+      moneyCol(),
+      textCol('notes', 'records.col.notes', { kind: 'long', minor: true, report: true }),
+    ],
+    filters: [
+      {
+        key: 'performedBy',
+        label: 'records.col.performedBy',
+        type: 'select',
+        options: enumOptions(WORK_PERFORMERS, 'workCard.performer'),
+      },
+      {
+        key: 'workType',
+        label: 'records.col.workType',
+        type: 'select',
+        options: enumOptions(WORK_TYPES, 'workCard.type'),
+      },
+    ],
+    defaults: () => ({ date: today(), workType: 'MECHANICAL', performedBy: 'IN_HOUSE' }),
+  },
 };
 
 /** The column "Added by" and the attachment list, shown or exported for every kind. */
@@ -585,6 +679,10 @@ export function toBody(kind: RecordKind, values: FormValues, unit: UsageUnit, is
       continue;
     }
     const str = typeof raw === 'string' ? raw.trim() : '';
+    if (f.type === 'receipts') {
+      body[f.key] = str ? str.split(',') : [];
+      continue;
+    }
     if (f.type === 'reading') {
       const value = str === '' ? null : Number(str);
       const [km, hours] =
@@ -605,7 +703,10 @@ export function toForm(kind: RecordKind, row: RecordRow, unit: UsageUnit): FormV
   for (const f of KIND_UI[kind].fields) {
     if (f.createOnly) continue;
     const raw = f.type === 'reading' ? row[readingKey(unit)] : row[f.key];
-    if (f.type === 'bool') values[f.key] = raw === true;
+    if (f.type === 'receipts') {
+      const linked = Array.isArray(row.receipts) ? (row.receipts as { id: string }[]) : [];
+      values[f.key] = linked.map((r) => r.id).join(',');
+    } else if (f.type === 'bool') values[f.key] = raw === true;
     else if (f.type === 'date')
       values[f.key] = typeof raw === 'string' ? localDay(new Date(raw)) : '';
     else values[f.key] = raw === null || raw === undefined ? '' : String(raw);

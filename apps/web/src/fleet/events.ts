@@ -8,6 +8,7 @@ import {
   FileMinus2,
   FilePlus2,
   Fuel,
+  Hammer,
   Package,
   Pencil,
   Trash2,
@@ -16,9 +17,17 @@ import {
   StickyNote,
   TriangleAlert,
   Wrench,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react';
-import { RECORD_KINDS, VEHICLE_FIELDS, type EventType, type VehicleField } from '@fleet-hub/shared';
+import {
+  EXCAVATOR_TOOLS,
+  type ExcavatorTool,
+  RECORD_KINDS,
+  VEHICLE_FIELDS,
+  type EventType,
+  type VehicleField,
+} from '@fleet-hub/shared';
 import { lookupName, type FleetEvent, type Lookups } from './data';
 import { numberFormat } from '@/lib/intl';
 
@@ -34,12 +43,19 @@ export const EVENT_GROUPS = {
       'RECORD_EDITED',
       'RECORD_DELETED',
       'RECORD_RESTORED',
+      'TOOL_CHANGED',
     ],
   },
   service: { icon: Wrench, types: ['SERVICE'] },
+  workCards: { icon: ClipboardList, types: ['WORK_CARD'] },
   malfunctions: {
     icon: TriangleAlert,
-    types: ['MALFUNCTION_REPORTED', 'MALFUNCTION_UPDATED', 'MALFUNCTION_RESOLVED'],
+    types: [
+      'MALFUNCTION_REPORTED',
+      'MALFUNCTION_UPDATED',
+      'MALFUNCTION_PROGRESS',
+      'MALFUNCTION_RESOLVED',
+    ],
   },
   fluids: { icon: Droplet, types: ['FLUID_ADDED'] },
   fuel: { icon: Fuel, types: ['FUEL_ADDED'] },
@@ -62,6 +78,7 @@ const OWN_ICON: Partial<Record<EventType, LucideIcon>> = {
   RECORD_EDITED: Pencil,
   RECORD_DELETED: Trash2,
   RECORD_RESTORED: Undo2,
+  TOOL_CHANGED: Hammer,
 };
 
 export const EVENT_ICON = Object.fromEntries(
@@ -142,6 +159,24 @@ export function describeEvent(
     case 'MALFUNCTION_UPDATED':
     case 'MALFUNCTION_RESOLVED':
       return t(`events.${e.type}`, { description: isolate(str(p.description)) });
+    case 'MALFUNCTION_PROGRESS':
+      return t('events.MALFUNCTION_PROGRESS', { progress: isolate(str(p.progress)) });
+    case 'WORK_CARD': {
+      const by = str(p.doneBy);
+      const performer = p.performedBy === 'CONTRACTED' ? 'CONTRACTED' : 'IN_HOUSE';
+      return t(by ? 'events.WORK_CARD_by' : 'events.WORK_CARD', {
+        description: isolate(str(p.description)),
+        performer: t(`workCard.performer.${performer}`),
+        by: isolate(by),
+      });
+    }
+    case 'TOOL_CHANGED': {
+      const tool = (v: unknown) =>
+        (EXCAVATOR_TOOLS as readonly string[]).includes(str(v))
+          ? t(`tool.${str(v) as ExcavatorTool}`)
+          : str(v);
+      return t('events.TOOL_CHANGED', { from: tool(p.from ?? 'bucket'), to: tool(p.to) });
+    }
     case 'MALFUNCTION_REPORTED': {
       const sev = str(p.severity);
       const severity =

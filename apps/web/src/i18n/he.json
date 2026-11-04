@@ -106,7 +106,8 @@
       "inspections": "בדיקות",
       "items": "פריטים",
       "documents": "קבלות והצעות מחיר",
-      "notes": "הערות"
+      "notes": "הערות",
+      "workCards": "כרטיסי עבודה"
     },
     "filters": {
       "label": "סינון הצי",
@@ -158,7 +159,11 @@
     "QUOTE_UNLINKED": "הצעת מחיר מאת {{supplier}} נותקה",
     "VEHICLE_UPDATED_fields": "פרטי הכלי עודכנו: {{fields}}",
     "imported": "מיובא",
-    "importedHint": "נוסף בייבוא מאקסל"
+    "importedHint": "נוסף בייבוא מאקסל",
+    "WORK_CARD": "כרטיס עבודה ({{performer}}): {{description}}",
+    "WORK_CARD_by": "כרטיס עבודה ({{performer}}, {{by}}): {{description}}",
+    "MALFUNCTION_PROGRESS": "התקדמות בתקלה: {{progress}}",
+    "TOOL_CHANGED": "החלפת כלי עבודה: {{from}} ← {{to}}"
   },
   "severity": {
     "LOW": "נמוכה",
@@ -203,8 +208,11 @@
         "fuel": "תדלוק",
         "movements": "שינוי מיקום",
         "inspections": "בדיקה",
-        "notes": "הערה"
-      }
+        "notes": "הערה",
+        "workCards": "כרטיס עבודה"
+      },
+      "workCards": "כרטיסי עבודה",
+      "contracted": "עבודות קבלן"
     },
     "copy": "לחיצה להעתקה",
     "copied": "הועתק",
@@ -297,7 +305,13 @@
       "set": "קביעת סטטוס",
       "clear": "חזרה לקביעה אוטומטית"
     },
-    "backToTable": "חזרה לטבלה המרוכזת"
+    "backToTable": "חזרה לטבלה המרוכזת",
+    "tool": {
+      "label": "כלי עבודה",
+      "change": "החלפת כלי העבודה",
+      "saved": "כלי העבודה הוחלף",
+      "failed": "כלי העבודה לא הוחלף. אפשר לנסות שוב."
+    }
   },
   "malfunctionState": {
     "OPEN": "פתוחה",
@@ -377,18 +391,25 @@
       "total": "סה״כ",
       "purchasePrice": "מחיר רכישה",
       "warrantyTerms": "תנאי אחריות",
-      "resolution": "מה בוצע",
       "fuelType": "סוג דלק",
       "place": "מקום התדלוק",
       "fueledBy": "מי תדלק",
-      "provider": "ספק הדלק"
+      "provider": "ספק הדלק",
+      "workType": "סוג עבודה",
+      "performedBy": "צוות פנימי או קבלן",
+      "workDone": "העבודה שבוצעה",
+      "doneBy": "בוצע על ידי",
+      "workPlace": "מקום הביצוע",
+      "laborHours": "שעות עבודה",
+      "receipts": "קבלות"
     },
     "field": {
       "nextServiceDate": "תאריך הטיפול הבא (לא חובה)",
       "nextServiceReading": "הטיפול הבא ב־{{unit}} (לא חובה)",
       "readingHint": "הקריאה בתדלוק הזה; לפיה מחושבת הצריכה.",
       "resolvedHint": "ריק = היום.",
-      "resolutionHint": "מה נמצא ומה נעשה כדי לתקן."
+      "doneByHint": "שם הטכנאי, המוסך או הקבלן.",
+      "noReceipts": "אין קבלות מאושרות של הכלי לקישור."
     },
     "filter": {
       "accidents": "תאונות בלבד",
@@ -443,7 +464,9 @@
       "APPROVED": "אושרה",
       "ORDERED": "הוזמנה",
       "REJECTED": "נדחתה"
-    }
+    },
+    "resizeColumn": "שינוי רוחב עמודה",
+    "resizeColumnHint": "גרירה לשינוי הרוחב, לחיצה כפולה לאיפוס"
   },
   "fleet": {
     "count": "{{shown}} מתוך {{total}} כלים",
@@ -738,7 +761,8 @@
       "lists": "רשימות",
       "users": "משתמשים והרשאות",
       "import": "ייבוא מאקסל",
-      "required": "שדות חובה"
+      "required": "שדות חובה",
+      "report": "דוחות להדפסה"
     },
     "loadFailed": "לא הצלחנו לטעון. אפשר לנסות שוב.",
     "mine": {
@@ -842,6 +866,19 @@
       "importNote": "ייבוא מ-Excel של גיליונות ישנים אינו נבדק.",
       "saved": "נשמר.",
       "saveFailed": "השמירה נכשלה. אפשר לנסות שוב."
+    },
+    "logo": {
+      "title": "לוגו החברה",
+      "hint": "מודפס בראש דוחות הכלים.",
+      "alt": "לוגו החברה",
+      "none": "עדיין אין לוגו",
+      "upload": "העלאת לוגו",
+      "replace": "החלפת הלוגו",
+      "remove": "הסרת הלוגו",
+      "limits": "PNG,‏ JPEG או WebP, עד 300KB. לוגו רחב על רקע לבן או שקוף מודפס הכי טוב.",
+      "badType": "יש להשתמש בתמונת PNG,‏ JPEG או WebP.",
+      "tooBig": "הלוגו גדול מ-300KB.",
+      "failed": "הלוגו לא נשמר. אפשר לנסות שוב."
     }
   },
   "reset": {
@@ -1122,6 +1159,64 @@
     "restore": "הקטנה",
     "resize": "שינוי גודל",
     "resizeHint": "גרירה משנה את הגודל, לחיצה כפולה למסך מלא",
-    "openCount": "תקלות פתוחות: {{count}}"
+    "receipts": "קבלות",
+    "noReceipts": "לא קושרו קבלות.",
+    "progress": "התקדמות",
+    "noProgress": "אין עדכונים עדיין.",
+    "addProgress": "הוספת עדכון",
+    "progressPlaceholder": "מה נמצא או מה בוצע",
+    "progressDate": "תאריך",
+    "saveProgress": "הוספת העדכון",
+    "removeProgress": "הסרת העדכון",
+    "progressFailed": "העדכון לא נשמר. אפשר לנסות שוב.",
+    "statusHint": "מצב: {{status}}. תקלות פתוחות: {{count}}"
+  },
+  "workCard": {
+    "type": {
+      "ROUTINE": "שגרתית",
+      "MECHANICAL": "מכנית"
+    },
+    "performer": {
+      "IN_HOUSE": "צוות פנימי",
+      "CONTRACTED": "קבלן חיצוני"
+    }
+  },
+  "tool": {
+    "bucket": "כף",
+    "hammer": "פטיש חציבה",
+    "ripper": "ריפר",
+    "grab": "גרייפר"
+  },
+  "vreport": {
+    "button": "דוח כלי",
+    "title": "דוח כלי",
+    "hint": "כל מה שנעשה בכלי בתאריכים שנבחרו, במסמך אחד להדפסה או לשמירה כ-PDF.",
+    "dates": "תאריכים",
+    "include": "מה לכלול",
+    "costs": "סיכום עלויות",
+    "receipts": "קבלות וחשבוניות",
+    "logo": "לוגו החברה",
+    "noLogo": "לא הוגדר לוגו. מנהל מערכת יכול להוסיף לוגו בהגדרות.",
+    "all": "הכול",
+    "none": "כלום",
+    "open": "פתיחת הדוח",
+    "pickOne": "יש לבחור לפחות חלק אחד.",
+    "print": "הדפסה או שמירה כ-PDF",
+    "back": "חזרה לכלי",
+    "period": "תקופה: {{from}} – {{to}}",
+    "allTime": "כל התאריכים",
+    "created": "הופק ב-{{date}} על ידי {{name}}",
+    "details": "פרטי הכלי",
+    "empty": "אין רשומות בתאריכים האלה.",
+    "total": "סה״כ",
+    "rows": "שורות: {{count}}",
+    "section": "חלק",
+    "recordsCost": "עלות ברשומות",
+    "receiptsTotal": "סה״כ קבלות",
+    "costNote": "קבלות חוזרות לעיתים קרובות על עלות שכבר רשומה, ולכן שני הסכומים מוצגים בנפרד.",
+    "loading": "הדוח בהכנה…",
+    "failed": "לא ניתן היה לטעון את הדוח. אפשר לנסות שוב.",
+    "linkedTo": "מקושר אל",
+    "page": "Fleet Hub · {{serial}}"
   }
 }

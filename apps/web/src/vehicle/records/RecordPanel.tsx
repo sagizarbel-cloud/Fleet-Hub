@@ -32,6 +32,7 @@ import { RecordForm } from './RecordForm';
 import { useExport } from './useExport';
 import { useOfferUndo } from './Undo';
 import { useRecordLink } from './recordLink';
+import { useColumnWidths } from './columnWidths';
 
 const FuelChart = lazy(() => import('./FuelChart'));
 
@@ -70,12 +71,15 @@ export default function RecordPanel({
   kind,
   vehicle,
   reduced,
+  fixed,
 }: {
   kind: RecordKind;
   vehicle: VehicleDetail;
   reduced: boolean;
+  /** Filters this panel always applies and doesn't offer (e.g. contracted work only). */
+  fixed?: RecordFilters;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const serial = vehicle.serial;
   const ui = KIND_UI[kind];
   const ctx = useFormatCtx(vehicle.usageUnit);
@@ -84,7 +88,11 @@ export default function RecordPanel({
   const [filters, setFilters] = useState<RecordFilters>({});
   const [search, setSearch] = useState('');
   const q = useDeferredValue(search.trim());
-  const active = useMemo(() => ({ ...filters, q: q || undefined }), [filters, q]);
+  const active = useMemo(() => ({ ...filters, ...fixed, q: q || undefined }), [filters, fixed, q]);
+  const cols = useColumnWidths(
+    fixed ? `${kind}.${Object.values(fixed).join('.')}` : kind,
+    i18n.dir() === 'rtl',
+  );
   const records = useRecords(serial, kind, active);
   const remove = useSetDeleted(serial, kind);
   const exporter = useExport();
@@ -101,7 +109,7 @@ export default function RecordPanel({
 
   const rows = useMemo(() => records.data?.pages.flatMap((p) => p.items) ?? [], [records.data]);
   const total = records.data?.pages[0]?.total ?? 0;
-  const filtered = Object.values(active).some(Boolean);
+  const filtered = Object.values({ ...filters, q: q || undefined }).some(Boolean);
 
   const sorting: SortingState = filters.sort
     ? [{ id: filters.sort, desc: (filters.dir ?? 'desc') === 'desc' }]
@@ -246,34 +254,36 @@ export default function RecordPanel({
             className={cn(CONTROL, 'num')}
           />
         </label>
-        {ui.filters.map((f) =>
-          f.type === 'select' ? (
-            <select
-              key={f.key}
-              value={filters[f.key] ?? ''}
-              onChange={(e) => setFilter(f.key, e.target.value)}
-              aria-label={t(f.label as never)}
-              className={CONTROL}
-            >
-              <option value="">{t('records.filterAll', { name: t(f.label as never) })}</option>
-              {f.options?.(ctx).map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <label key={f.key} className="flex items-center gap-1.5 text-xs">
-              <input
-                type="checkbox"
-                checked={filters[f.key] === '1'}
-                onChange={(e) => setFilter(f.key, e.target.checked ? '1' : undefined)}
-                className="accent-[var(--fh-accent)] size-4"
-              />
-              {t(f.label as never)}
-            </label>
-          ),
-        )}
+        {ui.filters
+          .filter((f) => !fixed?.[f.key])
+          .map((f) =>
+            f.type === 'select' ? (
+              <select
+                key={f.key}
+                value={filters[f.key] ?? ''}
+                onChange={(e) => setFilter(f.key, e.target.value)}
+                aria-label={t(f.label as never)}
+                className={CONTROL}
+              >
+                <option value="">{t('records.filterAll', { name: t(f.label as never) })}</option>
+                {f.options?.(ctx).map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <label key={f.key} className="flex items-center gap-1.5 text-xs">
+                <input
+                  type="checkbox"
+                  checked={filters[f.key] === '1'}
+                  onChange={(e) => setFilter(f.key, e.target.checked ? '1' : undefined)}
+                  className="accent-[var(--fh-accent)] size-4"
+                />
+                {t(f.label as never)}
+              </label>
+            ),
+          )}
         <div className="ms-auto flex gap-2">
           <Button
             variant="outline"
@@ -336,8 +346,9 @@ export default function RecordPanel({
                                 ? 'descending'
                                 : undefined
                           }
+                          style={cols.style(h.id)}
                           className={cn(
-                            'px-1.5 py-2 font-medium',
+                            'group relative px-1.5 py-2 font-medium',
                             numeric ? 'text-end' : 'text-start',
                           )}
                         >
@@ -353,6 +364,21 @@ export default function RecordPanel({
                             </button>
                           ) : (
                             flexRender(h.column.columnDef.header, h.getContext())
+                          )}
+                          {col && (
+                            <span
+                              {...cols.handle(
+                                h.id,
+                                t('records.resizeColumn'),
+                                t('records.resizeColumnHint'),
+                              )}
+                              className={cn(
+                                'absolute inset-y-1 -end-1 z-10 w-2 cursor-col-resize touch-none rounded-full',
+                                'hover:bg-[var(--fh-accent)]/60 focus-visible:bg-[var(--fh-accent)] focus-visible:outline-none',
+                                cols.widths[h.id] && 'bg-border-strong/60',
+                              )}
+                              data-testid="col-resize"
+                            />
                           )}
                         </th>
                       );
@@ -374,14 +400,18 @@ export default function RecordPanel({
                     {r.getVisibleCells().map((c, i) => {
                       const col = c.column.columnDef.meta as Column | undefined;
                       const numeric = col?.kind === 'number' || col?.kind === 'money';
+                      const sized = !!cols.widths[c.column.id];
                       return (
                         <td
                           key={c.id}
+                          style={cols.style(c.column.id)}
                           className={cn(
                             'px-1.5 py-2',
                             numeric && 'text-end whitespace-nowrap',
                             col?.kind === 'date' && 'whitespace-nowrap',
-                            col?.kind === 'long' && 'min-w-48 max-w-96',
+                            sized
+                              ? 'overflow-hidden break-words'
+                              : col?.kind === 'long' && 'min-w-48 max-w-96',
                           )}
                         >
                           {i === 0 ? (
@@ -475,6 +505,7 @@ export default function RecordPanel({
           unit={vehicle.usageUnit}
           location={vehicle.location}
           row={editing === 'new' ? undefined : editing}
+          preset={fixed as Record<string, string> | undefined}
           last={filters.sort ? undefined : rows[0]}
           canEdit={editing === 'new' || canChange(editing)}
           reduced={reduced}

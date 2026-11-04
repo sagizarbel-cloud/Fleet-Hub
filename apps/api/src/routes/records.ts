@@ -361,6 +361,9 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
         vendor: true,
         amount: true,
         notes: true,
+        approvedAt: true,
+        linkedRecordType: true,
+        linkedRecordId: true,
         category: { select: { code: true } },
       },
     });
@@ -370,8 +373,9 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
       rows.map((r) => r.id),
     );
     return {
-      items: rows.map(({ amount, category, ...d }) => ({
+      items: rows.map(({ amount, category, approvedAt, ...d }) => ({
         ...d,
+        approved: approvedAt !== null,
         amount: amount?.toNumber() ?? null,
         category: category?.code ?? null,
         attachments: files.get(d.id) ?? [],

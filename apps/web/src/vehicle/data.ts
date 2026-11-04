@@ -15,6 +15,8 @@ export interface AssignedItem {
 /** GET /api/vehicles/:serial. Never carries the start code itself, only `hasStartCode`. */
 export interface VehicleDetail {
   serial: string;
+  /** An excavator's tool (Revisions 1); null means the bucket. */
+  tool: string | null;
   vin: string | null;
   licenseNo: string | null;
   make: string;
@@ -71,6 +73,8 @@ export interface VehicleDetail {
     documents: number;
     quotes: number;
     notes: number;
+    workCards: number;
+    contracted: number;
   };
   items: AssignedItem[];
 }

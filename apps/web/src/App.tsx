@@ -27,9 +27,14 @@ const SETTINGS = [
   ['mine', '/settings'],
   ['lists', '/settings/lists'],
   ['required', '/settings/required'],
+  ['report', '/settings/report'],
   ['users', '/settings/users'],
   ['import', '/settings/import'],
 ] as const;
+// The printable vehicle report (Revisions 1).
+const VehicleReportPage = lazy(() =>
+  import('@/vehicle/report/VehicleReportPage').then((m) => ({ default: m.VehicleReportPage })),
+);
 const I18nCheckPage = lazy(() =>
   import('@/pages/I18nCheckPage').then((m) => ({ default: m.I18nCheckPage })),
 );
@@ -48,6 +53,14 @@ const router = createBrowserRouter([
           { path: '/fleet', element: null },
           { path: '/vehicles/:serial', element: null },
         ],
+      },
+      {
+        path: '/vehicles/:serial/report',
+        element: (
+          <Suspense>
+            <VehicleReportPage />
+          </Suspense>
+        ),
       },
       ...(['receipts', 'quotes', 'equipment'] as const).map((area) => {
         const Page = MONEY_PAGES[area];

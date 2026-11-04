@@ -29,6 +29,8 @@ export interface Tile {
   department: string | null;
   location: string | null;
   openIssues: number;
+  /** An excavator's tool (Revisions 1); null means the bucket. */
+  tool: string | null;
 }
 export interface Dashboard {
   kpis: {

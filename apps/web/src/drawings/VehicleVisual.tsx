@@ -16,6 +16,8 @@ export const STATUS_VAR: Record<VehicleStatus, string> = {
 
 interface Props {
   type: string;
+  /** An excavator's tool (Revisions 1); the bucket when absent. */
+  tool?: string | null;
   view: VisualView;
   status: VehicleStatus;
   /** Rendered width in px. */
@@ -38,8 +40,8 @@ export function Layers({ drawing }: { drawing: ViewDrawing }) {
 }
 
 /** A vehicle's line drawing in top-down, side or isometric view, tinted by status. */
-export function VehicleVisual({ type, view, status, size, draw = false, className }: Props) {
-  const def = drawingFor(type);
+export function VehicleVisual({ type, tool, view, status, size, draw = false, className }: Props) {
+  const def = drawingFor(type, tool);
   const svgRef = useRef<SVGSVGElement>(null);
   const style = { '--vd-color': STATUS_VAR[status] } as CSSProperties;
 
@@ -51,7 +53,7 @@ export function VehicleVisual({ type, view, status, size, draw = false, classNam
       .forEach((el) => {
         el.setAttribute('pathLength', '1');
       });
-  }, [draw, type, view]);
+  }, [draw, type, tool, view]);
 
   if (view === 'iso') {
     return (

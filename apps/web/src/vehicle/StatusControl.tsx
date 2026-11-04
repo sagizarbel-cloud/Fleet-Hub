@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Hand, TriangleAlert } from 'lucide-react';
+import { Hand, SlidersHorizontal, TriangleAlert } from 'lucide-react';
 import { hasRole, VEHICLE_STATUSES, type VehicleStatus } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { Popover } from '@/components/Popover';
@@ -42,50 +42,41 @@ export function StatusControl({
   );
   const report = useRecordLink();
   const open = vehicle?.computed.openMalfunctions ?? 0;
-  const showIssues = () => report.open('malfunctions', 'open');
-  // Revisions 1: the open malfunctions are a click away from the status.
-  const issues = open > 0 && (
+  // Revisions 1 (fleet manager): the status opens the malfunction report, for everyone.
+  const opener = vehicle ? (
     <button
       type="button"
-      onClick={showIssues}
-      className="text-warn border-warn/40 hover:bg-warn/10 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+      onClick={() => report.open('malfunctions', 'open')}
+      className="hover:ring-border-strong inline-flex items-center gap-1 rounded-full hover:ring-1"
+      aria-label={t('report.statusHint', { status: t(`status.${status}`), count: open })}
+      title={t('report.statusHint', { status: t(`status.${status}`), count: open })}
       data-testid="open-issues"
     >
-      <TriangleAlert aria-hidden className="size-3.5" />
-      {t('report.openCount', { count: open })}
+      {badge}
+      {open > 0 && (
+        <span className="text-warn inline-flex items-center gap-0.5 pe-1.5 text-xs font-medium">
+          <TriangleAlert aria-hidden className="size-3.5" />
+          <span className="num">{open}</span>
+        </span>
+      )}
     </button>
+  ) : (
+    badge
   );
 
-  if (!vehicle || !user || !hasRole(user.role, 'ADMIN'))
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        {open > 0 ? (
-          <button
-            type="button"
-            onClick={showIssues}
-            className="rounded-full"
-            aria-label={t('report.openTitle')}
-          >
-            {badge}
-          </button>
-        ) : (
-          badge
-        )}
-        {issues}
-      </span>
-    );
+  if (!vehicle || !user || !hasRole(user.role, 'ADMIN')) return opener;
 
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center gap-1">
+      {opener}
       <Popover
         label={t('vehicle.override.title')}
-        trigger={badge}
-        className="[&>button]:h-auto [&>button]:border-transparent [&>button]:p-0.5"
+        trigger={<SlidersHorizontal aria-hidden className="size-3.5" />}
+        className="[&>button]:text-muted [&>button]:hover:text-text [&>button]:size-7 [&>button]:p-0"
         panelClassName="w-72"
       >
         {(close) => <OverrideForm vehicle={vehicle} close={close} />}
       </Popover>
-      {issues}
     </span>
   );
 }

@@ -236,6 +236,18 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   fuelRequired: { place: false, fueledBy: false, fuelType: false, provider: false },
 };
 
+/** Image types a company logo can be (Revisions 1); SVG is left out so no script can ride in. */
+export const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+/** Largest logo, in bytes. */
+export const LOGO_MAX_BYTES = 300 * 1024;
+/** A company logo for printed vehicle reports, as a data URL (admins only). */
+export const logoBody = z.object({
+  dataUrl: z
+    .string()
+    .max(Math.ceil((LOGO_MAX_BYTES * 4) / 3) + 64)
+    .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/),
+});
+
 /** The mandatory fuel fields this input leaves empty. */
 export function missingFuelFields(
   required: FuelRequired,

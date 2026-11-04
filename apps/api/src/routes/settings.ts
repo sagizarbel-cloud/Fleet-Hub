@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { Prisma } from '@prisma/client';
 import {
   appSettingsBody,
+  LOGO_MAX_BYTES,
+  logoBody,
   LOOKUP_KINDS,
   lookupBody,
   lookupItemParams,
@@ -75,6 +77,68 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
   app.put('/app', { preHandler: requireRole('ADMIN') }, async (req) => {
     const body = parse(appSettingsBody, req.body);
     return app.db.$transaction((t) => writeAppSettings(t, req.user!.id, body));
+  });
+
+  // ---------- Company logo for printed reports (Revisions 1) ----------
+
+  const LOGO_KEY = 'companyLogo';
+
+  /** The logo image itself, for any signed-in user; 404 when none is set. */
+  app.get('/logo', { preHandler: requireUser }, async (_req, reply) => {
+    const row = await app.db.appSetting.findUnique({ where: { key: LOGO_KEY } });
+    const value = row?.value as { mime?: string; data?: string } | undefined;
+    if (!value?.mime || !value.data) throw new HttpError(404, 'not_found');
+    return reply
+      .header('content-type', value.mime)
+      .header('cache-control', 'private, no-cache')
+      .header('x-content-type-options', 'nosniff')
+      .send(Buffer.from(value.data, 'base64'));
+  });
+
+  /** Admins set the logo (PNG, JPEG or WebP, up to 300 KB); the change is audit-logged. */
+  app.put('/logo', { preHandler: requireRole('ADMIN') }, async (req) => {
+    const { dataUrl } = parse(logoBody, req.body);
+    const [, mime, data] = /^data:(image\/[a-z]+);base64,(.*)$/.exec(dataUrl)!;
+    const bytes = Buffer.from(data!, 'base64');
+    if (bytes.length > LOGO_MAX_BYTES)
+      throw Object.assign(new HttpError(400, 'validation_failed'), {
+        issues: [{ path: 'dataUrl', code: 'too_big' }],
+      });
+    const value = { mime: mime!, data: data! };
+    await app.db.$transaction(async (t) => {
+      await t.appSetting.upsert({
+        where: { key: LOGO_KEY },
+        create: { key: LOGO_KEY, value, updatedById: req.user!.id },
+        update: { value, updatedById: req.user!.id },
+      });
+      await t.auditLog.create({
+        data: {
+          userId: req.user!.id,
+          action: 'setting.changed',
+          targetType: 'AppSetting',
+          targetId: LOGO_KEY,
+          meta: { mime: mime!, bytes: bytes.length },
+        },
+      });
+    });
+    return { ok: true };
+  });
+
+  app.delete('/logo', { preHandler: requireRole('ADMIN') }, async (req) => {
+    await app.db.$transaction(async (t) => {
+      const gone = await t.appSetting.deleteMany({ where: { key: LOGO_KEY } });
+      if (gone.count)
+        await t.auditLog.create({
+          data: {
+            userId: req.user!.id,
+            action: 'setting.changed',
+            targetType: 'AppSetting',
+            targetId: LOGO_KEY,
+            meta: { removed: true },
+          },
+        });
+    });
+    return { ok: true };
   });
 
   app.get('/lookups', editor, async () => {

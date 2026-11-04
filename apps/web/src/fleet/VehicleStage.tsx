@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { motion, useAnimate } from 'motion/react';
-import { ArrowLeft, Loader2, Pencil } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, Pencil } from 'lucide-react';
 import type { DetailView } from '@fleet-hub/shared';
 import { DETAIL_VIEWS, hasRole } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
@@ -17,6 +17,7 @@ import { ItemsTable } from '@/vehicle/ItemsTable';
 import { Records } from '@/vehicle/Records';
 import { attachmentUrl } from '@/vehicle/records/api';
 import { StatusControl } from '@/vehicle/StatusControl';
+import { ToolPicker } from '@/vehicle/ToolPicker';
 import { ReportHost } from '@/vehicle/ReportHost';
 import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
 import { VitalsBar } from '@/vehicle/VitalsBar';
@@ -26,6 +27,9 @@ import { lookupName, useLookups, type Tile } from './data';
 // the saved preference (per user, on the server) is the source of truth.
 const VehicleForm = lazy(() =>
   import('@/vehicle/VehicleForm').then((m) => ({ default: m.VehicleForm })),
+);
+const ReportDialog = lazy(() =>
+  import('@/vehicle/report/ReportDialog').then((m) => ({ default: m.ReportDialog })),
 );
 const VIEW_KEY = 'fh.vehicleView';
 
@@ -112,6 +116,7 @@ export function VehicleStage({
   const { data: user } = useSession();
   const canEdit = !!user && hasRole(user.role, 'EDITOR');
   const [editing, setEditing] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
   const [heroPanelRef, heroPanelWidth] = useWidth<HTMLDivElement>();
@@ -341,6 +346,16 @@ export function VehicleStage({
                     </h1>
                   </div>
                   <StatusControl vehicle={vehicle} fallback={tile.status} />
+                  <button
+                    type="button"
+                    onClick={() => setReporting(true)}
+                    className="border-border hover:bg-border grid size-9 place-items-center rounded-lg border"
+                    aria-label={t('vreport.button')}
+                    title={t('vreport.button')}
+                    data-testid="vehicle-report-button"
+                  >
+                    <FileText aria-hidden className="size-4" />
+                  </button>
                   {canEdit && (
                     <button
                       type="button"
@@ -394,6 +409,7 @@ export function VehicleStage({
                 >
                   <HeroVisual
                     type={tile.type}
+                    tool={vehicle?.tool ?? tile.tool}
                     status={vehicle?.status ?? tile.status}
                     pose={returning ? 'flat' : pose}
                     size={size}
@@ -418,6 +434,11 @@ export function VehicleStage({
                 <Loader2 aria-hidden className="text-muted my-24 size-6 animate-spin" />
               ) : (
                 <p className="text-muted my-24 text-sm">{t('vehicle.notFound', { serial })}</p>
+              )}
+              {tile && (
+                <motion.div data-panel {...toggleMotion} className="absolute start-2 top-2">
+                  <ToolPicker vehicle={vehicle} type={tile.type} />
+                </motion.div>
               )}
               {tile && (
                 <motion.div
@@ -486,6 +507,11 @@ export function VehicleStage({
       {editing && (
         <Suspense>
           <VehicleForm serial={serial} reduced={reduced} onClose={() => setEditing(false)} />
+        </Suspense>
+      )}
+      {reporting && (
+        <Suspense>
+          <ReportDialog serial={serial} reduced={reduced} onClose={() => setReporting(false)} />
         </Suspense>
       )}
       <ReportHost vehicle={vehicle} reduced={reduced} />

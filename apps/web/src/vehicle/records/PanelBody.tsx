@@ -16,6 +16,17 @@ export default function PanelBody({
 }) {
   if (isRecordKind(recordKey))
     return <RecordPanel key={recordKey} kind={recordKey} vehicle={vehicle} reduced={reduced} />;
+  // Contracted work (Revisions 1): the work cards that someone outside the team did.
+  if (recordKey === 'contracted')
+    return (
+      <RecordPanel
+        key={recordKey}
+        kind="workCards"
+        vehicle={vehicle}
+        reduced={reduced}
+        fixed={{ performedBy: 'CONTRACTED' }}
+      />
+    );
   if (recordKey === 'ownership') return <OwnershipPanel vehicle={vehicle} reduced={reduced} />;
   if (recordKey === 'documents') return <DocumentsPanel vehicle={vehicle} />;
   return <QuotesPanel vehicle={vehicle} />;

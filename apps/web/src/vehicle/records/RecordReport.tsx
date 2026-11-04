@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Loader2, Pencil, TriangleAlert } from 'lucide-react';
+import { ChevronRight, Loader2, Pencil, ReceiptText, Trash2, TriangleAlert } from 'lucide-react';
 import { hasRole, type RecordKind } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { ResizableSheet } from '@/components/ResizableSheet';
@@ -12,10 +12,17 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { dateFormat, localeOf } from '@/lib/intl';
 import type { VehicleDetail } from '../data';
-import { attachmentUrl, useRecord, type RecordPage, type RecordRow } from './api';
+import {
+  attachmentUrl,
+  useProgress,
+  useRecord,
+  type ProgressEntry,
+  type RecordPage,
+  type RecordRow,
+} from './api';
 import { AttachmentList } from './Attachments';
 import { cellText, useFormatCtx } from './format';
-import { KIND_UI, type Column, type FormatCtx } from './kinds';
+import { KIND_UI, localDay, type Column, type FormatCtx } from './kinds';
 import { RecordForm } from './RecordForm';
 import { useRecordLink, type ReportTarget } from './recordLink';
 
@@ -24,7 +31,7 @@ const MALFUNCTION_PARTS = [
   { title: 'report.issue', keys: ['reportedAt', 'severity', 'isAccident', 'description'] },
   {
     title: 'report.whatHappened',
-    keys: ['state', 'resolution', 'resolvedAt', 'downtimeHours', 'cost'],
+    keys: ['state', 'resolvedAt', 'downtimeHours', 'cost'],
   },
 ] as const;
 
@@ -120,6 +127,159 @@ function History({
         );
       })}
     </ol>
+  );
+}
+
+/**
+ * What was done so far about a malfunction (Revisions 1, fleet manager): dated updates, oldest
+ * first, each with its author. Editors add and remove them.
+ */
+function ProgressLog({
+  vehicle,
+  malfunctionId,
+  entries,
+  canEdit,
+}: {
+  vehicle: VehicleDetail;
+  malfunctionId: string;
+  entries: ProgressEntry[];
+  canEdit: boolean;
+}) {
+  const { t } = useTranslation();
+  const ctx = useFormatCtx(vehicle.usageUnit);
+  const { add, remove } = useProgress(vehicle.serial, malfunctionId);
+  const [body, setBody] = useState('');
+  const [at, setAt] = useState(() => localDay());
+  const [failed, setFailed] = useState(false);
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setFailed(false);
+    add.mutate(
+      { at: at || null, body: body.trim() },
+      { onSuccess: () => setBody(''), onError: () => setFailed(true) },
+    );
+  };
+  return (
+    <div className="space-y-3" data-testid="progress-log">
+      {entries.length === 0 ? (
+        <p className="text-muted text-sm">{t('report.noProgress')}</p>
+      ) : (
+        <ol className="border-border space-y-3 border-s-2 ps-4">
+          {entries.map((p) => (
+            <li key={p.id} className="relative" data-progress={p.id}>
+              <span
+                aria-hidden
+                className="absolute -start-[1.3rem] top-1.5 size-2.5 rounded-full bg-[var(--fh-accent)]"
+              />
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted text-xs">
+                    <span className="num">{ctx.date(p.at)}</span>
+                    {p.createdBy && <> · {t('report.by', { name: p.createdBy })}</>}
+                  </p>
+                  <p className="mt-0.5 text-sm">
+                    <span className="block whitespace-pre-line">
+                      <bdi>{p.body}</bdi>
+                    </span>
+                  </p>
+                </div>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => remove.mutate(p.id)}
+                    disabled={remove.isPending}
+                    aria-label={t('report.removeProgress')}
+                    title={t('report.removeProgress')}
+                    className="text-muted hover:text-bad grid size-7 shrink-0 place-items-center rounded-md"
+                  >
+                    <Trash2 aria-hidden className="size-3.5" />
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+      {canEdit && (
+        <form onSubmit={submit} className="space-y-2" data-testid="progress-form">
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">{t('report.addProgress')}</span>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={2}
+              maxLength={2000}
+              placeholder={t('report.progressPlaceholder')}
+              className="border-border-strong bg-surface w-full rounded-md border px-2.5 py-2 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)]"
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1 text-xs">
+              <span className="text-muted">{t('report.progressDate')}</span>
+              <input
+                type="date"
+                value={at}
+                max={localDay()}
+                onChange={(e) => setAt(e.target.value)}
+                className="border-border-strong bg-surface num h-8 rounded-md border px-2 text-xs"
+              />
+            </label>
+            {failed && (
+              <p role="alert" className="text-bad text-xs">
+                {t('report.progressFailed')}
+              </p>
+            )}
+            <Button
+              type="submit"
+              size="sm"
+              className="ms-auto"
+              disabled={!body.trim() || add.isPending}
+            >
+              {t('report.saveProgress')}
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+interface LinkedReceipt {
+  id: string;
+  kind: 'RECEIPT' | 'INVOICE' | 'OTHER';
+  date: string;
+  vendor: string | null;
+  amount: number | null;
+}
+
+/** A work card's receipts (Revisions 1). */
+function Receipts({ row, ctx }: { row: RecordRow; ctx: FormatCtx }) {
+  const { t } = useTranslation();
+  const items = (Array.isArray(row.receipts) ? row.receipts : []) as LinkedReceipt[];
+  if (!items.length) return <p className="text-muted text-sm">{t('report.noReceipts')}</p>;
+  const total = items.reduce((sum, r) => sum + (r.amount ?? 0), 0);
+  return (
+    <ul
+      className="border-border divide-border divide-y rounded-lg border"
+      data-testid="report-receipts"
+    >
+      {items.map((r) => (
+        <li key={r.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+          <ReceiptText aria-hidden className="text-muted size-4 shrink-0" />
+          <span className="num text-muted shrink-0 text-xs">{ctx.date(r.date)}</span>
+          <span className="min-w-0 flex-1 truncate">
+            {r.vendor ? <bdi>{r.vendor}</bdi> : t(`records.documentKind.${r.kind}`)}
+          </span>
+          {r.amount !== null && <span className="num shrink-0">{ctx.money(r.amount)}</span>}
+        </li>
+      ))}
+      {items.length > 1 && (
+        <li className="flex justify-end px-3 py-2 text-sm font-medium">
+          <span className="num">{ctx.money(total)}</span>
+        </li>
+      )}
+    </ul>
   );
 }
 
@@ -254,20 +414,35 @@ function OneRecord({
             </p>
           )}
           {kind === 'malfunctions' ? (
-            MALFUNCTION_PARTS.map((part) => (
-              <Section key={part.title} title={t(part.title)}>
-                <Fields
-                  columns={part.keys
-                    .map((k) => ui.columns.find((c) => c.key === k))
-                    .filter((c): c is Column => !!c)}
-                  row={row}
-                  ctx={ctx}
+            <>
+              {MALFUNCTION_PARTS.map((part) => (
+                <Section key={part.title} title={t(part.title)}>
+                  <Fields
+                    columns={part.keys
+                      .map((k) => ui.columns.find((c) => c.key === k))
+                      .filter((c): c is Column => !!c)}
+                    row={row}
+                    ctx={ctx}
+                  />
+                </Section>
+              ))}
+              <Section title={t('report.progress')}>
+                <ProgressLog
+                  vehicle={vehicle}
+                  malfunctionId={row.id}
+                  entries={(row.progress as ProgressEntry[] | undefined) ?? []}
+                  canEdit={!!user && hasRole(user.role, 'EDITOR')}
                 />
               </Section>
-            ))
+            </>
           ) : (
             <Section title={t('report.details')}>
               <Fields columns={ui.columns} row={row} ctx={ctx} />
+            </Section>
+          )}
+          {kind === 'workCards' && (
+            <Section title={t('report.receipts')}>
+              <Receipts row={row} ctx={ctx} />
             </Section>
           )}
           <Section title={t('records.files')}>

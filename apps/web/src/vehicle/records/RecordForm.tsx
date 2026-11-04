@@ -17,6 +17,7 @@ import {
   uploadFiles,
   useAppSettings,
   useFuelSuggestions,
+  useDocuments,
   useSaveRecord,
   type RecordRow,
 } from './api';
@@ -48,6 +49,7 @@ export function RecordForm({
   location,
   row,
   last,
+  preset,
   canEdit,
   reduced,
   onClose,
@@ -61,6 +63,8 @@ export function RecordForm({
   row?: RecordRow;
   /** The newest record of this kind, for defaults (e.g. last time's fuel type). */
   last?: RecordRow;
+  /** Values a new record starts with, over the kind's defaults (e.g. contracted). */
+  preset?: FormValues;
   canEdit: boolean;
   reduced: boolean;
   onClose: () => void;
@@ -73,17 +77,20 @@ export function RecordForm({
   const [values, setValues] = useState<FormValues>(() =>
     row
       ? toForm(kind, row, unit)
-      : ui.defaults({
-          unit,
-          location,
-          last,
-          locationName: location
-            ? (lookupName(
-                ctx.lookups?.locations.find((l) => l.code === location),
-                ctx.lang,
-              ) ?? null)
-            : null,
-        }),
+      : {
+          ...ui.defaults({
+            unit,
+            location,
+            last,
+            locationName: location
+              ? (lookupName(
+                  ctx.lookups?.locations.find((l) => l.code === location),
+                  ctx.lang,
+                ) ?? null)
+              : null,
+          }),
+          ...preset,
+        },
   );
   const { data: settings } = useAppSettings();
   const suggestions = useFuelSuggestions(ui.fields.some((f) => f.suggest)).data;
@@ -192,27 +199,40 @@ export function RecordForm({
       }
     >
       <form id="record-form" noValidate onSubmit={submit} className="space-y-4" data-kind={kind}>
-        {visible.map((f) => (
-          <FieldInput
-            key={f.key}
-            field={{ ...f, required: isRequired(f) }}
-            suggestions={
-              f.suggest
-                ? [
-                    ...(f.suggest === 'place'
-                      ? (ctx.lookups?.locations ?? []).map((l) => lookupName(l, ctx.lang) ?? l.code)
-                      : []),
-                    ...(suggestions?.[f.suggest] ?? []),
-                  ]
-                : undefined
-            }
-            value={values[f.key]}
-            error={errors[f.key]}
-            unit={unit}
-            options={f.options?.(ctx)}
-            onChange={(v) => set(f.key, v)}
-          />
-        ))}
+        {visible.map((f) =>
+          f.type === 'receipts' ? (
+            <ReceiptPicker
+              key={f.key}
+              serial={serial}
+              cardId={row?.id ?? savedId}
+              label={t(f.label as never)}
+              value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
+              onChange={(v) => set(f.key, v)}
+            />
+          ) : (
+            <FieldInput
+              key={f.key}
+              field={{ ...f, required: isRequired(f) }}
+              suggestions={
+                f.suggest
+                  ? [
+                      ...(f.suggest === 'place'
+                        ? (ctx.lookups?.locations ?? []).map(
+                            (l) => lookupName(l, ctx.lang) ?? l.code,
+                          )
+                        : []),
+                      ...(suggestions?.[f.suggest] ?? []),
+                    ]
+                  : undefined
+              }
+              value={values[f.key]}
+              error={errors[f.key]}
+              unit={unit}
+              options={f.options?.(ctx)}
+              onChange={(v) => set(f.key, v)}
+            />
+          ),
+        )}
         <fieldset className="space-y-2">
           <legend className="mb-1 text-xs font-medium">{t('records.files')}</legend>
           {row && <AttachmentList serial={serial} items={row.attachments} canEdit={canEdit} />}
@@ -220,6 +240,74 @@ export function RecordForm({
         </fieldset>
       </form>
     </Sheet>
+  );
+}
+
+/**
+ * The vehicle's approved receipts a work card can be linked to (Revisions 1): those not linked
+ * to anything yet, and those already linked to this card.
+ */
+function ReceiptPicker({
+  serial,
+  cardId,
+  label,
+  value,
+  onChange,
+}: {
+  serial: string;
+  cardId: string | null;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const { data } = useDocuments(serial);
+  const ctx = useFormatCtx('KM');
+  const chosen = new Set(value ? value.split(',') : []);
+  const usable = (data?.items ?? []).filter(
+    (d) =>
+      d.approved &&
+      (!d.linkedRecordId ||
+        chosen.has(d.id) ||
+        (d.linkedRecordType === 'WorkCard' && d.linkedRecordId === cardId)),
+  );
+  const toggle = (id: string, on: boolean) => {
+    const next = new Set(chosen);
+    if (on) next.add(id);
+    else next.delete(id);
+    onChange([...next].join(','));
+  };
+  return (
+    <fieldset className="space-y-1.5" data-testid="receipt-picker">
+      <legend className="mb-1 text-xs font-medium">{label}</legend>
+      {usable.length === 0 ? (
+        <p className="text-muted text-xs">{t('records.field.noReceipts')}</p>
+      ) : (
+        <ul className="border-border max-h-48 divide-y overflow-y-auto rounded-md border">
+          {usable.map((d) => (
+            <li key={d.id}>
+              <label className="flex items-center gap-2 px-2.5 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={chosen.has(d.id)}
+                  onChange={(e) => toggle(d.id, e.target.checked)}
+                  className="accent-[var(--fh-accent)] size-4 shrink-0"
+                />
+                <span className="num text-muted shrink-0 text-xs">{ctx.date(d.date)}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {d.vendor ? <bdi>{d.vendor}</bdi> : t(`records.documentKind.${d.kind}` as never)}
+                </span>
+                {d.amount !== null && (
+                  <span className="num shrink-0 text-xs" lang={i18n.language}>
+                    {ctx.money(d.amount)}
+                  </span>
+                )}
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+    </fieldset>
   );
 }
 

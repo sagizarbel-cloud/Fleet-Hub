@@ -10,6 +10,7 @@ const KIND_OF_SOURCE: Record<string, RecordKind> = {
   Movement: 'movements',
   Inspection: 'inspections',
   Note: 'notes',
+  WorkCard: 'workCards',
 };
 
 /** What the record report shows: one record, or the vehicle's open malfunctions to pick from. */
