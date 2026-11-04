@@ -1,8 +1,14 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import {
+  hasRole,
   ownershipBody,
+  progressBody,
+  progressItemParams,
+  progressParams,
   RECORD_BODIES,
+  TOOL_TYPES,
+  toolBody,
   recordIdParams,
   recordParams,
   recordsQuery,
@@ -19,6 +25,7 @@ import {
   fuelEconomy,
   getRecord,
   listRecords,
+  progressOf,
   serializeOne,
   setDeleted,
   updateRecord,
@@ -120,6 +127,114 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
       },
     });
   }
+
+  // ---------- Malfunction progress updates (Revisions 1) ----------
+
+  /** Editors add "what was done so far" to a malfunction; each update is an Event too. */
+  app.post(
+    '/:serial/records/malfunctions/:id/progress',
+    { preHandler: requireUser },
+    async (req, reply) => {
+      const { serial, id } = parse(progressParams, req.params);
+      const { at, body } = parse(progressBody, req.body);
+      const user = req.user!;
+      if (!hasRole(user.role, 'EDITOR')) throw new HttpError(403, 'forbidden');
+      const progress = await app.db.$transaction(async (tx) => {
+        const vehicle = await vehicleRef(tx, serial);
+        const m = await tx.malfunction.findFirst({
+          where: { id, vehicleId: vehicle.id, deletedAt: null },
+          select: { id: true, description: true },
+        });
+        if (!m) throw new HttpError(404, 'not_found');
+        const when = at ?? new Date();
+        const row = await tx.malfunctionProgress.create({
+          data: { malfunctionId: id, at: when, body, createdById: user.id },
+        });
+        await tx.event.create({
+          data: {
+            vehicleId: vehicle.id,
+            userId: user.id,
+            type: 'MALFUNCTION_PROGRESS',
+            occurredAt: when,
+            sourceType: 'Malfunction',
+            sourceId: id,
+            params: { description: m.description, progress: body, progressId: row.id },
+          },
+        });
+        return progressOf(tx, id);
+      });
+      return reply.status(201).send({ progress });
+    },
+  );
+
+  /** Removes a progress update (editors), and its timeline entry. */
+  app.delete(
+    '/:serial/records/malfunctions/:id/progress/:progressId',
+    { preHandler: requireRole('EDITOR') },
+    async (req) => {
+      const { serial, id, progressId } = parse(progressItemParams, req.params);
+      return app.db.$transaction(async (tx) => {
+        const vehicle = await vehicleRef(tx, serial);
+        const row = await tx.malfunctionProgress.findFirst({
+          where: {
+            id: progressId,
+            malfunctionId: id,
+            deletedAt: null,
+            malfunction: { vehicleId: vehicle.id },
+          },
+        });
+        if (!row) throw new HttpError(404, 'not_found');
+        const now = new Date();
+        await tx.malfunctionProgress.update({
+          where: { id: progressId },
+          data: { deletedAt: now },
+        });
+        await tx.event.updateMany({
+          where: {
+            sourceType: 'Malfunction',
+            sourceId: id,
+            type: 'MALFUNCTION_PROGRESS',
+            params: { path: ['progressId'], equals: progressId },
+          },
+          data: { hiddenAt: now },
+        });
+        return { progress: await progressOf(tx, id) };
+      });
+    },
+  );
+
+  // ---------- Excavator tool (Revisions 1) ----------
+
+  /** Changes the tool on an excavator's arm; the drawing follows and Activity logs it. */
+  app.put('/:serial/tool', { preHandler: requireRole('EDITOR') }, async (req) => {
+    const { serial } = parse(serialParam, req.params);
+    const { tool } = parse(toolBody, req.body);
+    return app.db.$transaction(async (tx) => {
+      const v = await tx.vehicle.findUnique({
+        where: { serial },
+        select: { id: true, tool: true, type: { select: { code: true } } },
+      });
+      if (!v) throw new HttpError(404, 'vehicle_not_found');
+      if (!(TOOL_TYPES as readonly string[]).includes(v.type.code))
+        throw Object.assign(new HttpError(400, 'validation_failed'), {
+          issues: [{ path: 'tool', code: 'notExcavator' }],
+        });
+      const from = v.tool ?? 'bucket';
+      if (from !== tool) {
+        await tx.vehicle.update({ where: { id: v.id }, data: { tool } });
+        await tx.event.create({
+          data: {
+            vehicleId: v.id,
+            userId: req.user!.id,
+            type: 'TOOL_CHANGED',
+            occurredAt: new Date(),
+            params: { from, to: tool },
+          },
+        });
+      }
+      return { tool };
+    });
+  });
 
   app.get('/:serial/fuel-economy', { preHandler: requireUser }, async (req) => {
     const { serial } = parse(serialParam, req.params);

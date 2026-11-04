@@ -41,6 +41,7 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
           make: true,
           model: true,
           nextServiceDate: true,
+          tool: true,
           type: { select: { code: true, category: true } },
           department: { select: { code: true } },
           location: { select: { code: true } },

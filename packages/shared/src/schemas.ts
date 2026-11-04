@@ -1,5 +1,13 @@
 import { z } from 'zod';
-import { MALFUNCTION_SEVERITIES, MALFUNCTION_STATES, ROLES, VEHICLE_STATUSES } from './enums';
+import {
+  EXCAVATOR_TOOLS,
+  MALFUNCTION_SEVERITIES,
+  MALFUNCTION_STATES,
+  ROLES,
+  VEHICLE_STATUSES,
+  WORK_PERFORMERS,
+  WORK_TYPES,
+} from './enums';
 import { INSPECTION_KINDS, RECORD_KINDS, SORT_DIRS, type RecordKind } from './records';
 import { DETAIL_VIEWS, VITAL_KEYS } from './vitals';
 import { ALL_FLEET_COLUMNS, FLEET_GROUP_BY, FLEET_GROUPS } from './fleet';
@@ -104,8 +112,6 @@ export const malfunctionBody = z
     downtimeHours: nullable(z.number().int().min(0).max(100_000)),
     cost: money,
     resolvedAt: nullable(day),
-    /** What was done about it. */
-    resolution: optText(2000),
   })
   .refine((m) => !m.resolvedAt || m.resolvedAt >= m.reportedAt, {
     path: ['resolvedAt'],
@@ -155,6 +161,34 @@ export const inspectionBody = z
 
 export const noteBody = z.object({ body: text(4000) });
 
+/** A work card (Revisions 1): work done on a vehicle, in-house or by a contractor. */
+export const workCardBody = z.object({
+  date: day,
+  workType: z.enum(WORK_TYPES),
+  performedBy: z.enum(WORK_PERFORMERS),
+  description: text(2000),
+  doneBy: optText(200),
+  place: optText(120),
+  laborHours: nullable(z.number().min(0).max(10_000)),
+  odometerKm: reading,
+  engineHours: reading,
+  cost: money,
+  notes: optText(1000),
+  /** Receipts of this vehicle linked to the card; replaces the card's current links. */
+  receiptIds: z.array(z.string().min(1).max(40)).max(50).default([]),
+});
+
+/** A progress update on a malfunction (Revisions 1): what was found or done so far. */
+export const progressBody = z.object({ at: nullable(day), body: text(2000) });
+export const progressParams = z.object({
+  serial: z.string().min(1).max(40),
+  id: z.string().min(1).max(40),
+});
+export const progressItemParams = progressParams.extend({ progressId: z.string().min(1).max(40) });
+
+/** Changing an excavator's tool (Revisions 1). */
+export const toolBody = z.object({ tool: z.enum(EXCAVATOR_TOOLS) });
+
 export const RECORD_BODIES = {
   service: serviceBody,
   malfunctions: malfunctionBody,
@@ -163,6 +197,7 @@ export const RECORD_BODIES = {
   movements: movementBody,
   inspections: inspectionBody,
   notes: noteBody,
+  workCards: workCardBody,
 } satisfies Record<RecordKind, z.ZodType>;
 export type RecordBody<K extends RecordKind> = z.input<(typeof RECORD_BODIES)[K]>;
 export type RecordInput<K extends RecordKind> = z.output<(typeof RECORD_BODIES)[K]>;
@@ -193,6 +228,8 @@ export const recordsQuery = z.object({
   accident: flag,
   fluid: code.optional(),
   fuelType: code.optional(),
+  performedBy: z.enum(WORK_PERFORMERS).optional(),
+  workType: z.enum(WORK_TYPES).optional(),
   location: code.optional(),
   inspection: z.enum(INSPECTION_KINDS).optional(),
   drops: flag,
@@ -221,6 +258,7 @@ export const ATTACHMENT_OWNERS = [
   'Movement',
   'Inspection',
   'Note',
+  'WorkCard',
   'Vehicle',
   'Document',
   'Quote',

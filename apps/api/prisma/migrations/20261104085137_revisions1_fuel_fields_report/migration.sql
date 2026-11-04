@@ -4,9 +4,6 @@ ADD COLUMN     "fueledBy" TEXT,
 ADD COLUMN     "place" TEXT,
 ADD COLUMN     "provider" TEXT;
 
--- AlterTable
-ALTER TABLE "Malfunction" ADD COLUMN     "resolution" TEXT;
-
 -- CreateTable
 CREATE TABLE "FuelType" (
     "id" TEXT NOT NULL,

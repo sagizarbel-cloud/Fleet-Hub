@@ -32,7 +32,8 @@ type ModelName =
   | 'fuelEntry'
   | 'movement'
   | 'inspection'
-  | 'note';
+  | 'note'
+  | 'workCard';
 
 export interface VehicleRef {
   id: string;
@@ -56,6 +57,8 @@ export interface ListFilters {
   accident: boolean;
   fluid?: string;
   fuelType?: string;
+  performedBy?: string;
+  workType?: string;
   location?: string;
   inspection?: string;
   mine: boolean;
@@ -75,7 +78,7 @@ interface KindConfig<K extends RecordKind> {
   params(row: Row): Prisma.InputJsonObject;
   filters?(f: ListFilters): object[];
   /** Updates the vehicle's own fields that this kind feeds (usage, location, expiries). */
-  after?(ctx: Ctx, input: RecordInput<K> | null): Promise<void>;
+  after?(ctx: Ctx, input: RecordInput<K> | null, id: string): Promise<void>;
 }
 
 const DAY_MS = 86_400_000;
@@ -273,7 +276,69 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     data: async (input) => input,
     params: () => ({}),
   },
+  workCards: {
+    model: 'workCard',
+    sourceType: 'WorkCard',
+    dateField: 'date',
+    createType: 'WORK_CARD',
+    search: ['description', 'doneBy', 'place', 'notes'],
+    data: async ({ receiptIds: _r, ...rest }) => rest,
+    params: (row) => ({
+      description: row.description as string,
+      performedBy: row.performedBy as string,
+      doneBy: (row.doneBy as string | null) ?? null,
+    }),
+    filters: (f) => [
+      ...(f.performedBy ? [{ performedBy: f.performedBy }] : []),
+      ...(f.workType ? [{ workType: f.workType }] : []),
+    ],
+    after: async (ctx, input, id) => {
+      if (!input) return;
+      await bumpUsage(ctx, input);
+      await linkReceipts(ctx, id, input.receiptIds);
+    },
+  },
 };
+
+/**
+ * Links the given receipts of this vehicle to a work card and unlinks the card's others
+ * (Revisions 1). Only approved, live receipts of the same vehicle can be linked.
+ */
+async function linkReceipts(ctx: Ctx, cardId: string, ids: string[]) {
+  const link = { linkedRecordType: 'WorkCard', linkedRecordId: cardId };
+  const usable = await ctx.tx.document.findMany({
+    where: {
+      id: { in: ids },
+      deletedAt: null,
+      approvedAt: { not: null },
+      vehicles: { some: { vehicleId: ctx.vehicle.id } },
+    },
+    select: { id: true },
+  });
+  if (usable.length !== new Set(ids).size)
+    throw Object.assign(new HttpError(400, 'validation_failed'), {
+      issues: [{ path: 'receiptIds', code: 'unknown' }],
+    });
+  await ctx.tx.document.updateMany({
+    where: { ...link, id: { notIn: ids } },
+    data: { linkedRecordType: null, linkedRecordId: null },
+  });
+  if (ids.length) await ctx.tx.document.updateMany({ where: { id: { in: ids } }, data: link });
+}
+
+/** The receipts linked to each work card, newest first. */
+async function receiptsFor(tx: Tx, ids: string[]) {
+  if (!ids.length) return new Map<string, unknown[]>();
+  const docs = await tx.document.findMany({
+    where: { linkedRecordType: 'WorkCard', linkedRecordId: { in: ids }, deletedAt: null },
+    orderBy: { date: 'desc' },
+    select: { id: true, kind: true, date: true, vendor: true, amount: true, linkedRecordId: true },
+  });
+  const map = new Map<string, unknown[]>();
+  for (const { linkedRecordId, amount, ...d } of docs)
+    map.set(linkedRecordId!, [...(map.get(linkedRecordId!) ?? []), { ...d, amount: num(amount) }]);
+  return map;
+}
 
 export const delegate = (tx: Tx, kind: RecordKind) => tx[KINDS[kind].model] as unknown as Delegate;
 
@@ -329,12 +394,13 @@ export async function attachmentsFor(tx: Tx, ownerType: string, ids: string[]) {
 async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row[]) {
   const ids = rows.map((r) => r.id);
   const authorIds = [...new Set(rows.map((r) => r.createdById).filter((v): v is string => !!v))];
-  const [authors, files, economy] = await Promise.all([
+  const [authors, files, economy, receipts] = await Promise.all([
     authorIds.length
       ? tx.user.findMany({ where: { id: { in: authorIds } }, select: { id: true, name: true } })
       : [],
     attachmentsFor(tx, KINDS[kind].sourceType, ids),
     kind === 'fuel' ? fuelEconomy(tx, vehicle) : null,
+    kind === 'workCards' ? receiptsFor(tx, ids) : null,
   ]);
   const names = new Map(authors.map((a) => [a.id, a.name]));
   const points = new Map(economy?.points.map((p) => [p.id, p]));
@@ -347,6 +413,7 @@ async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row
       ...(kind === 'fuel'
         ? { economy: point?.value ?? null, baseline: point?.baseline ?? null, drop: !!point?.drop }
         : {}),
+      ...(receipts ? { receipts: receipts.get(row.id) ?? [] } : {}),
     };
   });
 }
@@ -470,7 +537,7 @@ export async function createRecord<K extends RecordKind>(
       },
     });
   }
-  await cfg.after?.(ctx, input);
+  await cfg.after?.(ctx, input, row.id);
   return row;
 }
 
@@ -521,7 +588,7 @@ export async function updateRecord<K extends RecordKind>(
       },
     });
   }
-  await cfg.after?.(ctx, input);
+  await cfg.after?.(ctx, input, id);
   return row;
 }
 
@@ -564,7 +631,7 @@ export async function setDeleted(
       params: { kind, of: cfg.createType, ...cfg.params(row) },
     },
   });
-  await cfg.after?.({ tx, vehicle }, null);
+  await cfg.after?.({ tx, vehicle }, null, id);
 }
 
 export async function serializeOne(tx: Tx, kind: RecordKind, vehicle: VehicleRef, row: Row) {
@@ -597,12 +664,31 @@ export async function getRecord(tx: Tx, kind: RecordKind, vehicle: VehicleRef, i
       },
     }),
   ]);
+  const progress = kind === 'malfunctions' ? await progressOf(tx, id) : undefined;
   return {
-    item,
+    item: progress ? { ...item, progress } : item,
     history: events.map(({ user, importRunId, ...e }) => ({
       ...e,
       imported: importRunId !== null,
       by: user?.name ?? null,
     })),
   };
+}
+
+/** A malfunction's progress updates, oldest first, with who wrote each (Revisions 1). */
+export async function progressOf(tx: Tx, malfunctionId: string) {
+  const rows = await tx.malfunctionProgress.findMany({
+    where: { malfunctionId, deletedAt: null },
+    orderBy: [{ at: 'asc' }, { createdAt: 'asc' }],
+    select: { id: true, at: true, body: true, createdById: true },
+  });
+  const ids = [...new Set(rows.map((r) => r.createdById).filter((v): v is string => !!v))];
+  const users = ids.length
+    ? await tx.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+    : [];
+  const names = new Map(users.map((u) => [u.id, u.name]));
+  return rows.map((r) => ({
+    ...r,
+    createdBy: r.createdById ? (names.get(r.createdById) ?? null) : null,
+  }));
 }

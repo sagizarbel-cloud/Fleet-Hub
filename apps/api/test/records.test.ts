@@ -75,6 +75,15 @@ const SAMPLES: { [K in RecordKind]: Json } = {
   movements: { date: isoDay(-1), fromLocation: 'rt_a', toLocation: 'rt_b' },
   inspections: { kind: 'SAFETY_CHECK', date: isoDay(-5), validUntil: isoDay(300), passed: true },
   notes: { body: 'Keys are in the office' },
+  workCards: {
+    date: isoDay(-2),
+    workType: 'MECHANICAL',
+    performedBy: 'CONTRACTED',
+    description: 'Hydraulic hose replaced',
+    doneBy: 'Contractor Ltd',
+    place: 'Their workshop',
+    cost: 900,
+  },
 };
 const CREATE_TYPE: Record<RecordKind, string> = {
   service: 'SERVICE',
@@ -84,6 +93,7 @@ const CREATE_TYPE: Record<RecordKind, string> = {
   movements: 'MOVEMENT',
   inspections: 'INSPECTION',
   notes: 'NOTE_ADDED',
+  workCards: 'WORK_CARD',
 };
 
 beforeAll(async () => {

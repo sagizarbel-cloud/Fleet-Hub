@@ -149,20 +149,38 @@ describe('record report', () => {
       description: 'Hydraulic leak',
     });
     const id = created.json().item.id;
+    const progressUrl = `${url}/${id}/progress`;
+    expect((await req('POST', progressUrl, viewer, { body: 'Hose ordered' })).statusCode).toBe(403);
+    const added = await req('POST', progressUrl, editor, { body: 'Hose ordered' });
+    expect(added.statusCode).toBe(201);
     await req('PUT', `${url}/${id}`, editor, {
       reportedAt: isoDay(-2),
       severity: 'HIGH',
       state: 'RESOLVED',
       description: 'Hydraulic leak',
-      resolution: 'Replaced the hose',
     });
 
     const res = await req('GET', `${url}/${id}`, viewer);
     expect(res.statusCode).toBe(200);
-    expect(res.json().item).toMatchObject({ resolution: 'Replaced the hose', state: 'RESOLVED' });
+    expect(res.json().item.state).toBe('RESOLVED');
+    expect(res.json().item.progress).toMatchObject([{ body: 'Hose ordered' }]);
+    expect(res.json().item.progress[0].createdBy).toBeTruthy();
     const history = res.json().history as { type: string; by: string | null }[];
-    expect(history.map((h) => h.type)).toEqual(['MALFUNCTION_REPORTED', 'MALFUNCTION_RESOLVED']);
+    expect(history.map((h) => h.type)).toEqual([
+      'MALFUNCTION_REPORTED',
+      'MALFUNCTION_PROGRESS',
+      'MALFUNCTION_RESOLVED',
+    ]);
     expect(history.every((h) => h.by)).toBe(true);
+
+    // Removing an update hides its timeline entry too.
+    const progressId = added.json().progress[0].id;
+    await req('DELETE', `${progressUrl}/${progressId}`, editor);
+    const after = await req('GET', `${url}/${id}`, viewer);
+    expect(after.json().item.progress).toEqual([]);
+    expect(after.json().history.map((h: { type: string }) => h.type)).not.toContain(
+      'MALFUNCTION_PROGRESS',
+    );
   });
 
   it('is 404 for a deleted record or one on another vehicle', async () => {
@@ -175,5 +193,85 @@ describe('record report', () => {
     ).toBe(404);
     await req('DELETE', `${url}/${id}`, editor);
     expect((await req('GET', `${url}/${id}`, viewer)).statusCode).toBe(404);
+  });
+});
+
+describe('work cards and receipts', () => {
+  it('links receipts of the same vehicle, and unlinks them when left out', async () => {
+    const serial = await vehicle();
+    const other = await vehicle();
+    const vid = (await app.db.vehicle.findUniqueOrThrow({ where: { serial } })).id;
+    const oid = (await app.db.vehicle.findUniqueOrThrow({ where: { serial: other } })).id;
+    const receipt = (vehicleId: string) =>
+      app.db.document.create({
+        data: {
+          date: new Date(),
+          amount: 500,
+          approvedAt: new Date(),
+          vehicles: { create: { vehicleId } },
+        },
+      });
+    const mine = await receipt(vid);
+    const theirs = await receipt(oid);
+    const url = `/api/vehicles/${serial}/records/workCards`;
+    const card = {
+      date: isoDay(-1),
+      workType: 'ROUTINE',
+      performedBy: 'IN_HOUSE',
+      description: 'Greasing',
+      receiptIds: [mine.id],
+    };
+    const bad = await req('POST', url, editor, { ...card, receiptIds: [theirs.id] });
+    expect(bad.statusCode).toBe(400);
+    const res = await req('POST', url, editor, card);
+    expect(res.statusCode).toBe(201);
+    expect(res.json().item.receipts).toMatchObject([{ id: mine.id, amount: 500 }]);
+
+    const id = res.json().item.id;
+    await req('PUT', `${url}/${id}`, editor, { ...card, receiptIds: [] });
+    const doc = await app.db.document.findUniqueOrThrow({ where: { id: mine.id } });
+    expect(doc.linkedRecordId).toBeNull();
+  });
+
+  it('filters contracted work', async () => {
+    const serial = await vehicle();
+    const url = `/api/vehicles/${serial}/records/workCards`;
+    const base = { date: isoDay(-1), workType: 'MECHANICAL', description: 'Fix' };
+    await req('POST', url, editor, { ...base, performedBy: 'IN_HOUSE' });
+    await req('POST', url, editor, { ...base, performedBy: 'CONTRACTED', doneBy: 'Garage' });
+    const list = await req('GET', `${url}?performedBy=CONTRACTED`, viewer);
+    expect(list.json().items.map((i: { doneBy: string }) => i.doneBy)).toEqual(['Garage']);
+  });
+});
+
+describe('excavator tool', () => {
+  it('changes the tool on excavators only, and logs the change', async () => {
+    await app.db.vehicleType.upsert({
+      where: { code: 'tracked_excavator' },
+      update: {},
+      create: {
+        code: 'tracked_excavator',
+        nameEn: 'Excavator',
+        nameHe: 'מחפר',
+        category: 'EQUIPMENT',
+        usageUnit: 'HOURS',
+      },
+    });
+    const type = await app.db.vehicleType.findUniqueOrThrow({
+      where: { code: 'tracked_excavator' },
+    });
+    const ex = await app.db.vehicle.create({
+      data: { serial: `R1-EX-${++seq}`, make: 'Test', model: 'Dig', typeId: type.id },
+    });
+    const url = `/api/vehicles/${ex.serial}/tool`;
+    expect((await req('PUT', url, viewer, { tool: 'hammer' })).statusCode).toBe(403);
+    expect((await req('PUT', url, editor, { tool: 'hammer' })).statusCode).toBe(200);
+    const e = await app.db.event.findFirst({ where: { vehicleId: ex.id, type: 'TOOL_CHANGED' } });
+    expect(e?.params).toEqual({ from: 'bucket', to: 'hammer' });
+
+    const road = await vehicle();
+    expect(
+      (await req('PUT', `/api/vehicles/${road}/tool`, editor, { tool: 'hammer' })).statusCode,
+    ).toBe(400);
   });
 });

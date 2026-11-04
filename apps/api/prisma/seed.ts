@@ -240,12 +240,6 @@ const malfunctionTexts = [
 const fuelPlaces = ['אתר א׳', 'אתר ב׳', 'חצר צפון', 'תחנת דלק בצומת', 'תחנת דלק בכביש הראשי'];
 const fuelers = ['יוסי אברהמי', 'מיכל דוד', 'אורי לוי', 'נועה כהן'];
 const fuelProviders = ['ספק דלק א׳', 'ספק דלק ב׳', 'מכלית שירות'];
-const fixTexts = [
-  'הוחלף צינור הידראולי ונבדק לחץ',
-  'נמצא חיבור רופף, חוזק ונבדק',
-  'הוחלף חלק והמערכת נבדקה בנסיעת מבחן',
-  'נוקה ונבדק, לא נמצאה תקלה נוספת',
-];
 const pick = <T>(list: T[], i: number) => list[Math.abs(i) % list.length]!;
 
 const noteTexts = [
@@ -607,7 +601,6 @@ async function main() {
           description,
           downtimeHours: m.state === 'RESOLVED' ? faker.number.int({ min: 2, max: 72 }) : null,
           cost: m.state === 'RESOLVED' ? money(200, 12_000) : null,
-          resolution: m.state === 'RESOLVED' ? pick(fixTexts, m.daysAgo) : null,
         },
       });
       const src = { type: 'Malfunction', id: row.id };
@@ -804,6 +797,7 @@ async function main() {
     }
   }
 
+  await seedRevisions1(vehicleIds, events, editor!.id);
   await db.event.createMany({ data: events });
 
   // A few fake attachments: an invoice photo on recent services, a certificate on annual tests.
@@ -892,3 +886,113 @@ main()
     process.exitCode = 1;
   })
   .finally(() => db.$disconnect());
+
+// ---------- Revisions 1: progress updates, work cards, an excavator's hammer ----------
+// Written after the rest without the random generators, so the fleet above stays the same.
+
+const progressTexts = [
+  'נבדק במקום, הוזמן חלק',
+  'החלק הגיע, ממתין למוסך',
+  'הוחלף החלק, נבדק בהפעלה',
+];
+const workTexts: { workType: 'ROUTINE' | 'MECHANICAL'; text: string }[] = [
+  { workType: 'ROUTINE', text: 'גירוז כללי ובדיקת מפלסים' },
+  { workType: 'MECHANICAL', text: 'החלפת צינור הידראולי ובדיקת לחצים' },
+  { workType: 'ROUTINE', text: 'ניקוי מסננים והחלפת שמן' },
+  { workType: 'MECHANICAL', text: 'תיקון מערכת חשמל ובדיקת מצבר' },
+];
+const contractors = ['מוסך חיצוני א׳', 'קבלן הידראוליקה', 'חשמלאי רכב'];
+const teams = ['יוסי אברהמי, אורי לוי', 'מיכל דוד', 'צוות האחזקה'];
+
+async function seedRevisions1(
+  vehicleIds: Record<string, string>,
+  events: Prisma.EventCreateManyInput[],
+  authorId: string,
+) {
+  const push = (
+    type: EventType,
+    vehicleId: string,
+    occurredAt: Date,
+    params: Prisma.InputJsonObject,
+    sourceType: string,
+    sourceId: string,
+  ) => events.push({ type, vehicleId, occurredAt, params, userId: authorId, sourceType, sourceId });
+
+  // Progress on every malfunction that isn't new: one update per two days since it was reported.
+  const started = await db.malfunction.findMany({
+    where: { state: { in: ['IN_PROGRESS', 'RESOLVED'] } },
+    orderBy: { reportedAt: 'asc' },
+  });
+  for (const m of started) {
+    const steps = m.state === 'RESOLVED' ? 3 : 1;
+    for (let i = 0; i < steps; i++) {
+      const at = new Date(
+        m.reportedAt.getTime() + (i + 1) * DAY * (m.state === 'RESOLVED' ? 0.9 : 0.5),
+      );
+      if (at > NOW) break;
+      const body = progressTexts[i]!;
+      const row = await db.malfunctionProgress.create({
+        data: { malfunctionId: m.id, at, body, createdById: authorId },
+      });
+      push(
+        'MALFUNCTION_PROGRESS',
+        m.vehicleId,
+        at,
+        { description: m.description, progress: body, progressId: row.id },
+        'Malfunction',
+        m.id,
+      );
+    }
+  }
+
+  // Two or three work cards a vehicle; every third one by a contractor.
+  let n = 0;
+  for (const [serial, vehicleId] of Object.entries(vehicleIds)) {
+    const v = await db.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+      select: { odometerKm: true, engineHours: true, location: { select: { nameHe: true } } },
+    });
+    for (let i = 0; i < 2 + (serial.charCodeAt(0) % 2); i++, n++) {
+      const w = pick(workTexts, n);
+      const contracted = n % 3 === 0;
+      const date = daysAgo(15 + ((n * 37) % 160));
+      const card = await db.workCard.create({
+        data: {
+          vehicleId,
+          date,
+          workType: w.workType,
+          performedBy: contracted ? 'CONTRACTED' : 'IN_HOUSE',
+          description: w.text,
+          doneBy: contracted ? pick(contractors, n) : pick(teams, n),
+          place: contracted ? pick(['מוסך הקבלן', 'באתר'], n) : (v.location?.nameHe ?? null),
+          laborHours: new Prisma.Decimal(2 + (n % 5) * 1.5),
+          odometerKm: null,
+          engineHours: null,
+          cost: contracted ? new Prisma.Decimal(800 + ((n * 431) % 4000)) : null,
+          createdById: authorId,
+        },
+      });
+      push(
+        'WORK_CARD',
+        vehicleId,
+        date,
+        { description: card.description, performedBy: card.performedBy, doneBy: card.doneBy },
+        'WorkCard',
+        card.id,
+      );
+    }
+  }
+
+  // EX-102 works with a hydraulic hammer for now.
+  const ex = vehicleIds['EX-102'];
+  if (ex) {
+    await db.vehicle.update({ where: { id: ex }, data: { tool: 'hammer' } });
+    events.push({
+      type: 'TOOL_CHANGED',
+      vehicleId: ex,
+      occurredAt: daysAgo(6),
+      params: { from: 'bucket', to: 'hammer' },
+      userId: authorId,
+    });
+  }
+}

@@ -53,6 +53,9 @@ enum EventType {
   QUOTE_LINKED
   QUOTE_UNLINKED
   NOTE_ADDED
+  WORK_CARD
+  MALFUNCTION_PROGRESS
+  TOOL_CHANGED
   RECORD_EDITED
   RECORD_DELETED
   RECORD_RESTORED
@@ -75,6 +78,18 @@ enum InspectionKind {
   ANNUAL_TEST
   INSURANCE
   SAFETY_CHECK
+}
+
+/// Revisions 1: what kind of work a work card records.
+enum WorkType {
+  ROUTINE
+  MECHANICAL
+}
+
+/// Revisions 1: whether our own team did the work or a contractor did.
+enum WorkPerformer {
+  IN_HOUSE
+  CONTRACTED
 }
 
 enum DocumentKind {
@@ -226,6 +241,8 @@ model Vehicle {
   /// The photo pair for the photo style: the top photo crossfades into the side photo.
   topPhotoId    String?
   sidePhotoId   String?
+  /// The tool on an excavator's arm (Revisions 1), e.g. "bucket" or "hammer"; null = the default bucket.
+  tool          String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -238,6 +255,7 @@ model Vehicle {
   movements       Movement[]
   inspections     Inspection[]
   notes           Note[]
+  workCards       WorkCard[]
   itemAssignments ItemAssignment[]
   currentItems    Item[]            @relation("CurrentVehicle")
   documents       DocumentVehicle[]
@@ -304,8 +322,8 @@ model Malfunction {
   description   String
   downtimeHours Int?
   cost          Decimal?            @db.Decimal(12, 2)
-  /// What was done about it (Revisions 1: the report's "What happened").
-  resolution    String?
+  /// Progress updates: what was done so far (Revisions 1).
+  progress      MalfunctionProgress[]
   createdById   String?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
@@ -313,6 +331,48 @@ model Malfunction {
 
   @@index([vehicleId, reportedAt])
   @@index([state])
+}
+
+/// One progress update on a malfunction: what was found or done, when and by whom (Revisions 1).
+model MalfunctionProgress {
+  id            String      @id @default(cuid())
+  malfunctionId String
+  malfunction   Malfunction @relation(fields: [malfunctionId], references: [id], onDelete: Cascade)
+  at            DateTime
+  body          String
+  createdById   String?
+  createdAt     DateTime    @default(now())
+  deletedAt     DateTime?
+
+  @@index([malfunctionId, at])
+}
+
+/// A work card (Revisions 1): routine or mechanical work done on a vehicle, in-house or by a
+/// contractor. Receipts link to it through Document.linkedRecordType = "WorkCard".
+model WorkCard {
+  id          String        @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date        DateTime
+  workType    WorkType
+  performedBy WorkPerformer
+  description String
+  /// The team members (in-house) or the contractor's name.
+  doneBy      String?
+  /// Where the work was done.
+  place       String?
+  laborHours  Decimal?      @db.Decimal(8, 2)
+  odometerKm  Int?
+  engineHours Int?
+  cost        Decimal?      @db.Decimal(12, 2)
+  notes       String?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  @@index([vehicleId, date])
+  @@index([performedBy])
 }
 
 model FluidAddition {

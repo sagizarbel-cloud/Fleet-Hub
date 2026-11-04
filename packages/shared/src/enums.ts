@@ -57,8 +57,23 @@ export const EVENT_TYPES = [
   'QUOTE_LINKED',
   'QUOTE_UNLINKED',
   'NOTE_ADDED',
+  'WORK_CARD',
+  'MALFUNCTION_PROGRESS',
+  'TOOL_CHANGED',
   'RECORD_EDITED',
   'RECORD_DELETED',
   'RECORD_RESTORED',
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
+
+/** Revisions 1: work cards. */
+export const WORK_TYPES = ['ROUTINE', 'MECHANICAL'] as const;
+export type WorkType = (typeof WORK_TYPES)[number];
+export const WORK_PERFORMERS = ['IN_HOUSE', 'CONTRACTED'] as const;
+export type WorkPerformer = (typeof WORK_PERFORMERS)[number];
+
+/** Revisions 1: tools an excavator's arm can carry; the drawing shows the current one. */
+export const EXCAVATOR_TOOLS = ['bucket', 'hammer', 'ripper', 'grab'] as const;
+export type ExcavatorTool = (typeof EXCAVATOR_TOOLS)[number];
+/** Vehicle types whose arm takes a tool. */
+export const TOOL_TYPES = ['tracked_excavator', 'wheeled_excavator'] as const;
