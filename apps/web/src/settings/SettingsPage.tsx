@@ -16,6 +16,7 @@ import { cn } from '@/lib/cn';
 import { ListsEditor } from './ListsEditor';
 import { MySettings } from './MySettings';
 import { RequiredFields } from './RequiredFields';
+import { MovementFields } from './MovementFields';
 import { ReportLogo } from './ReportLogo';
 import { UsersAdmin } from './UsersAdmin';
 
@@ -92,7 +93,12 @@ export function SettingsPage({ section }: { section: SettingsSection }) {
         </h1>
         {section === 'mine' && <MySettings />}
         {section === 'lists' && <ListsEditor />}
-        {section === 'required' && <RequiredFields />}
+        {section === 'required' && (
+          <div className="space-y-4">
+            <RequiredFields />
+            <MovementFields />
+          </div>
+        )}
         {section === 'report' && <ReportLogo />}
         {section === 'users' && <UsersAdmin />}
         {section === 'import' && (

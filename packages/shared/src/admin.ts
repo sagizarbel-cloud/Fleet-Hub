@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { ROLES, VEHICLE_CATEGORIES } from './enums';
+import {
+  CUSTOM_FIELD_KEYS,
+  CUSTOM_FIELD_TYPES,
+  ROLES,
+  VEHICLE_CATEGORIES,
+} from './enums';
 
 // ---------- Settings lists (SPEC 5.9) ----------
 
@@ -229,11 +234,29 @@ export const fuelRequiredSchema = z.object({
 });
 export type FuelRequired = z.output<typeof fuelRequiredSchema>;
 
+/** An extra field an admin adds to a record kind (Revisions 1), named in both languages. */
+export const customFieldDef = z.object({
+  key: z.enum(CUSTOM_FIELD_KEYS),
+  labelEn: z.string().trim().min(1).max(40),
+  labelHe: z.string().trim().min(1).max(40),
+  type: z.enum(CUSTOM_FIELD_TYPES),
+});
+export type CustomFieldDef = z.output<typeof customFieldDef>;
+const customFieldList = z
+  .array(customFieldDef)
+  .max(CUSTOM_FIELD_KEYS.length)
+  .refine((l) => new Set(l.map((f) => f.key)).size === l.length, { message: 'duplicate' });
+
 /** Every app setting with its value; each key is stored as one AppSetting row. */
-export const appSettingsBody = z.object({ fuelRequired: fuelRequiredSchema });
+export const appSettingsBody = z.object({
+  fuelRequired: fuelRequiredSchema,
+  /** Extra fields on location changes (Revisions 1, fleet manager). */
+  movementFields: customFieldList.default([]),
+});
 export type AppSettings = z.output<typeof appSettingsBody>;
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   fuelRequired: { place: false, fueledBy: false, fuelType: false, provider: false },
+  movementFields: [],
 };
 
 /** Image types a company logo can be (Revisions 1); SVG is left out so no script can ride in. */

@@ -22,7 +22,8 @@ import {
 } from './api';
 import { AttachmentList } from './Attachments';
 import { cellText, useFormatCtx } from './format';
-import { KIND_UI, localDay, type Column, type FormatCtx } from './kinds';
+import { colTitle, KIND_UI, localDay, type Column, type FormatCtx } from './kinds';
+import { useKindColumns } from './columns';
 import { RecordForm } from './RecordForm';
 import { useRecordLink, type ReportTarget } from './recordLink';
 
@@ -54,12 +55,12 @@ function Value({ col, row, ctx }: { col: Column; row: RecordRow; ctx: FormatCtx 
 }
 
 function Fields({ columns, row, ctx }: { columns: Column[]; row: RecordRow; ctx: FormatCtx }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
       {columns.map((col) => (
         <div key={col.key} className={cn(col.kind === 'long' && 'col-span-2')} data-field={col.key}>
-          <dt className="text-muted text-xs">{t(col.header as never)}</dt>
+          <dt className="text-muted text-xs">{colTitle(col, t, i18n.language)}</dt>
           <dd className="mt-0.5">
             <Value col={col} row={row} ctx={ctx} />
           </dd>
@@ -335,6 +336,7 @@ function OneRecord({
 }) {
   const { t } = useTranslation();
   const ui = KIND_UI[kind];
+  const columns = useKindColumns(kind);
   const ctx = useFormatCtx(vehicle.usageUnit);
   const { data: user } = useSession();
   const record = useRecord(vehicle.serial, kind, id);
@@ -437,7 +439,7 @@ function OneRecord({
             </>
           ) : (
             <Section title={t('report.details')}>
-              <Fields columns={ui.columns} row={row} ctx={ctx} />
+              <Fields columns={columns} row={row} ctx={ctx} />
             </Section>
           )}
           {kind === 'workCards' && (

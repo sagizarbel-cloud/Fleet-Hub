@@ -11,11 +11,22 @@
 
 ### Revisions 1 — 2026-11-04 (in progress; plan: https://claude.ai/artifact/2TfufphQqRhAAXcngmJnw8)
 
-- Record report: every row (desktop) or card (phone) in the seven record tables opens a report of that record: all its fields, photos large, and its history from the activity log with who and when. Malfunctions read as "The issue" and "What happened", with a new "What was done" text (`Malfunction.resolution`). It also opens from record lines in the vehicle's Activity and in the dashboard's Recent activity, from a new "Open malfunctions: N" chip next to the vehicle's status (non-admins can also click the status itself; admins keep the override popover), and from the dashboard's "Open malfunctions" box, which lists the fleet's open ones worst first. One open malfunction opens directly; several show a list first. The report is in the URL (`?record=<kind>.<id>`), so Back closes it.
+Round 1 (items 1-4):
+
+- Record report: every row (desktop) or card (phone) in the record tables opens a report of that record: all its fields, photos large, and its history from the activity log with who and when. Malfunctions read as "The issue", "What happened" and "Progress". It opens from record lines in the vehicle's Activity and the dashboard's Recent activity, from the vehicle's status badge (for everyone; with the open count next to it), and from the dashboard's "Open malfunctions" box, which lists the fleet's open ones worst first. One open malfunction opens directly; several show a list first. The report is in the URL (`?record=<kind>.<id>`), so Back closes it.
 - Resizable (`components/ResizableSheet.tsx`): on computers the inner edge drags wider or narrower (arrow keys too; double-click or the button for full screen), remembered per device; on phones a bottom sheet that switches between about 60% and full height.
-- Fuel: where fueled, who fueled, fuel type (new "Fuel types" list in Settings, Diesel and Petrol 95 to start) and fuel provider. Place, who and provider are typed with suggestions (locations, user and supplier names, earlier entries); a new fill-up starts with the vehicle's location and last time's fuel type and provider. The fuel table searches them and filters by fuel type; Excel import and export carry them.
-- Admins can make each of the four mandatory (Settings → Required fields, stored in the new `AppSetting` table, each change in the audit log). The API refuses an add or edit without them; Excel imports are exempt.
-- Tests: 7 new api tests (`test/revisions1.test.ts`) and 3 e2e tests (`e2e/report.spec.ts`). The start-codes api test now asks for a page of 200 vehicles, since other test files' vehicles had pushed its vehicle past the first 50. The "Back mid-flight" motion e2e test misses its 1.5 s budget by about 0.1 s in this container with and without these changes.
+- Fuel: where fueled, who fueled, fuel type (new "Fuel types" list in Settings, Diesel and Petrol 95 to start) and fuel provider, typed with suggestions. Admins can make each mandatory (Settings → Record fields, stored in the new `AppSetting` table, each change audited). The API refuses an add or edit without them; Excel imports are exempt.
+
+Round 2 (Sagi's answers plus new items):
+
+- Status badge opens the malfunction report for everyone; the admin override moved to a small button next to it. The separate "Open malfunctions: N" chip is gone.
+- Record table columns resize by dragging the header edge (arrow keys too, double-click resets), remembered per device and table (`vehicle/records/columnWidths.ts`).
+- Malfunction progress log (`MalfunctionProgress`): dated updates with their author, added and removed by editors, each also an Activity entry. It replaces the single "What was done" text.
+- Work cards (new record kind `workCards`): routine or mechanical work, in-house or contracted, done by, where, labour hours, reading, cost, notes and linked receipts (approved receipts of the vehicle). A "Contracted work" card shows only contracted cards. Work card costs count in maintenance costs.
+- Vehicle report (`/vehicles/:serial/report`): pick dates and sections (each record kind, receipts, cost summary), then print or save as PDF from the browser, with the company logo admins upload in Settings → Printed reports (PNG/JPEG/WebP up to 300 KB, stored in `AppSetting`).
+- Excavator tool (`Vehicle.tool`): bucket, hydraulic hammer, ripper or grab, drawn on the arm in every view; editors change it on the vehicle page and Activity logs it.
+- Location changes: transport contractor, cost, time in hours and distance, plus up to three extra fields admins name in Settings → Record fields (text, number or date; values in `Movement.custom`). They show in the form, table, report and exports. Movement costs show in the vehicle report's cost summary but don't count in the fleet cost totals yet.
+- Tests: 13 api tests in `test/revisions1.test.ts`, 11 e2e tests in `e2e/report.spec.ts`. The "Back mid-flight" motion e2e test misses its 1.5 s budget by about 0.1 s in this container with and without these changes.
 
 ### Quality pass — 2026-10-29
 
@@ -155,7 +166,7 @@
 - Phase 9 (2026-10-29, Sagi): the server isn't available yet; installing it is handed off to the server IT team, so this phase delivers everything in the repo plus a handoff. Domain for now: fleet.tfisolutions.com. The server has at least 2 GB of RAM. The first admin is Sagi.
 - Images are built on the server itself (no registry), so they come out arm64 there; a private repo is cloned with a read-only deploy key.
 - The first admin gets a one-time set-password link from `create-admin`, so no password passes through a terminal or chat.
-- Revisions 1 (2026-11-04, from the fleet manager via Sagi; assumptions in brackets until Sagi answers the plan's questions): "malfunction icons" = the vehicle's status and the dashboard's Open malfunctions box; "resize" = the report window; fuel place, who and provider are free text with suggestions (not fixed lists); fuel types start as Diesel and Petrol 95; mandatory switches don't apply to Excel imports.
+- Revisions 1 (2026-11-04, from the fleet manager via Sagi): "malfunction icons" = the vehicle's status badge and the Activity list; resize = the report window and the table columns; fuel place is a list plus free text, who and provider typed with suggestions; Diesel and Petrol 95 to start; mandatory switches don't apply to Excel imports; malfunctions get a progress log. Round 2 assumptions (in the plan doc): work cards are their own record kind, editors and admins add them; tools are bucket, hammer, ripper and grab; the vehicle report is printed to PDF by the browser; extra fields are for location changes only, up to three.
 
 ## Later
 
@@ -163,6 +174,8 @@
 
 - Dashboard KPI cards at 390 px: "Open malfunctions" and "Spent this month" sit tight against their numbers, and the shekel sign touches the digit (seen on the empty fleet)
 - A content security policy for the web app (the api already has a strict one)
+- Excel import of the new work card, movement and extra fields; extra fields on other record kinds
+- Count location-change costs in the fleet cost totals (only the vehicle report sums them now)
 
 - Auto-fill receipt date, vendor and total from the photo (SPEC 5.5)
 - Installable PWA (home-screen icon on phones)

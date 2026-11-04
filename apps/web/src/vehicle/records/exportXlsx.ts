@@ -21,7 +21,7 @@ const HEADER_ROW = 4;
 
 /** Units in the header so the cells can stay plain numbers that sum. */
 function header(col: Column, ctx: FormatCtx, mixed: boolean) {
-  const name = ctx.t(col.header as never) as string;
+  const name = col.title ? col.title(ctx.lang) : (ctx.t(col.header as never) as string);
   const unit =
     mixed && (col.key === 'reading' || col.key === 'economy')
       ? ''

@@ -426,6 +426,13 @@ model Movement {
   fromLocation   Location? @relation("MovementFrom", fields: [fromLocationId], references: [id])
   toLocationId   String
   toLocation     Location  @relation("MovementTo", fields: [toLocationId], references: [id])
+  /// Revisions 1: who moved it (transport contractor), what it cost, how long and how far.
+  contractor     String?
+  cost           Decimal?  @db.Decimal(12, 2)
+  durationHours  Decimal?  @db.Decimal(6, 1)
+  distanceKm     Int?
+  /// Values of the admin-defined extra fields (c1..c3), by key.
+  custom         Json?
   notes          String?
   createdById    String?
   createdAt      DateTime  @default(now())

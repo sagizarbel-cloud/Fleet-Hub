@@ -10,6 +10,7 @@ import {
   type UsageUnit,
 } from '@fleet-hub/shared';
 import { HttpError } from './http';
+import { readAppSettings } from './app-settings';
 
 type Tx = Prisma.TransactionClient;
 type Row = Record<string, unknown> & {
@@ -203,13 +204,14 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     sourceType: 'Movement',
     dateField: 'date',
     createType: 'MOVEMENT',
-    search: ['notes'],
+    search: ['notes', 'contractor'],
     include: {
       fromLocation: { select: { code: true } },
       toLocation: { select: { code: true } },
     },
-    data: async ({ fromLocation, toLocation, ...rest }, ctx) => ({
+    data: async ({ fromLocation, toLocation, custom, ...rest }, ctx) => ({
       ...rest,
+      custom: await keepDefinedCustom(ctx.tx, custom),
       fromLocationId: fromLocation
         ? await lookupId(ctx.tx, 'location', fromLocation, 'fromLocation')
         : null,
@@ -299,6 +301,29 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     },
   },
 };
+
+/**
+ * Keeps only the extra-field values an admin has defined for location changes (Revisions 1),
+ * each as its defined type; nothing left is stored as no value.
+ */
+async function keepDefinedCustom(tx: Tx, custom: unknown) {
+  if (!custom || typeof custom !== 'object') return Prisma.DbNull;
+  const { movementFields } = await readAppSettings(tx);
+  const out: Record<string, string | number> = {};
+  for (const f of movementFields) {
+    const v = (custom as Record<string, unknown>)[f.key];
+    if (v === null || v === undefined || v === '') continue;
+    if (f.type === 'number' && typeof v === 'number') out[f.key] = v;
+    else if (f.type === 'date' && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))
+      out[f.key] = v;
+    else if (f.type === 'text' && typeof v === 'string') out[f.key] = v;
+    else
+      throw Object.assign(new HttpError(400, 'validation_failed'), {
+        issues: [{ path: `custom.${f.key}`, code: 'invalid' }],
+      });
+  }
+  return Object.keys(out).length ? out : Prisma.DbNull;
+}
 
 /**
  * Links the given receipts of this vehicle to a work card and unlinks the card's others

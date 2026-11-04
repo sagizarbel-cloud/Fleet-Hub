@@ -27,7 +27,8 @@ import type { VehicleDetail } from '../data';
 import { useRecords, useSetDeleted, type RecordFilters, type RecordRow } from './api';
 import { AttachmentList } from './Attachments';
 import { cellText, useFormatCtx } from './format';
-import { createdByCol, KIND_UI, type Column, type FormatCtx } from './kinds';
+import { colTitle, createdByCol, KIND_UI, type Column, type FormatCtx } from './kinds';
+import { useKindColumns } from './columns';
 import { RecordForm } from './RecordForm';
 import { useExport } from './useExport';
 import { useOfferUndo } from './Undo';
@@ -100,7 +101,8 @@ export default function RecordPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const report = useRecordLink();
   /** Table columns: everything except the report-only ones (e.g. what was done, who fueled). */
-  const tableCols = useMemo(() => ui.columns.filter((c) => !c.report), [ui.columns]);
+  const allCols = useKindColumns(kind);
+  const tableCols = useMemo(() => allCols.filter((c) => !c.report), [allCols]);
 
   const isEditor = !!user && hasRole(user.role, 'EDITOR');
   const canAdd = !!user && (isEditor || kind === 'notes');
@@ -121,7 +123,7 @@ export default function RecordPanel({
     () => [
       ...tableCols.map((col): ColumnDef<RecordRow> => ({
         id: col.sort ?? col.key,
-        header: () => t(col.header as never),
+        header: () => colTitle(col, t, i18n.language),
         enableSorting: !!col.sort,
         cell: ({ row }) => <CellView col={col} row={row.original} ctx={ctx} />,
         meta: col,
@@ -141,7 +143,7 @@ export default function RecordPanel({
           ) : null,
       },
     ],
-    [tableCols, ctx, t, serial],
+    [tableCols, ctx, t, i18n.language, serial],
   );
 
   // TanStack Table returns fresh functions each render; this component simply opts out of memoizing.
@@ -178,7 +180,7 @@ export default function RecordPanel({
       kind,
       vehicle,
       filters: active,
-      columns: [...ui.columns, ...(kind === 'notes' ? [] : [createdByCol])],
+      columns: [...allCols, ...(kind === 'notes' ? [] : [createdByCol])],
       ctx,
     });
 
@@ -453,7 +455,7 @@ export default function RecordPanel({
                     .filter((c) => !c.minor)
                     .map((col) => (
                       <div key={col.key} className={cn(col.kind === 'long' && 'col-span-2')}>
-                        <dt className="text-muted text-xs">{t(col.header as never)}</dt>
+                        <dt className="text-muted text-xs">{colTitle(col, t, i18n.language)}</dt>
                         <dd>
                           <CellView col={col} row={row} ctx={ctx} />
                         </dd>

@@ -401,7 +401,11 @@
       "doneBy": "Done by",
       "workPlace": "Where it was done",
       "laborHours": "Labour hours",
-      "receipts": "Receipts"
+      "receipts": "Receipts",
+      "extra": "Extra field",
+      "contractor": "Transport contractor",
+      "duration": "Time, hours",
+      "distance": "Distance"
     },
     "field": {
       "nextServiceDate": "Next service date (optional)",
@@ -409,7 +413,8 @@
       "readingHint": "The reading at this fill-up; it's what economy is worked out from.",
       "resolvedHint": "Leave empty for today.",
       "doneByHint": "The technician, garage or contractor.",
-      "noReceipts": "No approved receipts on this vehicle to link."
+      "noReceipts": "No approved receipts on this vehicle to link.",
+      "contractorHint": "Leave empty when the team moved it."
     },
     "filter": {
       "accidents": "Accidents only",
@@ -761,7 +766,7 @@
       "lists": "Lists",
       "users": "Users and roles",
       "import": "Excel import",
-      "required": "Required fields",
+      "required": "Record fields",
       "report": "Printed reports"
     },
     "loadFailed": "Couldn't load this. Try again.",
@@ -879,6 +884,24 @@
       "badType": "Use a PNG, JPEG or WebP image.",
       "tooBig": "The logo is over 300 KB.",
       "failed": "The logo wasn't saved. Try again."
+    },
+    "extra": {
+      "title": "Extra fields on location changes",
+      "hint": "Up to three fields of your own, for example a permit number or the escort. They show in the form, the table, the report and the exports.",
+      "none": "No extra fields yet.",
+      "field": "Extra field {{n}}",
+      "labelEn": "Name in English",
+      "labelHe": "Name in Hebrew",
+      "type": "Kind of value",
+      "types": {
+        "text": "Text",
+        "number": "Number",
+        "date": "Date"
+      },
+      "add": "Add a field",
+      "remove": "Remove the field",
+      "invalid": "Each field needs a name in English and in Hebrew.",
+      "note": "Removing a field hides it; values already saved are kept."
     }
   },
   "reset": {

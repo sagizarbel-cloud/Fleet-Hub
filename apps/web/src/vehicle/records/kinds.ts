@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import {
+  type CustomFieldDef,
   type FuelDetailField,
   INSPECTION_KINDS,
   MALFUNCTION_SEVERITIES,
@@ -42,6 +43,30 @@ export interface Column {
   minor?: boolean;
   /** Shown only in the record report and the export, not as a table column. */
   report?: boolean;
+  /** A header typed by an admin (extra fields), shown as is instead of `header`. */
+  title?: (lang: string) => string;
+}
+
+/** A column's header text in the active language. */
+export const colTitle = (col: Column, t: TFunction, lang: string) =>
+  col.title ? col.title(lang) : (t(col.header as never) as string);
+
+/** Columns for the extra fields an admin defined (Revisions 1); values live in `row.custom`. */
+export function customColumns(defs: readonly CustomFieldDef[]): Column[] {
+  return defs.map((f) => {
+    const raw = (r: RecordRow) => {
+      const c = r.custom as Record<string, unknown> | null | undefined;
+      return c?.[f.key];
+    };
+    return {
+      key: `custom.${f.key}`,
+      header: 'records.col.extra',
+      title: (lang: string) => (lang === 'he' ? f.labelHe : f.labelEn),
+      kind: f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text',
+      value: (r) => (f.type === 'number' ? n(raw(r)) : f.type === 'date' ? d(raw(r)) : s(raw(r))),
+      minor: true,
+    } satisfies Column;
+  });
 }
 
 export type FieldType =
@@ -70,6 +95,8 @@ export interface Field {
   /** Decimal places allowed for numbers. */
   step?: number;
   hint?: string;
+  /** A label typed by an admin (extra fields), shown as is instead of `label`. */
+  title?: string;
   /** A fuel detail an admin can make mandatory (Revisions 1). */
   adminRequired?: FuelDetailField;
   /** Typed text with suggestions: which suggestion list feeds it. */
@@ -483,6 +510,16 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
         required: true,
         options: lookupOptions('locations'),
       },
+      {
+        key: 'contractor',
+        label: 'records.col.contractor',
+        type: 'text',
+        suggest: 'provider',
+        hint: 'records.field.contractorHint',
+      },
+      costField,
+      { key: 'durationHours', label: 'records.col.duration', type: 'number', step: 1 },
+      { key: 'distanceKm', label: 'records.col.distance', type: 'number' },
       notesField,
     ],
     columns: [
@@ -498,6 +535,32 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
         header: 'records.col.to',
         kind: 'text',
         value: (r, ctx) => lookupText('locations', r.toLocation, ctx),
+      },
+      textCol('contractor', 'records.col.contractor'),
+      moneyCol(),
+      {
+        key: 'durationHours',
+        header: 'records.col.duration',
+        kind: 'number',
+        value: (r) => n(r.durationHours),
+        text: (r, ctx) => {
+          const v = n(r.durationHours);
+          return v === null ? '' : ctx.t('vehicle.units.hours', { value: ctx.number(v, 1) });
+        },
+        minor: true,
+      },
+      {
+        key: 'distanceKm',
+        header: 'records.col.distance',
+        kind: 'number',
+        value: (r) => n(r.distanceKm),
+        text: (r, ctx) => {
+          const v = n(r.distanceKm);
+          return v === null ? '' : ctx.t('vehicle.units.km', { value: ctx.number(v) });
+        },
+        numFmt: '#,##0',
+        minor: true,
+        report: true,
       },
       textCol('notes', 'records.col.notes', { kind: 'long', minor: true }),
     ],

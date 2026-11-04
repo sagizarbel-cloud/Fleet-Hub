@@ -77,3 +77,9 @@ export const EXCAVATOR_TOOLS = ['bucket', 'hammer', 'ripper', 'grab'] as const;
 export type ExcavatorTool = (typeof EXCAVATOR_TOOLS)[number];
 /** Vehicle types whose arm takes a tool. */
 export const TOOL_TYPES = ['tracked_excavator', 'wheeled_excavator'] as const;
+
+/** Keys of the extra fields an admin can add to a record kind (Revisions 1): up to three. */
+export const CUSTOM_FIELD_KEYS = ['c1', 'c2', 'c3'] as const;
+export type CustomFieldKey = (typeof CUSTOM_FIELD_KEYS)[number];
+export const CUSTOM_FIELD_TYPES = ['text', 'number', 'date'] as const;
+export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];

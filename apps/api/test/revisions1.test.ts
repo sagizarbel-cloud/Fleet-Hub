@@ -289,9 +289,9 @@ describe('company logo', () => {
     expect(got.headers['content-type']).toBe('image/png');
     expect(got.rawPayload.subarray(1, 4).toString()).toBe('PNG');
     // The logo never shows up in the general settings.
-    expect(Object.keys((await req('GET', '/api/settings/app', viewer)).json())).toEqual([
-      'fuelRequired',
-    ]);
+    expect(Object.keys((await req('GET', '/api/settings/app', viewer)).json())).not.toContain(
+      'companyLogo',
+    );
     expect((await req('DELETE', '/api/settings/logo', admin)).statusCode).toBe(200);
     expect((await req('GET', '/api/settings/logo', viewer)).statusCode).toBe(404);
   });
@@ -303,5 +303,68 @@ describe('company logo', () => {
       (await req('PUT', '/api/settings/logo', admin, { dataUrl: 'javascript:alert(1)' }))
         .statusCode,
     ).toBe(400);
+  });
+});
+
+describe('location change details', () => {
+  it('keeps contractor, cost, time and the admin-defined extra fields', async () => {
+    await app.db.location.createMany({
+      data: [
+        { code: 'r1_a', nameEn: 'A', nameHe: 'א' },
+        { code: 'r1_b', nameEn: 'B', nameHe: 'ב' },
+      ],
+      skipDuplicates: true,
+    });
+    const fields = [
+      { key: 'c1', labelEn: 'Permit no.', labelHe: 'מספר היתר', type: 'text' },
+      { key: 'c2', labelEn: 'Escort cars', labelHe: 'רכבי ליווי', type: 'number' },
+    ];
+    expect(
+      (
+        await req('PUT', '/api/settings/app', editor, {
+          fuelRequired: NONE_REQUIRED,
+          movementFields: fields,
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await req('PUT', '/api/settings/app', admin, {
+          fuelRequired: NONE_REQUIRED,
+          movementFields: fields,
+        })
+      ).statusCode,
+    ).toBe(200);
+    const serial = await vehicle();
+    const url = `/api/vehicles/${serial}/records/movements`;
+    const res = await req('POST', url, editor, {
+      date: isoDay(-1),
+      fromLocation: 'r1_a',
+      toLocation: 'r1_b',
+      contractor: 'Haulage Co',
+      cost: 1500,
+      durationHours: 3.5,
+      distanceKm: 120,
+      // c3 isn't defined, so it isn't kept.
+      custom: { c1: 'P-77', c2: 2, c3: 'ignored' },
+    });
+    expect(res.statusCode).toBe(201);
+    const { items } = (await req('GET', `${url}?q=Haulage`, viewer)).json();
+    expect(items[0]).toMatchObject({
+      contractor: 'Haulage Co',
+      cost: 1500,
+      durationHours: 3.5,
+      distanceKm: 120,
+      custom: { c1: 'P-77', c2: 2 },
+    });
+    // A number field refuses text.
+    const bad = await req('POST', url, editor, {
+      date: isoDay(-1),
+      fromLocation: 'r1_b',
+      toLocation: 'r1_a',
+      custom: { c2: 'two' },
+    });
+    expect(bad.statusCode).toBe(400);
+    await setRequired(NONE_REQUIRED);
   });
 });

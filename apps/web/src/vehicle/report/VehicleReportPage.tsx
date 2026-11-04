@@ -11,7 +11,9 @@ import { cn } from '@/lib/cn';
 import { useVehicle, type VehicleDetail } from '../data';
 import { fetchAllRecords, useDocuments, type DocumentRow, type RecordRow } from '../records/api';
 import { cellText, useFormatCtx } from '../records/format';
-import { createdByCol, KIND_UI, type Column, type FormatCtx } from '../records/kinds';
+import { colTitle, createdByCol, type Column, type FormatCtx } from '../records/kinds';
+import { kindColumns } from '../records/columns';
+import { useAppSettings } from '../records/api';
 import { useLogo } from '@/settings/ReportLogo';
 import { parseReport, REPORT_KINDS, type ReportOptions } from './sections';
 
@@ -19,7 +21,14 @@ import { parseReport, REPORT_KINDS, type ReportOptions } from './sections';
 const RECEIPT_COLS = ['date', 'documentKind', 'vendor', 'category', 'notes'] as const;
 
 /** Kinds whose rows carry a cost, for the summary. */
-const COSTED: RecordKind[] = ['workCards', 'service', 'malfunctions', 'fuel', 'inspections'];
+const COSTED: RecordKind[] = [
+  'workCards',
+  'service',
+  'malfunctions',
+  'fuel',
+  'movements',
+  'inspections',
+];
 
 /** Every row of each chosen kind in the dates, fetched together. */
 function useReportRecords(serial: string, o: ReportOptions) {
@@ -40,7 +49,7 @@ function useReportRecords(serial: string, o: ReportOptions) {
 }
 
 function Table({ columns, rows, ctx }: { columns: Column[]; rows: RecordRow[]; ctx: FormatCtx }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <table className="vr-table w-full border-collapse text-[11px] leading-snug">
       <thead>
@@ -54,7 +63,7 @@ function Table({ columns, rows, ctx }: { columns: Column[]; rows: RecordRow[]; c
                 (c.kind === 'number' || c.kind === 'money') && 'text-end',
               )}
             >
-              {t(c.header as never)}
+              {colTitle(c, t, i18n.language)}
             </th>
           ))}
         </tr>
@@ -266,6 +275,7 @@ export function VehicleReportPage() {
   const records = useReportRecords(serial, o);
   const docs = useDocuments(serial);
   const logo = useLogo();
+  const { data: settings } = useAppSettings();
   const wantsReceipts = o.parts.includes('receipts') || o.parts.includes('costs');
   const receipts = (docs.data?.items ?? []).filter((d) => d.approved && inRange(d.date, o));
 
@@ -322,7 +332,10 @@ export function VehicleReportPage() {
             />
             {REPORT_KINDS.filter((k) => o.parts.includes(k)).map((k) => {
               const rows = records.data?.[k] ?? [];
-              const columns = [...KIND_UI[k].columns, ...(k === 'notes' ? [] : [createdByCol])];
+              const columns = [
+                ...kindColumns(k, settings),
+                ...(k === 'notes' ? [] : [createdByCol]),
+              ];
               return (
                 <Part key={k} title={t(`vehicle.records.${k}`)} count={rows.length}>
                   {rows.length ? (

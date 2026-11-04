@@ -995,4 +995,20 @@ async function seedRevisions1(
       userId: authorId,
     });
   }
+
+  // Location changes by a transport contractor (fake company names), with cost and time.
+  const moves = await db.movement.findMany({ orderBy: { date: 'asc' } });
+  const haulers = ['הובלות הצפון', 'מובילי הדרום'];
+  for (const [i, mv] of moves.entries()) {
+    if (i % 2) continue;
+    await db.movement.update({
+      where: { id: mv.id },
+      data: {
+        contractor: haulers[i % 4 === 0 ? 0 : 1],
+        cost: 900 + (i % 5) * 250,
+        durationHours: 2 + (i % 4),
+        distanceKm: 30 + (i % 7) * 15,
+      },
+    });
+  }
 }

@@ -70,7 +70,7 @@ export function RecordForm({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const ctx = useFormatCtx(unit);
   const ui = KIND_UI[kind];
   const isNew = !row;
@@ -98,6 +98,14 @@ export function RecordForm({
   const isRequired = (f: Field) =>
     !!f.required || (!!f.adminRequired && !!settings?.fuelRequired[f.adminRequired]);
   const [errors, setErrors] = useState<Errors>({});
+  // Extra fields an admin defined for this kind (Revisions 1), as typed text by key.
+  const customDefs = kind === 'movements' ? (settings?.movementFields ?? []) : [];
+  const [custom, setCustom] = useState<Record<string, string>>(() => {
+    const stored = (row?.custom ?? {}) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(stored).map(([k, v]) => [k, v === null || v === undefined ? '' : String(v)]),
+    );
+  });
   const [files, setFiles] = useState<File[]>([]);
   const [failed, setFailed] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -116,6 +124,23 @@ export function RecordForm({
     e.preventDefault();
     setFailed(null);
     const body = toBody(kind, values, unit, isNew);
+    if (customDefs.length) {
+      const bad: Errors = {};
+      body.custom = Object.fromEntries(
+        customDefs.map((f) => {
+          const raw = (custom[f.key] ?? '').trim();
+          if (!raw) return [f.key, null];
+          if (f.type !== 'number') return [f.key, raw];
+          const num = Number(raw);
+          if (!Number.isFinite(num)) bad[`custom.${f.key}`] = 'records.error.invalid';
+          return [f.key, num];
+        }),
+      );
+      if (Object.keys(bad).length) {
+        setErrors(bad);
+        return;
+      }
+    }
     // The same rules the server applies, so mistakes show by the field before saving.
     const parsed = RECORD_BODIES[kind].safeParse(body);
     if (!parsed.success) {
@@ -233,6 +258,25 @@ export function RecordForm({
             />
           ),
         )}
+        {customDefs.map((f) => (
+          <FieldInput
+            key={f.key}
+            field={{
+              key: `custom.${f.key}`,
+              label: 'records.col.extra',
+              title: i18n.language === 'he' ? f.labelHe : f.labelEn,
+              type: f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text',
+              step: f.type === 'number' ? 1 : undefined,
+            }}
+            value={custom[f.key] ?? ''}
+            error={errors[`custom.${f.key}`]}
+            unit={unit}
+            onChange={(v) => {
+              setCustom((c) => ({ ...c, [f.key]: String(v) }));
+              setErrors(({ [`custom.${f.key}`]: _gone, ...rest }) => rest);
+            }}
+          />
+        ))}
         <fieldset className="space-y-2">
           <legend className="mb-1 text-xs font-medium">{t('records.files')}</legend>
           {row && <AttachmentList serial={serial} items={row.attachments} canEdit={canEdit} />}
@@ -334,8 +378,9 @@ function FieldInput({
 }) {
   const { t } = useTranslation();
   const id = `field-${field.key}`;
-  const label =
-    field.type === 'reading'
+  const label = field.title
+    ? field.title
+    : field.type === 'reading'
       ? t(field.label as never, { unit: t(`vehicle.info.usage_${unit}`) })
       : t(field.label as never);
   const described = [error && `${id}-error`, field.hint && `${id}-hint`].filter(Boolean).join(' ');

@@ -131,3 +131,40 @@ test('editors change an excavator tool and Activity logs it', async ({ page }) =
   await picker.selectOption('bucket');
   await expect(picker).toHaveValue('bucket');
 });
+
+test('admins add an extra field to location changes; it shows in the form and report', async ({
+  page,
+}) => {
+  const clear = async () => {
+    const settings = await (await page.request.get('/api/settings/app')).json();
+    await page.request.put('/api/settings/app', {
+      data: { ...settings, movementFields: [] },
+      headers: { origin: 'http://localhost:5173' },
+    });
+  };
+  await clear();
+  await page.goto('/settings/required');
+  const box = page.getByTestId('movement-fields');
+  await box.getByRole('button', { name: 'Add a field' }).click();
+  await box.getByLabel('Name in English').fill('Permit no.');
+  await box.getByLabel('Name in Hebrew').fill('מספר היתר');
+  await box.getByTestId('save-extra').click();
+  await expect(box).toContainText('Saved.');
+
+  await page.goto('/vehicles/EX-101?panel=movements');
+  await page.getByTestId('add-record').click();
+  const form = page.locator('#record-form');
+  await form.getByRole('combobox', { name: 'To', exact: true }).selectOption({ index: 2 });
+  await form.getByLabel('Transport contractor').fill('E2E Haulage');
+  await form.getByLabel('Permit no.').fill('P-123');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(form).toHaveCount(0);
+  const row = page.getByTestId('record-table').locator('tbody tr', { hasText: 'E2E Haulage' });
+  await row.locator('td').nth(2).click();
+  const report = page.getByTestId('record-report');
+  await expect(report.locator('[data-field="custom.c1"]')).toContainText('P-123');
+  await expect(report.locator('[data-field="contractor"]')).toContainText('E2E Haulage');
+
+  // Leave the settings as the seed has them.
+  await clear();
+});

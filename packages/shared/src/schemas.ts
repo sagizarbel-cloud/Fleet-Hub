@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  CUSTOM_FIELD_KEYS,
   EXCAVATOR_TOOLS,
   MALFUNCTION_SEVERITIES,
   MALFUNCTION_STATES,
@@ -138,11 +139,25 @@ export const fuelBody = z.object({
   provider: optText(120),
 });
 
+/** Values of admin-defined extra fields (Revisions 1): text, a number or a day, by key. */
+export const customValues = z
+  .partialRecord(
+    z.enum(CUSTOM_FIELD_KEYS),
+    z.union([z.string().trim().max(200), z.number().min(-1e9).max(1e9), z.null()]),
+  )
+  .nullable()
+  .default(null);
+
 export const movementBody = z
   .object({
     date: day,
     fromLocation: nullable(code),
     toLocation: code,
+    contractor: optText(200),
+    cost: money,
+    durationHours: nullable(z.number().min(0).max(10_000)),
+    distanceKm: nullable(z.number().int().min(0).max(100_000)),
+    custom: customValues,
     notes: optText(500),
   })
   .refine((m) => m.fromLocation !== m.toLocation, { path: ['toLocation'], message: 'same' });
