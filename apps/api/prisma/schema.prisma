@@ -302,31 +302,35 @@ model ServiceRecord {
   description String
   vendor      String?
   cost        Decimal?  @db.Decimal(12, 2)
+  /// Revisions 1: the work card this service is part of, if any.
+  workCardId  String?
+  workCard    WorkCard? @relation(fields: [workCardId], references: [id], onDelete: SetNull)
   createdById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
   @@index([vehicleId, date])
+  @@index([workCardId])
 }
 
 model Malfunction {
-  id            String              @id @default(cuid())
+  id            String                @id @default(cuid())
   vehicleId     String
-  vehicle       Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle       Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   reportedAt    DateTime
   resolvedAt    DateTime?
   severity      MalfunctionSeverity
-  state         MalfunctionState    @default(OPEN)
-  isAccident    Boolean             @default(false)
+  state         MalfunctionState      @default(OPEN)
+  isAccident    Boolean               @default(false)
   description   String
   downtimeHours Int?
-  cost          Decimal?            @db.Decimal(12, 2)
+  cost          Decimal?              @db.Decimal(12, 2)
   /// Progress updates: what was done so far (Revisions 1).
   progress      MalfunctionProgress[]
   createdById   String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
   deletedAt     DateTime?
 
   @@index([vehicleId, reportedAt])
@@ -370,6 +374,8 @@ model WorkCard {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   deletedAt   DateTime?
+
+  services ServiceRecord[]
 
   @@index([vehicleId, date])
   @@index([performedBy])

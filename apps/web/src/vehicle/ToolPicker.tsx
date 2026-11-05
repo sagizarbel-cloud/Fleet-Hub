@@ -7,7 +7,7 @@ import type { VehicleDetail } from './data';
 import { useSetTool } from './records/api';
 
 /**
- * The tool on an excavator's arm (Revisions 1): bucket, hammer, ripper or grab. The drawing
+ * The tool on an excavator's arm (Revisions 1): bucket or hydraulic hammer (Sagi, 2026-11-05). The drawing
  * shows it; editors change it here and the change is logged in Activity.
  */
 export function ToolPicker({

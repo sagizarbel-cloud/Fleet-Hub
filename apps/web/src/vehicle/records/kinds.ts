@@ -79,7 +79,9 @@ export type FieldType =
   | 'bool'
   | 'reading'
   /** The vehicle's approved receipts to link (work cards); the value is comma-separated ids. */
-  | 'receipts';
+  | 'receipts'
+  /** The vehicle's services a work card gathers; the value is comma-separated ids. */
+  | 'services';
 
 export interface Field {
   key: string;
@@ -669,6 +671,7 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
       readingField,
       costField,
       notesField,
+      { key: 'serviceIds', label: 'records.col.services', type: 'services' },
       { key: 'receiptIds', label: 'records.col.receipts', type: 'receipts' },
     ],
     columns: [
@@ -742,7 +745,7 @@ export function toBody(kind: RecordKind, values: FormValues, unit: UsageUnit, is
       continue;
     }
     const str = typeof raw === 'string' ? raw.trim() : '';
-    if (f.type === 'receipts') {
+    if (f.type === 'receipts' || f.type === 'services') {
       body[f.key] = str ? str.split(',') : [];
       continue;
     }
@@ -766,8 +769,9 @@ export function toForm(kind: RecordKind, row: RecordRow, unit: UsageUnit): FormV
   for (const f of KIND_UI[kind].fields) {
     if (f.createOnly) continue;
     const raw = f.type === 'reading' ? row[readingKey(unit)] : row[f.key];
-    if (f.type === 'receipts') {
-      const linked = Array.isArray(row.receipts) ? (row.receipts as { id: string }[]) : [];
+    if (f.type === 'receipts' || f.type === 'services') {
+      const list = f.type === 'receipts' ? row.receipts : row.services;
+      const linked = Array.isArray(list) ? (list as { id: string }[]) : [];
       values[f.key] = linked.map((r) => r.id).join(',');
     } else if (f.type === 'bool') values[f.key] = raw === true;
     else if (f.type === 'date')

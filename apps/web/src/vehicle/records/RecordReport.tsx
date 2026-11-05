@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Loader2, Pencil, ReceiptText, Trash2, TriangleAlert } from 'lucide-react';
+import {
+  ChevronRight,
+  Loader2,
+  Pencil,
+  ReceiptText,
+  Trash2,
+  TriangleAlert,
+  Wrench,
+} from 'lucide-react';
 import { hasRole, type RecordKind } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { ResizableSheet } from '@/components/ResizableSheet';
@@ -284,6 +292,42 @@ function Receipts({ row, ctx }: { row: RecordRow; ctx: FormatCtx }) {
   );
 }
 
+/** The existing services a work card gathers (Sagi, 2026-11-05). */
+function Services({ row, ctx }: { row: RecordRow; ctx: FormatCtx }) {
+  const { t } = useTranslation();
+  const items = (Array.isArray(row.services) ? row.services : []) as {
+    id: string;
+    date: string;
+    description: string;
+    vendor: string | null;
+    cost: number | null;
+  }[];
+  if (!items.length) return <p className="text-muted text-sm">{t('report.noServices')}</p>;
+  return (
+    <ul
+      className="border-border divide-border divide-y rounded-lg border"
+      data-testid="report-services"
+    >
+      {items.map((s) => (
+        <li key={s.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+          <Wrench aria-hidden className="text-muted size-4 shrink-0" />
+          <span className="num text-muted shrink-0 text-xs">{ctx.date(s.date)}</span>
+          <span className="min-w-0 flex-1 truncate">
+            <bdi>{s.description}</bdi>
+            {s.vendor && (
+              <span className="text-muted">
+                {' · '}
+                <bdi>{s.vendor}</bdi>
+              </span>
+            )}
+          </span>
+          {s.cost !== null && <span className="num shrink-0">{ctx.money(s.cost)}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Photos shown large; other files as links. */
 function Files({ serial, row }: { serial: string; row: RecordRow }) {
   const { t } = useTranslation();
@@ -440,6 +484,11 @@ function OneRecord({
           ) : (
             <Section title={t('report.details')}>
               <Fields columns={columns} row={row} ctx={ctx} />
+            </Section>
+          )}
+          {kind === 'workCards' && (
+            <Section title={t('report.services')}>
+              <Services row={row} ctx={ctx} />
             </Section>
           )}
           {kind === 'workCards' && (

@@ -191,6 +191,8 @@ export const workCardBody = z.object({
   notes: optText(1000),
   /** Receipts of this vehicle linked to the card; replaces the card's current links. */
   receiptIds: z.array(z.string().min(1).max(40)).max(50).default([]),
+  /** Existing services of the vehicle that are part of this work (Sagi, 2026-11-05). */
+  serviceIds: z.array(z.string().min(1).max(40)).max(50).default([]),
 });
 
 /** A progress update on a malfunction (Revisions 1): what was found or done so far. */

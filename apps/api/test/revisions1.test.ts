@@ -233,6 +233,43 @@ describe('work cards and receipts', () => {
     expect(doc.linkedRecordId).toBeNull();
   });
 
+  it('gathers existing services of the same vehicle, one card each', async () => {
+    const serial = await vehicle();
+    const other = await vehicle();
+    const sUrl = (v: string) => `/api/vehicles/${v}/records/service`;
+    const service = async (v: string) =>
+      (
+        await req('POST', sUrl(v), editor, {
+          date: isoDay(-2),
+          description: 'Oil change',
+          cost: 300,
+        })
+      ).json().item.id as string;
+    const mine = await service(serial);
+    const theirs = await service(other);
+    const url = `/api/vehicles/${serial}/records/workCards`;
+    const card = {
+      date: isoDay(-1),
+      workType: 'ROUTINE',
+      performedBy: 'IN_HOUSE',
+      description: 'Yearly overhaul',
+    };
+    expect((await req('POST', url, editor, { ...card, serviceIds: [theirs] })).statusCode).toBe(
+      400,
+    );
+    const res = await req('POST', url, editor, { ...card, serviceIds: [mine] });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().item.services).toMatchObject([
+      { id: mine, description: 'Oil change', cost: 300 },
+    ]);
+    // A second card can't take the same service.
+    expect((await req('POST', url, editor, { ...card, serviceIds: [mine] })).statusCode).toBe(400);
+    const id = res.json().item.id;
+    await req('PUT', `${url}/${id}`, editor, { ...card, serviceIds: [] });
+    const row = await app.db.serviceRecord.findUniqueOrThrow({ where: { id: mine } });
+    expect(row.workCardId).toBeNull();
+  });
+
   it('filters contracted work', async () => {
     const serial = await vehicle();
     const url = `/api/vehicles/${serial}/records/workCards`;

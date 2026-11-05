@@ -405,7 +405,8 @@
       "extra": "שדה נוסף",
       "contractor": "קבלן הובלה",
       "duration": "זמן, בשעות",
-      "distance": "מרחק"
+      "distance": "מרחק",
+      "services": "טיפולים שנכללים"
     },
     "field": {
       "nextServiceDate": "תאריך הטיפול הבא (לא חובה)",
@@ -414,7 +415,9 @@
       "resolvedHint": "ריק = היום.",
       "doneByHint": "שם הטכנאי, המוסך או הקבלן.",
       "noReceipts": "אין קבלות מאושרות של הכלי לקישור.",
-      "contractorHint": "להשאיר ריק אם הצוות העביר בעצמו."
+      "contractorHint": "להשאיר ריק אם הצוות העביר בעצמו.",
+      "noServices": "אין טיפולים של הכלי להוספה.",
+      "servicesHint": "יש לסמן טיפולים שכבר נרשמו ושייכים לעבודה הזו. עבודה חדשה נרשמת בשדות שלמעלה."
     },
     "filter": {
       "accidents": "תאונות בלבד",
@@ -1192,7 +1195,9 @@
     "saveProgress": "הוספת העדכון",
     "removeProgress": "הסרת העדכון",
     "progressFailed": "העדכון לא נשמר. אפשר לנסות שוב.",
-    "statusHint": "מצב: {{status}}. תקלות פתוחות: {{count}}"
+    "statusHint": "מצב: {{status}}. תקלות פתוחות: {{count}}",
+    "services": "טיפולים שנכללים",
+    "noServices": "לא נכללו טיפולים."
   },
   "workCard": {
     "type": {
@@ -1206,9 +1211,7 @@
   },
   "tool": {
     "bucket": "כף",
-    "hammer": "פטיש חציבה",
-    "ripper": "ריפר",
-    "grab": "גרייפר"
+    "hammer": "פטיש חציבה"
   },
   "vreport": {
     "button": "דוח כלי",

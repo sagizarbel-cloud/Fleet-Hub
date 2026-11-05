@@ -11,8 +11,10 @@ import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  fetchAllRecords,
+  recordsKey,
   refreshAfterWrite,
   uploadFiles,
   useAppSettings,
@@ -225,7 +227,17 @@ export function RecordForm({
     >
       <form id="record-form" noValidate onSubmit={submit} className="space-y-4" data-kind={kind}>
         {visible.map((f) =>
-          f.type === 'receipts' ? (
+          f.type === 'services' ? (
+            <ServicePicker
+              key={f.key}
+              serial={serial}
+              unit={unit}
+              cardId={row?.id ?? savedId}
+              label={t(f.label as never)}
+              value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
+              onChange={(v) => set(f.key, v)}
+            />
+          ) : f.type === 'receipts' ? (
             <ReceiptPicker
               key={f.key}
               serial={serial}
@@ -351,6 +363,74 @@ function ReceiptPicker({
           ))}
         </ul>
       )}
+    </fieldset>
+  );
+}
+
+/**
+ * Existing services of the vehicle a work card gathers (Sagi, 2026-11-05): those on no card
+ * yet, and those already on this one.
+ */
+function ServicePicker({
+  serial,
+  unit,
+  cardId,
+  label,
+  value,
+  onChange,
+}: {
+  serial: string;
+  unit: UsageUnit;
+  cardId: string | null;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  const ctx = useFormatCtx(unit);
+  const { data } = useQuery({
+    queryKey: [...recordsKey(serial, 'service'), 'for-work-card'],
+    queryFn: () => fetchAllRecords(serial, 'service', {}),
+  });
+  const chosen = new Set(value ? value.split(',') : []);
+  const usable = (data?.items ?? []).filter(
+    (r) => !r.workCardId || r.workCardId === cardId || chosen.has(r.id),
+  );
+  const toggle = (id: string, on: boolean) => {
+    const next = new Set(chosen);
+    if (on) next.add(id);
+    else next.delete(id);
+    onChange([...next].join(','));
+  };
+  return (
+    <fieldset className="space-y-1.5" data-testid="service-picker">
+      <legend className="mb-1 text-xs font-medium">{label}</legend>
+      {usable.length === 0 ? (
+        <p className="text-muted text-xs">{t('records.field.noServices')}</p>
+      ) : (
+        <ul className="border-border max-h-48 divide-y overflow-y-auto rounded-md border">
+          {usable.map((r) => (
+            <li key={r.id}>
+              <label className="flex items-center gap-2 px-2.5 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={chosen.has(r.id)}
+                  onChange={(e) => toggle(r.id, e.target.checked)}
+                  className="size-4 shrink-0 accent-[var(--fh-accent)]"
+                />
+                <span className="num text-muted shrink-0 text-xs">{ctx.date(String(r.date))}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  <bdi>{String(r.description ?? '')}</bdi>
+                </span>
+                {typeof r.cost === 'number' && (
+                  <span className="num shrink-0 text-xs">{ctx.money(r.cost)}</span>
+                )}
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-muted text-xs">{t('records.field.servicesHint')}</p>
     </fieldset>
   );
 }

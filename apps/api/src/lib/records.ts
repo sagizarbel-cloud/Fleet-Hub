@@ -284,7 +284,7 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     dateField: 'date',
     createType: 'WORK_CARD',
     search: ['description', 'doneBy', 'place', 'notes'],
-    data: async ({ receiptIds: _r, ...rest }) => rest,
+    data: async ({ receiptIds: _r, serviceIds: _s, ...rest }) => rest,
     params: (row) => ({
       description: row.description as string,
       performedBy: row.performedBy as string,
@@ -298,6 +298,7 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
       if (!input) return;
       await bumpUsage(ctx, input);
       await linkReceipts(ctx, id, input.receiptIds);
+      await linkServices(ctx, id, input.serviceIds);
     },
   },
 };
@@ -349,6 +350,49 @@ async function linkReceipts(ctx: Ctx, cardId: string, ids: string[]) {
     data: { linkedRecordType: null, linkedRecordId: null },
   });
   if (ids.length) await ctx.tx.document.updateMany({ where: { id: { in: ids } }, data: link });
+}
+
+/**
+ * Makes the given services of this vehicle part of a work card and lets go of the card's
+ * others (Sagi, 2026-11-05). A service already on another card can't be taken.
+ */
+async function linkServices(ctx: Ctx, cardId: string, ids: string[]) {
+  const usable = await ctx.tx.serviceRecord.findMany({
+    where: {
+      id: { in: ids },
+      vehicleId: ctx.vehicle.id,
+      deletedAt: null,
+      OR: [{ workCardId: null }, { workCardId: cardId }],
+    },
+    select: { id: true },
+  });
+  if (usable.length !== new Set(ids).size)
+    throw Object.assign(new HttpError(400, 'validation_failed'), {
+      issues: [{ path: 'serviceIds', code: 'unknown' }],
+    });
+  await ctx.tx.serviceRecord.updateMany({
+    where: { workCardId: cardId, id: { notIn: ids } },
+    data: { workCardId: null },
+  });
+  if (ids.length)
+    await ctx.tx.serviceRecord.updateMany({
+      where: { id: { in: ids } },
+      data: { workCardId: cardId },
+    });
+}
+
+/** The services that are part of each work card, newest first. */
+async function servicesFor(tx: Tx, ids: string[]) {
+  if (!ids.length) return new Map<string, unknown[]>();
+  const rows = await tx.serviceRecord.findMany({
+    where: { workCardId: { in: ids }, deletedAt: null },
+    orderBy: { date: 'desc' },
+    select: { id: true, date: true, description: true, vendor: true, cost: true, workCardId: true },
+  });
+  const map = new Map<string, unknown[]>();
+  for (const { workCardId, cost, ...r } of rows)
+    map.set(workCardId!, [...(map.get(workCardId!) ?? []), { ...r, cost: num(cost) }]);
+  return map;
 }
 
 /** The receipts linked to each work card, newest first. */
@@ -419,13 +463,14 @@ export async function attachmentsFor(tx: Tx, ownerType: string, ids: string[]) {
 async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row[]) {
   const ids = rows.map((r) => r.id);
   const authorIds = [...new Set(rows.map((r) => r.createdById).filter((v): v is string => !!v))];
-  const [authors, files, economy, receipts] = await Promise.all([
+  const [authors, files, economy, receipts, services] = await Promise.all([
     authorIds.length
       ? tx.user.findMany({ where: { id: { in: authorIds } }, select: { id: true, name: true } })
       : [],
     attachmentsFor(tx, KINDS[kind].sourceType, ids),
     kind === 'fuel' ? fuelEconomy(tx, vehicle) : null,
     kind === 'workCards' ? receiptsFor(tx, ids) : null,
+    kind === 'workCards' ? servicesFor(tx, ids) : null,
   ]);
   const names = new Map(authors.map((a) => [a.id, a.name]));
   const points = new Map(economy?.points.map((p) => [p.id, p]));
@@ -439,6 +484,7 @@ async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row
         ? { economy: point?.value ?? null, baseline: point?.baseline ?? null, drop: !!point?.drop }
         : {}),
       ...(receipts ? { receipts: receipts.get(row.id) ?? [] } : {}),
+      ...(services ? { services: services.get(row.id) ?? [] } : {}),
     };
   });
 }

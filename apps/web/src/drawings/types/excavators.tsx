@@ -45,57 +45,6 @@ function toolSolids(tool: Exclude<ExcavatorTool, 'bucket'>, mid: number, dx = 0)
           y: [mid - 0.08, mid + 0.08],
         },
       ];
-    case 'ripper':
-      // Ripper: one curved tooth, pointing forward and down.
-      return [
-        {
-          part: 'bucket',
-          profile: shift([
-            [6.25, 1.0],
-            [6.85, 0.95],
-            [6.95, 0.55],
-            [7.25, 0.05],
-            [7.0, 0.08],
-            [6.6, 0.45],
-            [6.3, 0.7],
-          ]),
-          y: [mid - 0.14, mid + 0.14],
-        },
-      ];
-    case 'grab':
-      // Grab: a rotator and two open jaws.
-      return [
-        {
-          part: 'bucket',
-          profile: shift([
-            [6.35, 1.0],
-            [6.85, 1.0],
-            [6.85, 0.8],
-            [6.35, 0.8],
-          ]),
-          y: [mid - 0.3, mid + 0.3],
-        },
-        {
-          part: 'bucket',
-          profile: shift([
-            [6.35, 0.82],
-            [6.6, 0.82],
-            [6.3, 0.05],
-            [6.05, 0.2],
-          ]),
-          y: [mid - 0.45, mid + 0.45],
-        },
-        {
-          part: 'bucket',
-          profile: shift([
-            [6.6, 0.82],
-            [6.85, 0.82],
-            [7.15, 0.2],
-            [6.9, 0.05],
-          ]),
-          y: [mid - 0.45, mid + 0.45],
-        },
-      ];
   }
 }
 

@@ -405,7 +405,8 @@
       "extra": "Extra field",
       "contractor": "Transport contractor",
       "duration": "Time, hours",
-      "distance": "Distance"
+      "distance": "Distance",
+      "services": "Services included"
     },
     "field": {
       "nextServiceDate": "Next service date (optional)",
@@ -414,7 +415,9 @@
       "resolvedHint": "Leave empty for today.",
       "doneByHint": "The technician, garage or contractor.",
       "noReceipts": "No approved receipts on this vehicle to link.",
-      "contractorHint": "Leave empty when the team moved it."
+      "contractorHint": "Leave empty when the team moved it.",
+      "noServices": "No services on this vehicle to include.",
+      "servicesHint": "Tick services already recorded that are part of this work. New work goes in the fields above."
     },
     "filter": {
       "accidents": "Accidents only",
@@ -1192,7 +1195,9 @@
     "saveProgress": "Add update",
     "removeProgress": "Remove update",
     "progressFailed": "The update wasn't saved. Try again.",
-    "statusHint": "Status: {{status}}. Open malfunctions: {{count}}"
+    "statusHint": "Status: {{status}}. Open malfunctions: {{count}}",
+    "services": "Services included",
+    "noServices": "No services included."
   },
   "workCard": {
     "type": {
@@ -1206,9 +1211,7 @@
   },
   "tool": {
     "bucket": "Bucket",
-    "hammer": "Hydraulic hammer",
-    "ripper": "Ripper",
-    "grab": "Grab"
+    "hammer": "Hydraulic hammer"
   },
   "vreport": {
     "button": "Vehicle report",

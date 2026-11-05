@@ -126,8 +126,8 @@ test('the vehicle report opens with the chosen sections', async ({ page, context
 test('editors change an excavator tool and Activity logs it', async ({ page }) => {
   await page.goto('/vehicles/EX-103');
   const picker = page.getByTestId('tool-picker');
-  await picker.selectOption('ripper');
-  await expect(page.getByText('Tool changed: Bucket → Ripper').first()).toBeVisible();
+  await picker.selectOption('hammer');
+  await expect(page.getByText('Tool changed: Bucket → Hydraulic hammer').first()).toBeVisible();
   await picker.selectOption('bucket');
   await expect(picker).toHaveValue('bucket');
 });
@@ -167,4 +167,18 @@ test('admins add an extra field to location changes; it shows in the form and re
 
   // Leave the settings as the seed has them.
   await clear();
+});
+
+test('a work card gathers an existing service and shows it in its report', async ({ page }) => {
+  await page.goto('/vehicles/TR-601?panel=workCards');
+  await page.getByTestId('add-record').click();
+  const form = page.locator('#record-form');
+  await form.getByLabel('Work done').fill('E2E overhaul');
+  const picker = form.getByTestId('service-picker');
+  await picker.getByRole('checkbox').first().check();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(form).toHaveCount(0);
+  const row = page.getByTestId('record-table').locator('tbody tr', { hasText: 'E2E overhaul' });
+  await row.locator('td').nth(3).click();
+  await expect(page.getByTestId('report-services').locator('li')).toHaveCount(1);
 });

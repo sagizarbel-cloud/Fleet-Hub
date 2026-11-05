@@ -996,6 +996,21 @@ async function seedRevisions1(
     });
   }
 
+  // Each vehicle's newest in-house work card gathers its latest earlier service (Sagi, 2026-11-05).
+  for (const vehicleId of Object.values(vehicleIds)) {
+    const card = await db.workCard.findFirst({
+      where: { vehicleId, performedBy: 'IN_HOUSE' },
+      orderBy: { date: 'desc' },
+    });
+    if (!card) continue;
+    const service = await db.serviceRecord.findFirst({
+      where: { vehicleId, date: { lte: card.date } },
+      orderBy: { date: 'desc' },
+    });
+    if (service)
+      await db.serviceRecord.update({ where: { id: service.id }, data: { workCardId: card.id } });
+  }
+
   // Location changes by a transport contractor (fake company names), with cost and time.
   const moves = await db.movement.findMany({ orderBy: { date: 'asc' } });
   const haulers = ['הובלות הצפון', 'מובילי הדרום'];

@@ -73,7 +73,8 @@ export const WORK_PERFORMERS = ['IN_HOUSE', 'CONTRACTED'] as const;
 export type WorkPerformer = (typeof WORK_PERFORMERS)[number];
 
 /** Revisions 1: tools an excavator's arm can carry; the drawing shows the current one. */
-export const EXCAVATOR_TOOLS = ['bucket', 'hammer', 'ripper', 'grab'] as const;
+/** Excavator tools the fleet uses (Sagi, 2026-11-05); more can be added with their drawing. */
+export const EXCAVATOR_TOOLS = ['bucket', 'hammer'] as const;
 export type ExcavatorTool = (typeof EXCAVATOR_TOOLS)[number];
 /** Vehicle types whose arm takes a tool. */
 export const TOOL_TYPES = ['tracked_excavator', 'wheeled_excavator'] as const;
