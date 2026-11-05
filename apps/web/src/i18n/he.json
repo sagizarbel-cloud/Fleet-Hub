@@ -127,7 +127,30 @@
     "notSet": "לא הוגדר",
     "error": "לא ניתן לטעון את לוח הבקרה.",
     "retry": "ניסיון חוזר",
-    "openVehicle": "פתיחת {{serial}}"
+    "openVehicle": "פתיחת {{serial}}",
+    "dueList": {
+      "title": "לטיפול ב־30 הימים הקרובים",
+      "none": "אין פריטים לטיפול ב־30 הימים הקרובים.",
+      "overdue": "באיחור",
+      "kind": {
+        "service": "טיפול",
+        "annualTest": "טסט שנתי",
+        "insurance": "ביטוח"
+      }
+    },
+    "spendList": {
+      "title": "הוצאות החודש",
+      "none": "אין עדיין קבלות החודש.",
+      "total": "סה״כ",
+      "noVehicle": "לא משויך לכלי",
+      "shared": "מתחלק בין {{count}} כלים"
+    },
+    "groupBy": {
+      "label": "קיבוץ לפי",
+      "location": "מיקום",
+      "type": "סוג",
+      "noLocation": "ללא מיקום"
+    }
   },
   "events": {
     "VEHICLE_CREATED": "הכלי נוסף לצי",
@@ -782,7 +805,9 @@
         "dark": "כהה",
         "light": "בהירה"
       },
-      "vitals": "נתונים מוצגים כברירת מחדל"
+      "vitals": "נתונים מוצגים כברירת מחדל",
+      "fleetGrouping": "הצי בלוח הבקרה",
+      "fleetGroupingHint": "אופן הצגת הצי בלוח הבקרה. אפשר לשנות גם שם."
     },
     "password": {
       "title": "שינוי סיסמה",

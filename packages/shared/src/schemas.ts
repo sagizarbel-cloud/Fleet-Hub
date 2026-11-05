@@ -10,7 +10,7 @@ import {
   WORK_TYPES,
 } from './enums';
 import { INSPECTION_KINDS, RECORD_KINDS, SORT_DIRS, type RecordKind } from './records';
-import { DETAIL_VIEWS, VITAL_KEYS } from './vitals';
+import { DETAIL_VIEWS, FLEET_GROUPINGS, VITAL_KEYS } from './vitals';
 import { ALL_FLEET_COLUMNS, FLEET_GROUP_BY, FLEET_GROUPS } from './fleet';
 import {
   DOCUMENT_KINDS,
@@ -57,6 +57,7 @@ export const preferencesBody = z.object({
     .refine((keys) => new Set(keys).size === keys.length, 'duplicate')
     .optional(),
   detailView: z.enum(DETAIL_VIEWS).optional(),
+  fleetGrouping: z.enum(FLEET_GROUPINGS).optional(),
   /** The saved view the fleet table opens with; null for the built-in one. */
   fleetViewId: z.string().min(1).max(40).nullable().optional(),
   /** Defaults that follow the user to every device; null = this device decides. */

@@ -13,11 +13,13 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'motion/react';
 import { takeNewTile } from './newTile';
-import { ChevronDown, Package, Plus } from 'lucide-react';
+import { ChevronDown, MapPin, Package, Plus } from 'lucide-react';
 import {
+  FLEET_GROUPINGS,
   hasRole,
   VEHICLE_STATUSES,
   VEHICLE_TYPE_CODES,
+  type FleetGrouping,
   type VehicleStatus,
 } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
@@ -35,6 +37,7 @@ import { STATUS_ICON } from './statusIcon';
 import type { PickedItem } from './EquipmentTray';
 import { Chip } from './Timeline';
 import { dateFormat, localeOf } from '@/lib/intl';
+import { usePreferences, useSavePreferences } from '@/vehicle/data';
 
 // Both load only when used: a file dropped on a tile, or the equipment tray opened.
 const ReceiptForm = lazy(() =>
@@ -321,7 +324,16 @@ interface GridProps {
   away: boolean;
 }
 
-/** Fleet grid: top-down tiles tinted by status, grouped by type in collapsible sections. */
+const typeOrder = (code: string) => {
+  const i = VEHICLE_TYPE_CODES.indexOf(code as (typeof VEHICLE_TYPE_CODES)[number]);
+  return i === -1 ? VEHICLE_TYPE_CODES.length : i;
+};
+
+/**
+ * Fleet grid: top-down tiles tinted by status. By default it is a lot, one plain area per
+ * location (Revisions 1, fleet manager); grouping by type in collapsible sections is the other
+ * choice, saved to the account.
+ */
 export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
   const { t, i18n } = useTranslation();
   const { data: lookups } = useLookups();
@@ -340,6 +352,9 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
   const [confirm, setConfirm] = useState<{ item: PickedItem; serial: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const move = useItemMove();
+  const prefs = usePreferences();
+  const savePrefs = useSavePreferences();
+  const grouping: FleetGrouping = prefs.data?.fleetGrouping ?? 'location';
 
   useEffect(() => {
     if (!notice) return;
@@ -354,14 +369,29 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
       (!department || v.department === department),
   );
   const sections = useMemo(() => {
-    const order = (code: string) => {
-      const i = VEHICLE_TYPE_CODES.indexOf(code as (typeof VEHICLE_TYPE_CODES)[number]);
-      return i === -1 ? VEHICLE_TYPE_CODES.length : i;
+    const groups = new Map<string, Tile[]>();
+    const keyOf = (v: Tile) => (grouping === 'type' ? v.type : (v.location ?? ''));
+    for (const v of visible) groups.set(keyOf(v), [...(groups.get(keyOf(v)) ?? []), v]);
+    if (grouping === 'type')
+      return [...groups.entries()].sort(([a], [b]) => typeOrder(a) - typeOrder(b));
+    // The lot: places in list order, vehicles without one last; machines of a kind park together.
+    const places = lookups?.locations.map((l) => l.code) ?? [];
+    const placeOrder = (code: string) => {
+      const i = places.indexOf(code);
+      return code === '' ? places.length + 1 : i === -1 ? places.length : i;
     };
-    const byType = new Map<string, Tile[]>();
-    for (const v of visible) byType.set(v.type, [...(byType.get(v.type) ?? []), v]);
-    return [...byType.entries()].sort(([a], [b]) => order(a) - order(b));
-  }, [visible]);
+    return [...groups.entries()]
+      .sort(([a], [b]) => placeOrder(a) - placeOrder(b) || a.localeCompare(b))
+      .map(
+        ([code, list]) =>
+          [
+            code,
+            [...list].sort(
+              (a, b) => typeOrder(a.type) - typeOrder(b.type) || a.serial.localeCompare(b.serial),
+            ),
+          ] as [string, Tile[]],
+      );
+  }, [visible, grouping, lookups]);
 
   // Ripple: each tile leaves (and returns) after a delay that grows with its distance from the chosen tile.
   useLayoutEffect(() => {
@@ -445,6 +475,25 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
         </h2>
         <div
           role="group"
+          aria-label={t('dashboard.groupBy.label')}
+          className="flex items-center gap-1.5"
+          data-testid="fleet-grouping"
+        >
+          <span aria-hidden className="text-muted text-xs">
+            {t('dashboard.groupBy.label')}
+          </span>
+          {FLEET_GROUPINGS.map((g) => (
+            <Chip
+              key={g}
+              pressed={grouping === g}
+              onClick={() => grouping !== g && savePrefs.mutate({ fleetGrouping: g })}
+            >
+              {t(`dashboard.groupBy.${g}`)}
+            </Chip>
+          ))}
+        </div>
+        <div
+          role="group"
           aria-label={t('dashboard.filters.status')}
           className="flex flex-wrap gap-1.5"
         >
@@ -520,41 +569,45 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
           {t(tiles.length === 0 ? 'dashboard.emptyFleet' : 'dashboard.noVehicles')}
         </p>
       )}
-      <div className="flex flex-wrap gap-x-6 gap-y-3">
-        {sections.map(([code, list]) => {
-          const isCollapsed = collapsed.includes(code);
-          const name =
-            lookupName(
-              lookups?.vehicleTypes.find((vt) => vt.code === code),
-              lang,
-            ) ?? code;
-          return (
-            <section key={code} aria-label={name} data-section={code}>
-              <motion.button
-                type="button"
-                initial={false}
-                animate={{ opacity: away ? 0 : 1 }}
-                transition={fade.base}
-                aria-expanded={!isCollapsed}
-                onClick={() => toggleSection(code)}
-                className="text-muted hover:text-text mb-1.5 flex items-center gap-1.5 text-xs font-medium"
+      {grouping === 'location' ? (
+        <div className="flex flex-wrap items-start gap-3">
+          {sections.map(([code, list]) => {
+            const name = code
+              ? (lookupName(
+                  lookups?.locations.find((l) => l.code === code),
+                  lang,
+                ) ?? code)
+              : t('dashboard.groupBy.noLocation');
+            return (
+              <section
+                key={code}
+                aria-label={name}
+                data-lot={code}
+                className="relative isolate max-w-full min-w-40 rounded-xl p-2.5"
               >
-                <ChevronDown
+                {/* The lot's painted outline fades on its own, so the chosen tile can fly out. */}
+                <motion.div
                   aria-hidden
-                  className={cn(
-                    'size-3.5 transition-transform',
-                    isCollapsed && '-rotate-90 rtl:rotate-90',
-                  )}
+                  initial={false}
+                  animate={{ opacity: away ? 0 : 1 }}
+                  transition={fade.base}
+                  className="border-border-strong/70 absolute inset-0 -z-10 rounded-xl border border-dashed"
                 />
-                <span>{name}</span>
-                <span aria-hidden className="num">
-                  · {list.length}
-                </span>
-                <span className="sr-only">
-                  {t('dashboard.sectionCount', { count: list.length })}
-                </span>
-              </motion.button>
-              {!isCollapsed && (
+                <motion.h3
+                  initial={false}
+                  animate={{ opacity: away ? 0 : 1 }}
+                  transition={fade.base}
+                  className="text-muted mb-2 flex items-center gap-1.5 text-xs font-medium"
+                >
+                  <MapPin aria-hidden className="size-3.5" />
+                  <span>{name}</span>
+                  <span aria-hidden className="num">
+                    · {list.length}
+                  </span>
+                  <span className="sr-only">
+                    {t('dashboard.sectionCount', { count: list.length })}
+                  </span>
+                </motion.h3>
                 <ul className="flex flex-wrap gap-2">
                   {list.map((tile) => (
                     <TileButton
@@ -568,11 +621,67 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
                     />
                   ))}
                 </ul>
-              )}
-            </section>
-          );
-        })}
-      </div>
+              </section>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          {sections.map(([code, list]) => {
+            const isCollapsed = collapsed.includes(code);
+            const name =
+              lookupName(
+                lookups?.vehicleTypes.find((vt) => vt.code === code),
+                lang,
+              ) ?? code;
+            return (
+              <section key={code} aria-label={name} data-section={code}>
+                <motion.button
+                  type="button"
+                  initial={false}
+                  animate={{ opacity: away ? 0 : 1 }}
+                  transition={fade.base}
+                  aria-expanded={!isCollapsed}
+                  onClick={() => toggleSection(code)}
+                  className="text-muted hover:text-text mb-1.5 flex items-center gap-1.5 text-xs font-medium"
+                >
+                  <ChevronDown
+                    aria-hidden
+                    className={cn(
+                      'size-3.5 transition-transform',
+                      isCollapsed && '-rotate-90 rtl:rotate-90',
+                    )}
+                  />
+                  <span>{name}</span>
+                  <span aria-hidden className="num">
+                    · {list.length}
+                  </span>
+                  <span className="sr-only">
+                    {t('dashboard.sectionCount', { count: list.length })}
+                  </span>
+                </motion.button>
+                {!isCollapsed && (
+                  <ul className="flex flex-wrap gap-2">
+                    {list.map((tile) => (
+                      <TileButton
+                        key={tile.serial}
+                        tile={tile}
+                        away={away}
+                        delay={
+                          away ? (delays[tile.serial] ?? 0) : 0.25 - (delays[tile.serial] ?? 0)
+                        }
+                        carried={tile.serial === activeSerial}
+                        linked={hover.event?.serial === tile.serial}
+                        drop={drop}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {canAdd && (
         <motion.div

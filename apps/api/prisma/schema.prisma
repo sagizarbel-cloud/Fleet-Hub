@@ -677,14 +677,16 @@ model AuditLog {
 }
 
 model UserPreference {
-  userId       String   @id
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pinnedVitals String[] @default([])
-  detailView   String   @default("side")
-  language     String?
-  theme        String?
+  userId        String   @id
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pinnedVitals  String[] @default([])
+  detailView    String   @default("side")
+  /// How the dashboard groups the fleet (Revisions 1): "location" (the lot) or "type".
+  fleetGrouping String   @default("location")
+  language      String?
+  theme         String?
   /// Saved view the fleet table opens with; null means the built-in view.
-  fleetViewId  String?
+  fleetViewId   String?
 }
 
 /// A fleet table view (SPEC 5.4). Every user can pick any view; its creator or an admin changes it.

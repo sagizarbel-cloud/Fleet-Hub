@@ -190,6 +190,7 @@ describe('preferences', () => {
     expect((await get('/api/me/preferences', first)).json()).toEqual({
       pinnedVitals: ['status', 'usage', 'nextService', 'annualTest', 'location', 'department'],
       detailView: 'side',
+      fleetGrouping: 'location',
       fleetViewId: null,
       language: null,
       theme: null,
@@ -205,6 +206,7 @@ describe('preferences', () => {
     expect((await get('/api/me/preferences', second)).json()).toEqual({
       pinnedVitals: ['fuelEconomy', 'status'],
       detailView: 'iso',
+      fleetGrouping: 'location',
       fleetViewId: null,
       language: null,
       theme: null,

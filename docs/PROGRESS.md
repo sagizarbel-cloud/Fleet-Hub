@@ -24,9 +24,15 @@ Round 2 (Sagi's answers plus new items):
 - Malfunction progress log (`MalfunctionProgress`): dated updates with their author, added and removed by editors, each also an Activity entry. It replaces the single "What was done" text.
 - Work cards (new record kind `workCards`): routine or mechanical work, in-house or contracted, done by, where, labour hours, reading, cost, notes and linked receipts (approved receipts of the vehicle). A "Contracted work" card shows only contracted cards. Work card costs count in maintenance costs.
 - Vehicle report (`/vehicles/:serial/report`): pick dates and sections (each record kind, receipts, cost summary), then print or save as PDF from the browser, with the company logo admins upload in Settings → Printed reports (PNG/JPEG/WebP up to 300 KB, stored in `AppSetting`).
-- Excavator tool (`Vehicle.tool`): bucket, hydraulic hammer, ripper or grab, drawn on the arm in every view; editors change it on the vehicle page and Activity logs it.
+- Excavator tool (`Vehicle.tool`): bucket or hydraulic hammer, drawn on the arm in every view; editors change it on the vehicle page and Activity logs it.
 - Sagi's round 2 answers (2026-11-05): a work card can also gather existing services of the vehicle (`ServiceRecord.workCardId`; one card per service), shown in its form and report; the tools on offer are bucket and hydraulic hammer only.
 - Location changes: transport contractor, cost, time in hours and distance, plus up to three extra fields admins name in Settings → Record fields (text, number or date; values in `Movement.custom`). They show in the form, table, report and exports. Movement costs show in the vehicle report's cost summary but don't count in the fleet cost totals yet.
+Round 3 (Sagi, 2026-11-05):
+
+- Recent activity no longer makes the page jump when a filter is picked: the current list stays, dimmed, until the filtered one arrives (dashboard and the vehicle's Activity).
+- The dashboard's "Due within 30 days" box opens a side list by vehicle with what is due (service, annual test, insurance), its date and "overdue" (`GET /api/dashboard/due`). "Spent this month" opens this month's receipts by vehicle, biggest first; a receipt for several vehicles counts an even share on each (`GET /api/dashboard/spend`).
+- The fleet grid is a lot by default: one plain outlined area per location (vehicles without one last), machines of a kind next to each other. Grouping by type in collapsible sections is the other choice, picked on the dashboard or in My settings and saved to the account (`UserPreference.fleetGrouping`).
+
 - Tests: 13 api tests in `test/revisions1.test.ts`, 11 e2e tests in `e2e/report.spec.ts`. The "Back mid-flight" motion e2e test misses its 1.5 s budget by about 0.1 s in this container with and without these changes.
 
 ### Quality pass — 2026-10-29

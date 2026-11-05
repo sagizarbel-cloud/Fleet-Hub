@@ -127,7 +127,30 @@
     "notSet": "Not set",
     "error": "Couldn't load the dashboard.",
     "retry": "Try again",
-    "openVehicle": "Open {{serial}}"
+    "openVehicle": "Open {{serial}}",
+    "dueList": {
+      "title": "Due within 30 days",
+      "none": "Nothing is due in the next 30 days.",
+      "overdue": "overdue",
+      "kind": {
+        "service": "Service",
+        "annualTest": "Annual test",
+        "insurance": "Insurance"
+      }
+    },
+    "spendList": {
+      "title": "Spent this month",
+      "none": "No receipts this month yet.",
+      "total": "Total",
+      "noVehicle": "Not tagged to a vehicle",
+      "shared": "shared by {{count}} vehicles"
+    },
+    "groupBy": {
+      "label": "Group by",
+      "location": "Location",
+      "type": "Type",
+      "noLocation": "No location"
+    }
   },
   "events": {
     "VEHICLE_CREATED": "Vehicle added to the fleet",
@@ -782,7 +805,9 @@
         "dark": "Dark",
         "light": "Light"
       },
-      "vitals": "Default vitals"
+      "vitals": "Default vitals",
+      "fleetGrouping": "Fleet on the dashboard",
+      "fleetGroupingHint": "How the fleet opens on the dashboard. It can also be changed there."
     },
     "password": {
       "title": "Change password",

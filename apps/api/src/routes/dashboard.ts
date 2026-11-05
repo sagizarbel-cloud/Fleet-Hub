@@ -79,6 +79,118 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  /**
+   * What falls due within 30 days, overdue included, one row per vehicle and kind (Revisions 1:
+   * the "Due within 30 days" box opens it). Soonest first; the counts in the box match it.
+   */
+  app.get('/due', { preHandler: requireUser }, async () => {
+    const dueBy = new Date(Date.now() + DUE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const rows = await app.db.vehicle.findMany({
+      where: {
+        OR: [
+          { nextServiceDate: { lte: dueBy } },
+          { annualTestExpiry: { lte: dueBy } },
+          { insuranceExpiry: { lte: dueBy } },
+        ],
+      },
+      // Never select startCodeEnc here.
+      select: {
+        serial: true,
+        make: true,
+        model: true,
+        nextServiceDate: true,
+        annualTestExpiry: true,
+        insuranceExpiry: true,
+      },
+    });
+    const kinds = [
+      ['service', 'nextServiceDate'],
+      ['annualTest', 'annualTestExpiry'],
+      ['insurance', 'insuranceExpiry'],
+    ] as const;
+    return rows
+      .flatMap((v) =>
+        kinds
+          .filter(([, field]) => v[field] && v[field] <= dueBy)
+          .map(([kind, field]) => ({
+            serial: v.serial,
+            make: v.make,
+            model: v.model,
+            kind,
+            date: v[field]!,
+          })),
+      )
+      .sort((a, b) => a.date.getTime() - b.date.getTime() || a.serial.localeCompare(b.serial));
+  });
+
+  /**
+   * This month's spend by vehicle (Revisions 1: the "Spent this month" box opens it). A receipt
+   * tagged to several vehicles is split evenly, as in the cost totals; untagged ones come last.
+   */
+  app.get('/spend', { preHandler: requireUser }, async () => {
+    const now = new Date();
+    const docs = await app.db.document.findMany({
+      where: { deletedAt: null, date: { gte: startOfMonth(now), lte: now }, amount: { not: null } },
+      orderBy: [{ date: 'desc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        date: true,
+        vendor: true,
+        amount: true,
+        category: { select: { nameEn: true, nameHe: true } },
+        vehicles: { select: { vehicle: { select: { serial: true, make: true, model: true } } } },
+      },
+    });
+    type Group = {
+      serial: string | null;
+      make: string | null;
+      model: string | null;
+      total: number;
+      receipts: {
+        id: string;
+        date: Date;
+        vendor: string | null;
+        category: { nameEn: string; nameHe: string } | null;
+        amount: number;
+        share: number;
+        vehicles: number;
+      }[];
+    };
+    const groups = new Map<string, Group>();
+    let total = 0;
+    for (const d of docs) {
+      const amount = d.amount!.toNumber();
+      total += amount;
+      const vehicles = d.vehicles.map((x) => x.vehicle);
+      const share = vehicles.length ? amount / vehicles.length : amount;
+      for (const v of vehicles.length ? vehicles : [null]) {
+        const key = v?.serial ?? '';
+        const g = groups.get(key) ?? {
+          serial: v?.serial ?? null,
+          make: v?.make ?? null,
+          model: v?.model ?? null,
+          total: 0,
+          receipts: [],
+        };
+        g.total += share;
+        g.receipts.push({
+          id: d.id,
+          date: d.date,
+          vendor: d.vendor,
+          category: d.category,
+          amount,
+          share,
+          vehicles: vehicles.length,
+        });
+        groups.set(key, g);
+      }
+    }
+    const vehicles = [...groups.values()].sort(
+      (a, b) => Number(a.serial === null) - Number(b.serial === null) || b.total - a.total,
+    );
+    return { total, vehicles };
+  });
+
   /** Every open or in-progress malfunction in the fleet, worst first (Revisions 1: the KPI opens it). */
   app.get('/open-malfunctions', { preHandler: requireUser }, async () => {
     const rows = await app.db.malfunction.findMany({

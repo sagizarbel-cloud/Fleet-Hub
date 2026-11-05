@@ -120,6 +120,56 @@ describe('dashboard', () => {
     expect(after.status.GREEN - before.status.GREEN).toBe(3);
   });
 
+  it('lists what is due and this month\'s spend by vehicle (Revisions 1)', async () => {
+    const type = await app.db.vehicleType.findUniqueOrThrow({ where: { code: 'dash_test' } });
+    const now = Date.now();
+    const a = await app.db.vehicle.create({
+      data: {
+        serial: 'DB-020',
+        make: 'T',
+        model: 'T',
+        typeId: type.id,
+        nextServiceDate: new Date(now + 5 * DAY),
+        insuranceExpiry: new Date(now - 2 * DAY),
+        annualTestExpiry: new Date(now + 60 * DAY),
+      },
+    });
+    const b = await app.db.vehicle.create({
+      data: { serial: 'DB-021', make: 'T', model: 'T', typeId: type.id },
+    });
+    expect((await app.inject({ method: 'GET', url: '/api/dashboard/due' })).statusCode).toBe(401);
+    const due = (await get('/api/dashboard/due', viewer)).json() as {
+      serial: string;
+      kind: string;
+    }[];
+    const mine = due.filter((d) => d.serial === 'DB-020').map((d) => d.kind);
+    // Overdue insurance first, then the service; the test 60 days out stays off.
+    expect(mine).toEqual(['insurance', 'service']);
+    const kpis = (await get('/api/dashboard', viewer)).json().kpis;
+    expect(due.length).toBe(kpis.dueWithin30Days.total);
+    expect(JSON.stringify(due)).not.toContain('startCode');
+
+    const doc = await app.db.document.create({ data: { date: new Date(), amount: 300 } });
+    await app.db.documentVehicle.createMany({
+      data: [
+        { documentId: doc.id, vehicleId: a.id },
+        { documentId: doc.id, vehicleId: b.id },
+      ],
+    });
+    const spend = (await get('/api/dashboard/spend', viewer)).json() as {
+      total: number;
+      vehicles: { serial: string | null; total: number; receipts: { id: string; share: number }[] }[];
+    };
+    expect(spend.total).toBeCloseTo(kpis.spendThisMonth + 300);
+    const shareA = spend.vehicles.find((v) => v.serial === 'DB-020')!;
+    expect(shareA.total).toBeCloseTo(150);
+    expect(shareA.receipts[0]!.share).toBeCloseTo(150);
+    // Untagged receipts (the 120.50 above) are grouped last.
+    expect(spend.vehicles.at(-1)!.serial).toBeNull();
+    const sum = spend.vehicles.reduce((n, v) => n + v.total, 0);
+    expect(sum).toBeCloseTo(spend.total);
+  });
+
   it('returns tiles without start codes', async () => {
     const res = await get('/api/dashboard', viewer);
     const tile = res.json().tiles.find((t: { serial: string }) => t.serial === SERIAL);

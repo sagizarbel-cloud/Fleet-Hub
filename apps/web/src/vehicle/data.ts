@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { DetailView, VehicleCategory, VehicleStatus, VitalKey } from '@fleet-hub/shared';
+import type {
+  DetailView,
+  FleetGrouping,
+  VehicleCategory,
+  VehicleStatus,
+  VitalKey,
+} from '@fleet-hub/shared';
 import { api } from '@/lib/api';
 
 export interface AssignedItem {
@@ -82,6 +88,8 @@ export interface VehicleDetail {
 export interface Preferences {
   pinnedVitals: VitalKey[];
   detailView: DetailView;
+  /** How the dashboard groups the fleet (Revisions 1). */
+  fleetGrouping: FleetGrouping;
   fleetViewId: string | null;
   /** Null: follow this device's own choice. */
   language: 'en' | 'he' | null;

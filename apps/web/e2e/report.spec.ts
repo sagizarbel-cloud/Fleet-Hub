@@ -176,6 +176,12 @@ test('admins add an extra field to location changes; it shows in the form and re
 });
 
 test('a work card gathers an existing service and shows it in its report', async ({ page }) => {
+  // A service no card holds yet (earlier runs may have gathered the seeded ones).
+  const made = await page.request.post('/api/vehicles/TR-601/records/service', {
+    data: { date: new Date().toISOString().slice(0, 10), description: 'E2E service to gather' },
+    headers: { origin: 'http://localhost:5173' },
+  });
+  expect(made.ok()).toBe(true);
   await page.goto('/vehicles/TR-601?panel=workCards');
   await page.getByTestId('add-record').click();
   const form = page.locator('#record-form');

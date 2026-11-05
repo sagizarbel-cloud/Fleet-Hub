@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Check } from 'lucide-react';
 import {
   changePasswordBody,
   DEFAULT_PINNED_VITALS,
+  FLEET_GROUPINGS,
   VITAL_KEYS,
   type VitalKey,
 } from '@fleet-hub/shared';
@@ -112,9 +113,28 @@ export function MySettings() {
           />
         </div>
       </Panel>
+      <FleetGroupingChoice />
       <DefaultVitals />
       <ChangePassword />
     </div>
+  );
+}
+
+/** How the dashboard groups the fleet (Revisions 1): the lot by location, or by type. */
+function FleetGroupingChoice() {
+  const { t } = useTranslation();
+  const prefs = usePreferences();
+  const save = useSavePreferences();
+  return (
+    <Panel title={t('settings.mine.fleetGrouping')} hint={t('settings.mine.fleetGroupingHint')}>
+      <Choice
+        name="fleetGrouping"
+        label={t('dashboard.groupBy.label')}
+        value={prefs.data?.fleetGrouping ?? 'location'}
+        options={FLEET_GROUPINGS.map((g) => ({ value: g, label: t(`dashboard.groupBy.${g}`) }))}
+        onChange={(fleetGrouping) => save.mutate({ fleetGrouping })}
+      />
+    </Panel>
   );
 }
 

@@ -8,6 +8,10 @@ import type { Dashboard } from './data';
 import { formatMoney } from './events';
 
 const OpenMalfunctionsSheet = lazy(() => import('./OpenMalfunctionsSheet'));
+const DueSheet = lazy(() => import('./DueSheet'));
+const SpendSheet = lazy(() => import('./SpendSheet'));
+
+type SheetName = 'open' | 'due' | 'spend';
 
 const STATUS_STYLE: Record<VehicleStatus, { icon: typeof CircleCheck; tone: string }> = {
   GREEN: { icon: CircleCheck, tone: 'text-ok' },
@@ -25,7 +29,8 @@ const DUE_KEYS = [
 export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
   const { t, i18n } = useTranslation();
   const due = kpis.dueWithin30Days;
-  const [showOpen, setShowOpen] = useState(false);
+  const [sheet, setSheet] = useState<SheetName | null>(null);
+  const close = () => setSheet(null);
 
   return (
     <section
@@ -51,27 +56,34 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
           })}
         </dl>
       </div>
-      <div className="glass col-span-2 p-3" data-testid="kpi-due">
-        <h2 className="text-muted mb-1 inline-flex items-center gap-1.5 text-xs font-medium">
+      {/* Revisions 1: the box opens the list of what's due, by vehicle. */}
+      <button
+        type="button"
+        onClick={() => setSheet('due')}
+        className="glass hover:border-border-strong col-span-2 block p-3 text-start"
+        data-testid="kpi-due"
+        aria-label={t('dashboard.dueList.title')}
+      >
+        <span className="text-muted mb-1 inline-flex items-center gap-1.5 text-xs font-medium">
           <CalendarClock aria-hidden className="size-3.5" />
           {t('dashboard.kpi.due')}
-        </h2>
-        <div className="flex items-end gap-4">
+        </span>
+        <span className="flex items-end gap-4">
           <span className="num text-2xl leading-none font-semibold">{due.total}</span>
-          <dl className="text-muted flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+          <span className="text-muted flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
             {DUE_KEYS.map(([key, field]) => (
-              <div key={key} className="flex gap-1">
-                <dt>{t(`dashboard.kpi.${key}`)}</dt>
-                <dd className="num text-text">{due[field]}</dd>
-              </div>
+              <span key={key} className="flex gap-1">
+                <span>{t(`dashboard.kpi.${key}`)}</span>
+                <span className="num text-text">{due[field]}</span>
+              </span>
             ))}
-          </dl>
-        </div>
-      </div>
+          </span>
+        </span>
+      </button>
       {/* Revisions 1: the box opens the list of open malfunctions, each with its report. */}
       <button
         type="button"
-        onClick={() => setShowOpen(true)}
+        onClick={() => setSheet('open')}
         className="glass hover:border-border-strong block p-3 text-start"
         data-testid="kpi-malfunctions"
         aria-label={t('report.fleetOpenTitle')}
@@ -89,23 +101,31 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
           {kpis.openMalfunctions}
         </span>
       </button>
-      {showOpen && (
-        <Suspense>
-          <OpenMalfunctionsSheet
-            onClose={() => setShowOpen(false)}
-            reduced={prefersReducedMotion()}
-          />
-        </Suspense>
-      )}
-      <div className="glass p-3" data-testid="kpi-spend">
-        <h2 className="text-muted mb-1 inline-flex items-center gap-1.5 text-xs font-medium">
+      {/* Revisions 1: the box opens this month's spend, by vehicle. */}
+      <button
+        type="button"
+        onClick={() => setSheet('spend')}
+        className="glass hover:border-border-strong block p-3 text-start"
+        data-testid="kpi-spend"
+        aria-label={t('dashboard.spendList.title')}
+      >
+        <span className="text-muted mb-1 inline-flex items-center gap-1.5 text-xs font-medium">
           <Wallet aria-hidden className="size-3.5" />
           {t('dashboard.kpi.spendThisMonth')}
-        </h2>
-        <span className="num text-xl leading-none font-semibold">
+        </span>
+        <span className="num block text-xl leading-none font-semibold">
           <bdi>{formatMoney(kpis.spendThisMonth, i18n.language)}</bdi>
         </span>
-      </div>
+      </button>
+      {sheet && (
+        <Suspense>
+          {sheet === 'open' && (
+            <OpenMalfunctionsSheet onClose={close} reduced={prefersReducedMotion()} />
+          )}
+          {sheet === 'due' && <DueSheet onClose={close} reduced={prefersReducedMotion()} />}
+          {sheet === 'spend' && <SpendSheet onClose={close} reduced={prefersReducedMotion()} />}
+        </Suspense>
+      )}
     </section>
   );
 }
