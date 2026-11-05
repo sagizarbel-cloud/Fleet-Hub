@@ -94,6 +94,7 @@ export interface Preferences {
   /** Null: follow this device's own choice. */
   language: 'en' | 'he' | null;
   theme: 'dark' | 'light' | null;
+  design: 'classic' | 'yard' | null;
 }
 
 const vehicleKey = (serial: string) => ['vehicle', serial] as const;

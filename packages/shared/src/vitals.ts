@@ -34,3 +34,7 @@ export type DetailView = (typeof DETAIL_VIEWS)[number];
 /** How the dashboard groups the fleet (Revisions 1): the lot by location (default) or by type. */
 export const FLEET_GROUPINGS = ['location', 'type'] as const;
 export type FleetGrouping = (typeof FLEET_GROUPINGS)[number];
+
+/** The site's design (2026-11-05): today's look, or Yard signage. */
+export const DESIGNS = ['classic', 'yard'] as const;
+export type Design = (typeof DESIGNS)[number];

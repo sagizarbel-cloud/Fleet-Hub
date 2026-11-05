@@ -254,7 +254,7 @@ function TileButton({
         whileHover={{ y: -4 }}
         transition={{ type: 'spring', stiffness: 520, damping: 38 }}
         className={cn(
-          'border-border bg-surface relative flex w-full flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2',
+          'fh-tile border-border bg-surface relative flex w-full flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2',
           'hover:border-border-strong',
           linked && 'border-accent/70 ring-accent/40 ring-2',
           drop.picking && 'border-accent/60 border-dashed',
@@ -292,10 +292,10 @@ function TileButton({
             />
           </div>
         </div>
-        <span className="flex items-center gap-1 text-xs">
-          <Icon aria-hidden className={cn('size-3.5', tone)} />
+        <span className="flex max-w-full min-w-0 items-center gap-1 text-xs">
+          <Icon aria-hidden className={cn('size-3.5 shrink-0', tone)} />
           <span className="sr-only">{t(`status.${tile.status}`)}</span>
-          <bdi dir="ltr" className="num">
+          <bdi dir="ltr" className="num min-w-0 truncate" title={tile.serial}>
             {tile.serial}
           </bdi>
         </span>
@@ -583,7 +583,7 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
                 key={code}
                 aria-label={name}
                 data-lot={code}
-                className="relative isolate max-w-full min-w-40 rounded-xl p-2.5"
+                className="fh-lot relative isolate max-w-full min-w-40 rounded-xl p-2.5"
               >
                 {/* The lot's painted outline fades on its own, so the chosen tile can fly out. */}
                 <motion.div
@@ -591,16 +591,18 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
                   initial={false}
                   animate={{ opacity: away ? 0 : 1 }}
                   transition={fade.base}
-                  className="border-border-strong/70 absolute inset-0 -z-10 rounded-xl border border-dashed"
+                  className="fh-lot-line border-border-strong/70 absolute inset-0 -z-10 rounded-xl border border-dashed"
                 />
                 <motion.h3
                   initial={false}
                   animate={{ opacity: away ? 0 : 1 }}
                   transition={fade.base}
-                  className="text-muted mb-2 flex items-center gap-1.5 text-xs font-medium"
+                  className="fh-lot-sign text-muted mb-2 flex min-w-0 items-center gap-1.5 text-xs font-medium"
                 >
-                  <MapPin aria-hidden className="size-3.5" />
-                  <span>{name}</span>
+                  <MapPin aria-hidden className="size-3.5 shrink-0" />
+                  <span className="min-w-0 truncate" title={name}>
+                    {name}
+                  </span>
                   <span aria-hidden className="num">
                     · {list.length}
                   </span>

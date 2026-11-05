@@ -35,7 +35,7 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
   return (
     <section
       aria-label={t('dashboard.kpi.vehicles')}
-      className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+      className="fh-kpis grid grid-cols-2 gap-2 sm:grid-cols-4"
     >
       <div className="glass col-span-2 p-3 sm:col-span-4" data-testid="kpi-status">
         <h2 className="text-muted mb-2 text-xs font-medium">{t('dashboard.kpi.vehicles')}</h2>
@@ -44,7 +44,7 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
             const { icon: Icon, tone } = STATUS_STYLE[s];
             return (
               <div key={s} className="flex flex-col">
-                <dd className={cn('num text-3xl leading-none font-semibold', tone)}>
+                <dd className={cn('fh-big num text-3xl leading-none font-semibold', tone)}>
                   {kpis.status[s]}
                 </dd>
                 <dt className={cn('mt-1 inline-flex items-center gap-1 text-xs', tone)}>
@@ -69,7 +69,7 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
           {t('dashboard.kpi.due')}
         </span>
         <span className="flex items-end gap-4">
-          <span className="num text-2xl leading-none font-semibold">{due.total}</span>
+          <span className="fh-big num text-2xl leading-none font-semibold">{due.total}</span>
           <span className="text-muted flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
             {DUE_KEYS.map(([key, field]) => (
               <span key={key} className="flex gap-1">
@@ -94,7 +94,7 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
         </span>
         <span
           className={cn(
-            'num block text-2xl leading-none font-semibold',
+            'fh-big num block text-2xl leading-none font-semibold',
             kpis.openMalfunctions > 0 && 'text-warn',
           )}
         >
@@ -113,7 +113,7 @@ export function KpiStrip({ kpis }: { kpis: Dashboard['kpis'] }) {
           <Wallet aria-hidden className="size-3.5" />
           {t('dashboard.kpi.spendThisMonth')}
         </span>
-        <span className="num block text-xl leading-none font-semibold">
+        <span className="fh-big num block text-xl leading-none font-semibold">
           <bdi>{formatMoney(kpis.spendThisMonth, i18n.language)}</bdi>
         </span>
       </button>

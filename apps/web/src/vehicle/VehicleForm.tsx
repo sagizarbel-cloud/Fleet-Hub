@@ -380,7 +380,12 @@ export function VehicleForm({
                   onChange={() => set('type', ty.code)}
                 />
                 <span className="grid h-16 place-items-center overflow-hidden">
-                  <VehicleVisual type={ty.code} view="top" status="GREEN" size={pickerSize(ty.code)} />
+                  <VehicleVisual
+                    type={ty.code}
+                    view="top"
+                    status="GREEN"
+                    size={pickerSize(ty.code)}
+                  />
                 </span>
                 {lookupName(ty, lang)}
               </label>

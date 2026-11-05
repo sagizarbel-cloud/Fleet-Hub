@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, Check } from 'lucide-react';
 import {
   changePasswordBody,
+  DESIGNS,
   DEFAULT_PINNED_VITALS,
   FLEET_GROUPINGS,
   VITAL_KEYS,
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { LANGUAGES, setLanguage, type Language } from '@/i18n';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { currentDesign, setDesign, subscribeDesign } from '@/lib/design';
 import { currentTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme';
 import { errorProps, INPUT, issuesToErrors, Labeled, type Errors } from '@/money/form';
 import { usePreferences, useSavePreferences } from '@/vehicle/data';
@@ -86,6 +88,7 @@ export function MySettings() {
   const { t, i18n } = useTranslation();
   const look = useSaveLook();
   const theme = useSyncExternalStore(subscribeTheme, currentTheme);
+  const design = useSyncExternalStore(subscribeDesign, currentDesign);
 
   return (
     <div className="space-y-3">
@@ -109,6 +112,16 @@ export function MySettings() {
             onChange={(v) => {
               setTheme(v);
               look.theme(v);
+            }}
+          />
+          <Choice
+            name="design"
+            label={t('settings.mine.design')}
+            value={design}
+            options={DESIGNS.map((v) => ({ value: v, label: t(`settings.mine.designs.${v}`) }))}
+            onChange={(v) => {
+              setDesign(v);
+              look.design(v);
             }}
           />
         </div>

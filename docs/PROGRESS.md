@@ -35,6 +35,13 @@ Round 3 (Sagi, 2026-11-05):
 
 - Tests: 13 api tests in `test/revisions1.test.ts`, 11 e2e tests in `e2e/report.spec.ts`. The "Back mid-flight" motion e2e test misses its 1.5 s budget by about 0.1 s in this container with and without these changes.
 
+### Yard signage design — 2026-11-05 (mock-up: https://claude.ai/artifact/8UnbivhgHJExuBWbg2Mf8N)
+
+- Sagi wanted the site to look less machine-made and picked "Yard signage": painted on asphalt, read from a cab. It is now the default design. Today's look stays as "Classic", picked in My settings and saved to the account (`UserPreference.design`, `fh.design` on the device, `data-design` on `<html>`).
+- Yard: soft-black page (#131416), asphalt panels (#1D1F21), safety yellow (#F5C400), amber for "has issues" (#FFA31A), signal red, green. Secular One for signs and numbers, Rubik for text (both self-hosted, both cover Hebrew), Plex Mono for codes. Square corners, flat panels without blur or shadow, pills become 2 px chips. The header is black on yellow with hazard tape as its bottom edge. Lots are a painted dashed line with a sign, with no box around each vehicle. A light variant uses concrete and chalk.
+- No text leaves its box: lot names and serials truncate with a tooltip, KPI numbers shrink with their box, and `e2e/overflow.spec.ts` checks 7 screens in English and Hebrew at 1440 and 390 px.
+- All of it is CSS under `:root[data-design='yard']` in `styles.css`, hooked to a few `fh-*` classes, so Classic is untouched.
+
 ### Quality pass — 2026-10-29
 
 - Drawings: all 12 (11 types plus the generic one) checked in top, side and isometric views, dark and light. Fixed: the pickup's front door line ran down into the front wheel arch and its mirror stuck out past the windscreen pillar; the trailer's jockey wheel floated under the drawbar (now on a post); the wheeled excavator's dozer blade floated in front of the chassis (now on a push frame); the truck's tipper body hovered above the chassis.

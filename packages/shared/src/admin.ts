@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  CUSTOM_FIELD_KEYS,
-  CUSTOM_FIELD_TYPES,
-  ROLES,
-  VEHICLE_CATEGORIES,
-} from './enums';
+import { CUSTOM_FIELD_KEYS, CUSTOM_FIELD_TYPES, ROLES, VEHICLE_CATEGORIES } from './enums';
 
 // ---------- Settings lists (SPEC 5.9) ----------
 

@@ -805,6 +805,11 @@
         "dark": "Dark",
         "light": "Light"
       },
+      "design": "Design",
+      "designs": {
+        "yard": "Yard signage",
+        "classic": "Classic"
+      },
       "vitals": "Default vitals",
       "fleetGrouping": "Fleet on the dashboard",
       "fleetGroupingHint": "How the fleet opens on the dashboard. It can also be changed there."

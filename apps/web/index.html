@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" dir="ltr" data-theme="dark">
+<html lang="en" dir="ltr" data-theme="dark" data-design="yard">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -7,13 +7,15 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Fleet Hub</title>
     <script>
-      // Apply the saved language and theme before first paint to avoid a flash.
+      // Apply the saved language, theme and design before first paint to avoid a flash.
       try {
         var lang = localStorage.getItem('fh.lang') === 'he' ? 'he' : 'en';
         var theme = localStorage.getItem('fh.theme') === 'light' ? 'light' : 'dark';
         document.documentElement.lang = lang;
         document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
         document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.design =
+          localStorage.getItem('fh.design') === 'classic' ? 'classic' : 'yard';
       } catch (e) {}
     </script>
   </head>

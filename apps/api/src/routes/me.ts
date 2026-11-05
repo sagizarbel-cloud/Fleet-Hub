@@ -16,6 +16,7 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
       // Null: follow the device (browser language, system theme).
       language: pref?.language === 'en' || pref?.language === 'he' ? pref.language : null,
       theme: pref?.theme === 'dark' || pref?.theme === 'light' ? pref.theme : null,
+      design: pref?.design === 'classic' || pref?.design === 'yard' ? pref.design : null,
     };
   };
 

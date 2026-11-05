@@ -10,7 +10,7 @@ import {
   WORK_TYPES,
 } from './enums';
 import { INSPECTION_KINDS, RECORD_KINDS, SORT_DIRS, type RecordKind } from './records';
-import { DETAIL_VIEWS, FLEET_GROUPINGS, VITAL_KEYS } from './vitals';
+import { DESIGNS, DETAIL_VIEWS, FLEET_GROUPINGS, VITAL_KEYS } from './vitals';
 import { ALL_FLEET_COLUMNS, FLEET_GROUP_BY, FLEET_GROUPS } from './fleet';
 import {
   DOCUMENT_KINDS,
@@ -63,6 +63,7 @@ export const preferencesBody = z.object({
   /** Defaults that follow the user to every device; null = this device decides. */
   language: z.enum(['en', 'he']).nullable().optional(),
   theme: z.enum(['dark', 'light']).nullable().optional(),
+  design: z.enum(DESIGNS).nullable().optional(),
 });
 export type PreferencesBody = z.infer<typeof preferencesBody>;
 
