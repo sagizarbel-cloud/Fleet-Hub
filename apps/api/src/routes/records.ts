@@ -1,8 +1,14 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import {
+  hasRole,
   ownershipBody,
+  progressBody,
+  progressItemParams,
+  progressParams,
   RECORD_BODIES,
+  TOOL_TYPES,
+  toolBody,
   recordIdParams,
   recordParams,
   recordsQuery,
@@ -17,13 +23,16 @@ import {
   canCreate,
   createRecord,
   fuelEconomy,
+  getRecord,
   listRecords,
+  progressOf,
   serializeOne,
   setDeleted,
   updateRecord,
   type VehicleRef,
 } from '../lib/records';
 import { refreshStatus } from '../lib/status';
+import { checkFuelRequired } from '../lib/app-settings';
 import { requireRole, requireUser } from '../plugins/auth';
 
 type Db = FastifyInstance['db'] | Prisma.TransactionClient;
@@ -64,12 +73,20 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
     return listRecords(app.db as unknown as Prisma.TransactionClient, req.user!, kind, vehicle, q);
   });
 
+  // One record with its history, for the record report (Revisions 1). Anyone signed in may read.
+  app.get('/:serial/records/:kind/:id', { preHandler: requireUser }, async (req) => {
+    const { serial, kind, id } = parse(recordIdParams, req.params);
+    const tx = app.db as unknown as Prisma.TransactionClient;
+    return getRecord(tx, kind, await vehicleRef(tx, serial), id);
+  });
+
   app.post('/:serial/records/:kind', { preHandler: requireUser }, async (req, reply) => {
     const { serial, kind } = parse(recordParams, req.params);
     const user = req.user!;
     if (!canCreate(user, kind)) throw new HttpError(403, 'forbidden');
     const input = parse(RECORD_BODIES[kind], req.body);
     const result = await app.db.$transaction(async (tx) => {
+      if (kind === 'fuel') await checkFuelRequired(tx, input as object);
       const vehicle = await vehicleRef(tx, serial);
       const row = await createRecord(tx, user, kind as RecordKind, vehicle, input as never);
       const status = await refreshStatus(tx, vehicle.id, user.id);
@@ -83,6 +100,7 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
     const user = req.user!;
     const input = parse(RECORD_BODIES[kind], req.body);
     return app.db.$transaction(async (tx) => {
+      if (kind === 'fuel') await checkFuelRequired(tx, input as object);
       const vehicle = await vehicleRef(tx, serial);
       const row = await updateRecord(tx, user, kind as RecordKind, vehicle, id, input as never);
       const status = await refreshStatus(tx, vehicle.id, user.id);
@@ -109,6 +127,114 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
       },
     });
   }
+
+  // ---------- Malfunction progress updates (Revisions 1) ----------
+
+  /** Editors add "what was done so far" to a malfunction; each update is an Event too. */
+  app.post(
+    '/:serial/records/malfunctions/:id/progress',
+    { preHandler: requireUser },
+    async (req, reply) => {
+      const { serial, id } = parse(progressParams, req.params);
+      const { at, body } = parse(progressBody, req.body);
+      const user = req.user!;
+      if (!hasRole(user.role, 'EDITOR')) throw new HttpError(403, 'forbidden');
+      const progress = await app.db.$transaction(async (tx) => {
+        const vehicle = await vehicleRef(tx, serial);
+        const m = await tx.malfunction.findFirst({
+          where: { id, vehicleId: vehicle.id, deletedAt: null },
+          select: { id: true, description: true },
+        });
+        if (!m) throw new HttpError(404, 'not_found');
+        const when = at ?? new Date();
+        const row = await tx.malfunctionProgress.create({
+          data: { malfunctionId: id, at: when, body, createdById: user.id },
+        });
+        await tx.event.create({
+          data: {
+            vehicleId: vehicle.id,
+            userId: user.id,
+            type: 'MALFUNCTION_PROGRESS',
+            occurredAt: when,
+            sourceType: 'Malfunction',
+            sourceId: id,
+            params: { description: m.description, progress: body, progressId: row.id },
+          },
+        });
+        return progressOf(tx, id);
+      });
+      return reply.status(201).send({ progress });
+    },
+  );
+
+  /** Removes a progress update (editors), and its timeline entry. */
+  app.delete(
+    '/:serial/records/malfunctions/:id/progress/:progressId',
+    { preHandler: requireRole('EDITOR') },
+    async (req) => {
+      const { serial, id, progressId } = parse(progressItemParams, req.params);
+      return app.db.$transaction(async (tx) => {
+        const vehicle = await vehicleRef(tx, serial);
+        const row = await tx.malfunctionProgress.findFirst({
+          where: {
+            id: progressId,
+            malfunctionId: id,
+            deletedAt: null,
+            malfunction: { vehicleId: vehicle.id },
+          },
+        });
+        if (!row) throw new HttpError(404, 'not_found');
+        const now = new Date();
+        await tx.malfunctionProgress.update({
+          where: { id: progressId },
+          data: { deletedAt: now },
+        });
+        await tx.event.updateMany({
+          where: {
+            sourceType: 'Malfunction',
+            sourceId: id,
+            type: 'MALFUNCTION_PROGRESS',
+            params: { path: ['progressId'], equals: progressId },
+          },
+          data: { hiddenAt: now },
+        });
+        return { progress: await progressOf(tx, id) };
+      });
+    },
+  );
+
+  // ---------- Excavator tool (Revisions 1) ----------
+
+  /** Changes the tool on an excavator's arm; the drawing follows and Activity logs it. */
+  app.put('/:serial/tool', { preHandler: requireRole('EDITOR') }, async (req) => {
+    const { serial } = parse(serialParam, req.params);
+    const { tool } = parse(toolBody, req.body);
+    return app.db.$transaction(async (tx) => {
+      const v = await tx.vehicle.findUnique({
+        where: { serial },
+        select: { id: true, tool: true, type: { select: { code: true } } },
+      });
+      if (!v) throw new HttpError(404, 'vehicle_not_found');
+      if (!(TOOL_TYPES as readonly string[]).includes(v.type.code))
+        throw Object.assign(new HttpError(400, 'validation_failed'), {
+          issues: [{ path: 'tool', code: 'notExcavator' }],
+        });
+      const from = v.tool ?? 'bucket';
+      if (from !== tool) {
+        await tx.vehicle.update({ where: { id: v.id }, data: { tool } });
+        await tx.event.create({
+          data: {
+            vehicleId: v.id,
+            userId: req.user!.id,
+            type: 'TOOL_CHANGED',
+            occurredAt: new Date(),
+            params: { from, to: tool },
+          },
+        });
+      }
+      return { tool };
+    });
+  });
 
   app.get('/:serial/fuel-economy', { preHandler: requireUser }, async (req) => {
     const { serial } = parse(serialParam, req.params);
@@ -235,6 +361,9 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
         vendor: true,
         amount: true,
         notes: true,
+        approvedAt: true,
+        linkedRecordType: true,
+        linkedRecordId: true,
         category: { select: { code: true } },
       },
     });
@@ -244,8 +373,9 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
       rows.map((r) => r.id),
     );
     return {
-      items: rows.map(({ amount, category, ...d }) => ({
+      items: rows.map(({ amount, category, approvedAt, ...d }) => ({
         ...d,
+        approved: approvedAt !== null,
         amount: amount?.toNumber() ?? null,
         category: category?.code ?? null,
         attachments: files.get(d.id) ?? [],

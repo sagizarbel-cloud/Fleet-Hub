@@ -28,6 +28,56 @@ test.describe('dashboard', () => {
     for (const text of await rows.allInnerTexts()) expect(text).toContain('Refueled');
   });
 
+  test('the fleet parks by location; grouping by type is a saved choice (Revisions 1)', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const grid = page.getByTestId('fleet-grid');
+    const pick = grid.getByTestId('fleet-grouping');
+    await expect(pick.getByRole('button', { name: 'Location' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(grid.locator('[data-lot]').first()).toBeVisible();
+    await expect(grid.locator('[data-section]')).toHaveCount(0);
+    const tiles = await grid.locator('[data-tile]').count();
+    expect(await grid.locator('[data-lot] [data-tile]').count()).toBe(tiles);
+
+    const saved = page.waitForResponse(
+      (r) => r.url().endsWith('/api/me/preferences') && r.request().method() === 'PUT',
+    );
+    await pick.getByRole('button', { name: 'Type' }).click();
+    await saved;
+    await expect(grid.locator('[data-section]').first()).toBeVisible();
+    await expect(grid.locator('[data-lot]')).toHaveCount(0);
+    await page.reload();
+    await expect(grid.locator('[data-section]').first()).toBeVisible();
+
+    const back = page.waitForResponse(
+      (r) => r.url().endsWith('/api/me/preferences') && r.request().method() === 'PUT',
+    );
+    await pick.getByRole('button', { name: 'Location' }).click();
+    await back;
+    await expect(grid.locator('[data-lot]').first()).toBeVisible();
+  });
+
+  test('the due and spend boxes open their lists (Revisions 1)', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('kpi-due').click();
+    const due = page.getByTestId('due-sheet');
+    await expect(due).toBeVisible();
+    const total = Number(await page.getByTestId('kpi-due').locator('.num').first().innerText());
+    if (total > 0) await expect(due.locator('[data-kind]')).toHaveCount(total);
+    await page.keyboard.press('Escape');
+    await expect(due).toHaveCount(0);
+
+    await page.getByTestId('kpi-spend').click();
+    const spend = page.getByTestId('spend-sheet');
+    await expect(spend).toBeVisible();
+    await expect(spend.getByText(/Total|No receipts this month/).first()).toBeVisible();
+    await page.keyboard.press('Escape');
+  });
+
   test('filters the grid by status', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('[data-tile]').first()).toBeVisible();

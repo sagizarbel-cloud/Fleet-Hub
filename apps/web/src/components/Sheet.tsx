@@ -1,8 +1,60 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
+
+/**
+ * Dialog behaviour shared by sheets: focus moves in (first field, else first button) and comes
+ * back on close; Esc closes and is marked handled so the page underneath doesn't also react;
+ * Tab stays inside.
+ */
+export function useDialogFocus(
+  panel: RefObject<HTMLElement | null>,
+  onClose: () => void,
+  /** Focus the dialog itself rather than its first control (a read-only report). */
+  focusPanel = false,
+) {
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
+
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    const first = focusPanel
+      ? panel.current
+      : (panel.current?.querySelector<HTMLElement>('input, select, textarea') ??
+        panel.current?.querySelector<HTMLElement>('button'));
+    first?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        close.current();
+        return;
+      }
+      if (e.key !== 'Tab' || !panel.current) return;
+      const items = panel.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not(:disabled), input:not(:disabled), select, textarea, [tabindex="0"]',
+      );
+      const firstEl = items[0];
+      const lastEl = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === firstEl) {
+        e.preventDefault();
+        lastEl?.focus();
+      } else if (!e.shiftKey && document.activeElement === lastEl) {
+        e.preventDefault();
+        firstEl?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      before?.focus?.();
+    };
+  }, [panel, focusPanel]);
+}
 
 /**
  * A side sheet (full screen on phones) for forms. Esc and the backdrop close it; Esc is
@@ -24,45 +76,7 @@ export function Sheet({
   const { t, i18n } = useTranslation();
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  const close = useRef(onClose);
-  useEffect(() => {
-    close.current = onClose;
-  });
-
-  useEffect(() => {
-    const before = document.activeElement as HTMLElement | null;
-    const first =
-      panel.current?.querySelector<HTMLElement>('input, select, textarea') ??
-      panel.current?.querySelector<HTMLElement>('button');
-    first?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        close.current();
-        return;
-      }
-      if (e.key !== 'Tab' || !panel.current) return;
-      // Keep Tab inside the sheet.
-      const items = panel.current.querySelectorAll<HTMLElement>(
-        'a[href], button:not(:disabled), input:not(:disabled), select, textarea',
-      );
-      const firstEl = items[0];
-      const lastEl = items[items.length - 1];
-      if (e.shiftKey && document.activeElement === firstEl) {
-        e.preventDefault();
-        lastEl?.focus();
-      } else if (!e.shiftKey && document.activeElement === lastEl) {
-        e.preventDefault();
-        firstEl?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => {
-      window.removeEventListener('keydown', onKey, true);
-      before?.focus?.();
-    };
-  }, []);
+  useDialogFocus(panel, onClose);
 
   // Slides in from the inline end: the right in English, the left in Hebrew.
   const from = reduced ? 0 : i18n.dir() === 'rtl' ? -40 : 40;

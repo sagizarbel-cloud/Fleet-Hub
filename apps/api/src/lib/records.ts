@@ -10,6 +10,7 @@ import {
   type UsageUnit,
 } from '@fleet-hub/shared';
 import { HttpError } from './http';
+import { readAppSettings } from './app-settings';
 
 type Tx = Prisma.TransactionClient;
 type Row = Record<string, unknown> & {
@@ -32,7 +33,8 @@ type ModelName =
   | 'fuelEntry'
   | 'movement'
   | 'inspection'
-  | 'note';
+  | 'note'
+  | 'workCard';
 
 export interface VehicleRef {
   id: string;
@@ -55,6 +57,9 @@ export interface ListFilters {
   severity?: string;
   accident: boolean;
   fluid?: string;
+  fuelType?: string;
+  performedBy?: string;
+  workType?: string;
   location?: string;
   inspection?: string;
   mine: boolean;
@@ -74,7 +79,7 @@ interface KindConfig<K extends RecordKind> {
   params(row: Row): Prisma.InputJsonObject;
   filters?(f: ListFilters): object[];
   /** Updates the vehicle's own fields that this kind feeds (usage, location, expiries). */
-  after?(ctx: Ctx, input: RecordInput<K> | null): Promise<void>;
+  after?(ctx: Ctx, input: RecordInput<K> | null, id: string): Promise<void>;
 }
 
 const DAY_MS = 86_400_000;
@@ -83,14 +88,17 @@ const code = (v: unknown) => (v as { code?: string } | null)?.code ?? null;
 
 async function lookupId(
   tx: Tx,
-  list: 'fluidType' | 'location',
+  list: 'fluidType' | 'fuelType' | 'location',
   value: string,
   field: string,
 ): Promise<string> {
+  const where = { where: { code: value }, select: { id: true } };
   const row =
     list === 'fluidType'
-      ? await tx.fluidType.findUnique({ where: { code: value }, select: { id: true } })
-      : await tx.location.findUnique({ where: { code: value }, select: { id: true } });
+      ? await tx.fluidType.findUnique(where)
+      : list === 'fuelType'
+        ? await tx.fuelType.findUnique(where)
+        : await tx.location.findUnique(where);
   if (!row) {
     const err = new HttpError(400, 'validation_failed');
     Object.assign(err, { issues: [{ path: field, code: 'unknown' }] });
@@ -179,9 +187,14 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     sourceType: 'FuelEntry',
     dateField: 'date',
     createType: 'FUEL_ADDED',
-    search: [],
-    data: async (input) => input,
+    search: ['place', 'fueledBy', 'provider'],
+    include: { fuelType: { select: { code: true } } },
+    data: async ({ fuelType, ...rest }, ctx) => ({
+      ...rest,
+      fuelTypeId: fuelType ? await lookupId(ctx.tx, 'fuelType', fuelType, 'fuelType') : null,
+    }),
     params: (row) => ({ liters: num(row.liters) as number }),
+    filters: (f) => (f.fuelType ? [{ fuelType: { code: f.fuelType } }] : []),
     after: async (ctx, input) => {
       if (input) await bumpUsage(ctx, input);
     },
@@ -191,13 +204,14 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     sourceType: 'Movement',
     dateField: 'date',
     createType: 'MOVEMENT',
-    search: ['notes'],
+    search: ['notes', 'contractor'],
     include: {
       fromLocation: { select: { code: true } },
       toLocation: { select: { code: true } },
     },
-    data: async ({ fromLocation, toLocation, ...rest }, ctx) => ({
+    data: async ({ fromLocation, toLocation, custom, ...rest }, ctx) => ({
       ...rest,
+      custom: await keepDefinedCustom(ctx.tx, custom),
       fromLocationId: fromLocation
         ? await lookupId(ctx.tx, 'location', fromLocation, 'fromLocation')
         : null,
@@ -264,7 +278,136 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     data: async (input) => input,
     params: () => ({}),
   },
+  workCards: {
+    model: 'workCard',
+    sourceType: 'WorkCard',
+    dateField: 'date',
+    createType: 'WORK_CARD',
+    search: ['description', 'doneBy', 'place', 'notes'],
+    data: async ({ receiptIds: _r, serviceIds: _s, ...rest }) => rest,
+    params: (row) => ({
+      description: row.description as string,
+      performedBy: row.performedBy as string,
+      doneBy: (row.doneBy as string | null) ?? null,
+    }),
+    filters: (f) => [
+      ...(f.performedBy ? [{ performedBy: f.performedBy }] : []),
+      ...(f.workType ? [{ workType: f.workType }] : []),
+    ],
+    after: async (ctx, input, id) => {
+      if (!input) return;
+      await bumpUsage(ctx, input);
+      await linkReceipts(ctx, id, input.receiptIds);
+      await linkServices(ctx, id, input.serviceIds);
+    },
+  },
 };
+
+/**
+ * Keeps only the extra-field values an admin has defined for location changes (Revisions 1),
+ * each as its defined type; nothing left is stored as no value.
+ */
+async function keepDefinedCustom(tx: Tx, custom: unknown) {
+  if (!custom || typeof custom !== 'object') return Prisma.DbNull;
+  const { movementFields } = await readAppSettings(tx);
+  const out: Record<string, string | number> = {};
+  for (const f of movementFields) {
+    const v = (custom as Record<string, unknown>)[f.key];
+    if (v === null || v === undefined || v === '') continue;
+    if (f.type === 'number' && typeof v === 'number') out[f.key] = v;
+    else if (f.type === 'date' && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))
+      out[f.key] = v;
+    else if (f.type === 'text' && typeof v === 'string') out[f.key] = v;
+    else
+      throw Object.assign(new HttpError(400, 'validation_failed'), {
+        issues: [{ path: `custom.${f.key}`, code: 'invalid' }],
+      });
+  }
+  return Object.keys(out).length ? out : Prisma.DbNull;
+}
+
+/**
+ * Links the given receipts of this vehicle to a work card and unlinks the card's others
+ * (Revisions 1). Only approved, live receipts of the same vehicle can be linked.
+ */
+async function linkReceipts(ctx: Ctx, cardId: string, ids: string[]) {
+  const link = { linkedRecordType: 'WorkCard', linkedRecordId: cardId };
+  const usable = await ctx.tx.document.findMany({
+    where: {
+      id: { in: ids },
+      deletedAt: null,
+      approvedAt: { not: null },
+      vehicles: { some: { vehicleId: ctx.vehicle.id } },
+    },
+    select: { id: true },
+  });
+  if (usable.length !== new Set(ids).size)
+    throw Object.assign(new HttpError(400, 'validation_failed'), {
+      issues: [{ path: 'receiptIds', code: 'unknown' }],
+    });
+  await ctx.tx.document.updateMany({
+    where: { ...link, id: { notIn: ids } },
+    data: { linkedRecordType: null, linkedRecordId: null },
+  });
+  if (ids.length) await ctx.tx.document.updateMany({ where: { id: { in: ids } }, data: link });
+}
+
+/**
+ * Makes the given services of this vehicle part of a work card and lets go of the card's
+ * others (Sagi, 2026-11-05). A service already on another card can't be taken.
+ */
+async function linkServices(ctx: Ctx, cardId: string, ids: string[]) {
+  const usable = await ctx.tx.serviceRecord.findMany({
+    where: {
+      id: { in: ids },
+      vehicleId: ctx.vehicle.id,
+      deletedAt: null,
+      OR: [{ workCardId: null }, { workCardId: cardId }],
+    },
+    select: { id: true },
+  });
+  if (usable.length !== new Set(ids).size)
+    throw Object.assign(new HttpError(400, 'validation_failed'), {
+      issues: [{ path: 'serviceIds', code: 'unknown' }],
+    });
+  await ctx.tx.serviceRecord.updateMany({
+    where: { workCardId: cardId, id: { notIn: ids } },
+    data: { workCardId: null },
+  });
+  if (ids.length)
+    await ctx.tx.serviceRecord.updateMany({
+      where: { id: { in: ids } },
+      data: { workCardId: cardId },
+    });
+}
+
+/** The services that are part of each work card, newest first. */
+async function servicesFor(tx: Tx, ids: string[]) {
+  if (!ids.length) return new Map<string, unknown[]>();
+  const rows = await tx.serviceRecord.findMany({
+    where: { workCardId: { in: ids }, deletedAt: null },
+    orderBy: { date: 'desc' },
+    select: { id: true, date: true, description: true, vendor: true, cost: true, workCardId: true },
+  });
+  const map = new Map<string, unknown[]>();
+  for (const { workCardId, cost, ...r } of rows)
+    map.set(workCardId!, [...(map.get(workCardId!) ?? []), { ...r, cost: num(cost) }]);
+  return map;
+}
+
+/** The receipts linked to each work card, newest first. */
+async function receiptsFor(tx: Tx, ids: string[]) {
+  if (!ids.length) return new Map<string, unknown[]>();
+  const docs = await tx.document.findMany({
+    where: { linkedRecordType: 'WorkCard', linkedRecordId: { in: ids }, deletedAt: null },
+    orderBy: { date: 'desc' },
+    select: { id: true, kind: true, date: true, vendor: true, amount: true, linkedRecordId: true },
+  });
+  const map = new Map<string, unknown[]>();
+  for (const { linkedRecordId, amount, ...d } of docs)
+    map.set(linkedRecordId!, [...(map.get(linkedRecordId!) ?? []), { ...d, amount: num(amount) }]);
+  return map;
+}
 
 export const delegate = (tx: Tx, kind: RecordKind) => tx[KINDS[kind].model] as unknown as Delegate;
 
@@ -276,14 +419,15 @@ export function canChange(user: SessionUser, kind: RecordKind, row: Row) {
   return hasRole(user.role, 'EDITOR') || (kind === 'notes' && row.createdById === user.id);
 }
 
-const LOOKUP_IDS = new Set(['fluidTypeId', 'fromLocationId', 'toLocationId']);
+const LOOKUP_IDS = new Set(['fluidTypeId', 'fuelTypeId', 'fromLocationId', 'toLocationId']);
+const LOOKUP_KEYS = new Set(['fluidType', 'fuelType', 'fromLocation', 'toLocation']);
 
 /** A row as the API returns it: decimals as numbers, lookups as codes. */
 function serialize(row: Row) {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(row)) {
     if (key === 'vehicleId' || key === 'deletedAt') continue;
-    if (key === 'fluidType' || key === 'fromLocation' || key === 'toLocation') {
+    if (LOOKUP_KEYS.has(key)) {
       out[key] = code(value);
       continue;
     }
@@ -319,12 +463,14 @@ export async function attachmentsFor(tx: Tx, ownerType: string, ids: string[]) {
 async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row[]) {
   const ids = rows.map((r) => r.id);
   const authorIds = [...new Set(rows.map((r) => r.createdById).filter((v): v is string => !!v))];
-  const [authors, files, economy] = await Promise.all([
+  const [authors, files, economy, receipts, services] = await Promise.all([
     authorIds.length
       ? tx.user.findMany({ where: { id: { in: authorIds } }, select: { id: true, name: true } })
       : [],
     attachmentsFor(tx, KINDS[kind].sourceType, ids),
     kind === 'fuel' ? fuelEconomy(tx, vehicle) : null,
+    kind === 'workCards' ? receiptsFor(tx, ids) : null,
+    kind === 'workCards' ? servicesFor(tx, ids) : null,
   ]);
   const names = new Map(authors.map((a) => [a.id, a.name]));
   const points = new Map(economy?.points.map((p) => [p.id, p]));
@@ -337,6 +483,8 @@ async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row
       ...(kind === 'fuel'
         ? { economy: point?.value ?? null, baseline: point?.baseline ?? null, drop: !!point?.drop }
         : {}),
+      ...(receipts ? { receipts: receipts.get(row.id) ?? [] } : {}),
+      ...(services ? { services: services.get(row.id) ?? [] } : {}),
     };
   });
 }
@@ -409,7 +557,7 @@ export async function listRecords(
   };
 }
 
-async function findRow(tx: Tx, kind: RecordKind, vehicle: VehicleRef, id: string) {
+export async function findRow(tx: Tx, kind: RecordKind, vehicle: VehicleRef, id: string) {
   const row = await delegate(tx, kind).findFirst({
     where: { id, vehicleId: vehicle.id },
     include: KINDS[kind].include,
@@ -460,7 +608,7 @@ export async function createRecord<K extends RecordKind>(
       },
     });
   }
-  await cfg.after?.(ctx, input);
+  await cfg.after?.(ctx, input, row.id);
   return row;
 }
 
@@ -511,7 +659,7 @@ export async function updateRecord<K extends RecordKind>(
       },
     });
   }
-  await cfg.after?.(ctx, input);
+  await cfg.after?.(ctx, input, id);
   return row;
 }
 
@@ -554,10 +702,64 @@ export async function setDeleted(
       params: { kind, of: cfg.createType, ...cfg.params(row) },
     },
   });
-  await cfg.after?.({ tx, vehicle }, null);
+  await cfg.after?.({ tx, vehicle }, null, id);
 }
 
 export async function serializeOne(tx: Tx, kind: RecordKind, vehicle: VehicleRef, row: Row) {
   const [item] = await decorate(tx, kind, vehicle, [row]);
   return item!;
+}
+
+/**
+ * One record for its report (Revisions 1): the row as the list returns it, plus every timeline
+ * entry about it (reported, updated, resolved, edited, restored) with who wrote it, oldest first.
+ */
+export async function getRecord(tx: Tx, kind: RecordKind, vehicle: VehicleRef, id: string) {
+  const row = await findRow(tx, kind, vehicle, id);
+  if (row.deletedAt) throw new HttpError(404, 'not_found');
+  const [item, events] = await Promise.all([
+    serializeOne(tx, kind, vehicle, row),
+    tx.event.findMany({
+      where: { ...source(kind, id), hiddenAt: null },
+      orderBy: [{ occurredAt: 'asc' }, { createdAt: 'asc' }],
+      take: 200,
+      select: {
+        id: true,
+        type: true,
+        occurredAt: true,
+        params: true,
+        sourceType: true,
+        sourceId: true,
+        importRunId: true,
+        user: { select: { name: true } },
+      },
+    }),
+  ]);
+  const progress = kind === 'malfunctions' ? await progressOf(tx, id) : undefined;
+  return {
+    item: progress ? { ...item, progress } : item,
+    history: events.map(({ user, importRunId, ...e }) => ({
+      ...e,
+      imported: importRunId !== null,
+      by: user?.name ?? null,
+    })),
+  };
+}
+
+/** A malfunction's progress updates, oldest first, with who wrote each (Revisions 1). */
+export async function progressOf(tx: Tx, malfunctionId: string) {
+  const rows = await tx.malfunctionProgress.findMany({
+    where: { malfunctionId, deletedAt: null },
+    orderBy: [{ at: 'asc' }, { createdAt: 'asc' }],
+    select: { id: true, at: true, body: true, createdById: true },
+  });
+  const ids = [...new Set(rows.map((r) => r.createdById).filter((v): v is string => !!v))];
+  const users = ids.length
+    ? await tx.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+    : [];
+  const names = new Map(users.map((u) => [u.id, u.name]));
+  return rows.map((r) => ({
+    ...r,
+    createdBy: r.createdById ? (names.get(r.createdById) ?? null) : null,
+  }));
 }

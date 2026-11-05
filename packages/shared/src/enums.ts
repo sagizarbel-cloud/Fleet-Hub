@@ -57,8 +57,30 @@ export const EVENT_TYPES = [
   'QUOTE_LINKED',
   'QUOTE_UNLINKED',
   'NOTE_ADDED',
+  'WORK_CARD',
+  'MALFUNCTION_PROGRESS',
+  'TOOL_CHANGED',
   'RECORD_EDITED',
   'RECORD_DELETED',
   'RECORD_RESTORED',
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
+
+/** Revisions 1: work cards. */
+export const WORK_TYPES = ['ROUTINE', 'MECHANICAL'] as const;
+export type WorkType = (typeof WORK_TYPES)[number];
+export const WORK_PERFORMERS = ['IN_HOUSE', 'CONTRACTED'] as const;
+export type WorkPerformer = (typeof WORK_PERFORMERS)[number];
+
+/** Revisions 1: tools an excavator's arm can carry; the drawing shows the current one. */
+/** Excavator tools the fleet uses (Sagi, 2026-11-05); more can be added with their drawing. */
+export const EXCAVATOR_TOOLS = ['bucket', 'hammer'] as const;
+export type ExcavatorTool = (typeof EXCAVATOR_TOOLS)[number];
+/** Vehicle types whose arm takes a tool. */
+export const TOOL_TYPES = ['tracked_excavator', 'wheeled_excavator'] as const;
+
+/** Keys of the extra fields an admin can add to a record kind (Revisions 1): up to three. */
+export const CUSTOM_FIELD_KEYS = ['c1', 'c2', 'c3'] as const;
+export type CustomFieldKey = (typeof CUSTOM_FIELD_KEYS)[number];
+export const CUSTOM_FIELD_TYPES = ['text', 'number', 'date'] as const;
+export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];

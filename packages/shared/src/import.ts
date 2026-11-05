@@ -231,6 +231,27 @@ export const IMPORT_FIELDS: Record<ImportTarget, ImportField[]> = {
     cost,
     km,
     hours,
+    // Revisions 1. Never required here, even when an admin makes them mandatory in the form.
+    {
+      key: 'place',
+      kind: 'text',
+      aliases: ['place', 'where', 'station', 'fueled at', 'מקום', 'מקום תדלוק', 'תחנה', 'איפה'],
+    },
+    {
+      key: 'fueledBy',
+      kind: 'text',
+      aliases: ['fueled by', 'fuelled by', 'driver', 'מי תדלק', 'מתדלק', 'נהג', 'תודלק על ידי'],
+    },
+    {
+      key: 'fuelType',
+      kind: 'list',
+      aliases: ['fuel type', 'type', 'סוג דלק', 'סוג'],
+    },
+    {
+      key: 'provider',
+      kind: 'text',
+      aliases: ['provider', 'supplier', 'vendor', 'company', 'ספק', 'ספק דלק', 'חברה', 'חברת דלק'],
+    },
   ],
   movements: [
     vehicleRef,

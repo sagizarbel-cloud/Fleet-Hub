@@ -1,3 +1,4 @@
+import { cn } from '@/lib/cn';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
@@ -5,6 +6,7 @@ import type { EventType } from '@fleet-hub/shared';
 import { useEvents } from '@/fleet/data';
 import { EVENT_GROUP_KEYS, EVENT_GROUPS, type EventGroup } from '@/fleet/events';
 import { Chip, EventList } from '@/fleet/Timeline';
+import { recordOfEvent, useRecordLink } from './records/recordLink';
 
 /** How far back a linked event is looked for, in pages of 60 (about 1,200 events). */
 const MAX_PAGES_FOR_HIGHLIGHT = 20;
@@ -26,6 +28,7 @@ export function Activity({
 }) {
   const { t } = useTranslation();
   const [groups, setGroups] = useState<EventGroup[]>([]);
+  const report = useRecordLink();
   const types = useMemo(
     () => groups.flatMap((g) => EVENT_GROUPS[g].types as EventType[]),
     [groups],
@@ -96,7 +99,15 @@ export function Activity({
           );
         })}
       </div>
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto" data-scroll="activity">
+      <div
+        ref={scroller}
+        className={cn(
+          'min-h-0 flex-1 overflow-y-auto transition-opacity',
+          events.isPlaceholderData && 'opacity-60',
+        )}
+        aria-busy={events.isPlaceholderData || undefined}
+        data-scroll="activity"
+      >
         {events.isPending ? (
           <Loader2 aria-hidden className="text-muted mx-auto my-8 size-5 animate-spin" />
         ) : empty ? (
@@ -104,7 +115,17 @@ export function Activity({
             {groups.length ? t('dashboard.noEvents') : t('vehicle.noActivity')}
           </p>
         ) : (
-          <EventList pages={pages} highlightId={highlightId} linkable={false} showSerial={false} />
+          <EventList
+            pages={pages}
+            highlightId={highlightId}
+            linkable={false}
+            showSerial={false}
+            onOpen={(e) => {
+              const rec = recordOfEvent(e);
+              if (rec) report.open(rec.kind, rec.id);
+            }}
+            canOpen={(e) => !!recordOfEvent(e)}
+          />
         )}
         <div ref={sentinel} aria-hidden className="h-px" />
         {isFetchingNextPage && (

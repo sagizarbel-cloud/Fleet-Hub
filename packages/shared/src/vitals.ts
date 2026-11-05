@@ -30,3 +30,7 @@ export const DEFAULT_PINNED_VITALS: VitalKey[] = [
 
 export const DETAIL_VIEWS = ['side', 'iso'] as const;
 export type DetailView = (typeof DETAIL_VIEWS)[number];
+
+/** How the dashboard groups the fleet (Revisions 1): the lot by location (default) or by type. */
+export const FLEET_GROUPINGS = ['location', 'type'] as const;
+export type FleetGrouping = (typeof FLEET_GROUPINGS)[number];

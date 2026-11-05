@@ -27,7 +27,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-dvh pb-8">
+    <div className="min-h-dvh pb-8 print:p-0">
       <a
         href="#main"
         className="bg-accent text-accent-contrast sr-only rounded-md px-3 py-2 focus:not-sr-only focus:absolute focus:start-3 focus:top-3 focus:z-50"
@@ -35,7 +35,10 @@ export function AppShell() {
         {t('a11y.skipToContent')}
       </a>
       <TopBar user={user} />
-      <main id="main" className="mx-auto mt-4 max-w-[1600px] px-2 sm:mt-6 sm:px-4">
+      <main
+        id="main"
+        className="mx-auto mt-4 max-w-[1600px] px-2 sm:mt-6 sm:px-4 print:m-0 print:max-w-none print:p-0"
+      >
         <Outlet />
       </main>
     </div>

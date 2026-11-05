@@ -184,7 +184,7 @@ function readChoice(set: string, v: Cell): string | null {
   return options.find(([, words]) => words.includes(s))?.[0] ?? containing(s, options);
 }
 
-type ListName = 'vehicleTypes' | 'departments' | 'locations' | 'fluidTypes';
+type ListName = 'vehicleTypes' | 'departments' | 'locations' | 'fluidTypes' | 'fuelTypes';
 type Lists = Record<ListName, { code: string; nameEn: string; nameHe: string }[]>;
 
 /**
@@ -206,6 +206,7 @@ const LIST_OF: Record<string, ListName> = {
   toLocation: 'locations',
   fromLocation: 'locations',
   fluidType: 'fluidTypes',
+  fuelType: 'fuelTypes',
 };
 const CHOICE_OF: Partial<Record<ImportTarget, Record<string, string>>> = {
   malfunctions: { severity: 'severity', state: 'state' },
@@ -279,6 +280,7 @@ const SAME_RECORD: Record<RecordKind, string[]> = {
   movements: [],
   inspections: ['kind'],
   notes: ['body'],
+  workCards: ['description'],
 };
 
 async function vehicleRefOf(tx: Tx, serial: string): Promise<VehicleRef | null> {
@@ -537,6 +539,7 @@ export async function runImport(
       fluidTypes: await tx.fluidType.findMany({
         select: { code: true, nameEn: true, nameHe: true },
       }),
+      fuelTypes: await tx.fuelType.findMany({ select: { code: true, nameEn: true, nameHe: true } }),
     };
     const run = await tx.importRun.create({
       data: {

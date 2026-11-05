@@ -35,7 +35,10 @@ export function TopBar({ user }: { user: SessionUser }) {
   }, []);
 
   return (
-    <header ref={ref} className="glass sticky top-2 z-40 mx-2 mt-2 rounded-xl sm:mx-4 sm:mt-3">
+    <header
+      ref={ref}
+      className="glass sticky top-2 z-40 mx-2 mt-2 rounded-xl sm:mx-4 sm:mt-3 print:hidden"
+    >
       <div className="flex h-14 items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <NavLink to="/" className="flex shrink-0 items-center gap-2 font-semibold tracking-tight">
           <img src="/favicon.svg" alt="" className="size-7" />

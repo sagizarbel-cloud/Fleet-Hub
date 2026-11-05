@@ -10,6 +10,7 @@ export const RECORD_KINDS = [
   'movements',
   'inspections',
   'notes',
+  'workCards',
 ] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];
 
@@ -25,6 +26,7 @@ export const RECORD_SORTS = {
   movements: ['date'],
   inspections: ['date', 'validUntil', 'kind'],
   notes: ['createdAt'],
+  workCards: ['date', 'cost', 'laborHours'],
 } as const satisfies Record<RecordKind, readonly string[]>;
 
 export const SORT_DIRS = ['asc', 'desc'] as const;

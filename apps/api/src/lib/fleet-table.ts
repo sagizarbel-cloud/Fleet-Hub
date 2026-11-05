@@ -59,7 +59,7 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
   const m3 = since(91);
   const live = { deletedAt: null };
   const costBy = (
-    model: 'serviceRecord' | 'malfunction' | 'fuelEntry',
+    model: 'serviceRecord' | 'malfunction' | 'fuelEntry' | 'workCard',
     dateField: string,
     from: Date,
   ) =>
@@ -87,6 +87,8 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
     fuel3,
     receipts12,
     receipts3,
+    work12,
+    work3,
   ] = await Promise.all([
     db.vehicle.findMany({ select: tableSelect, orderBy: { serial: 'asc' } }),
     db.malfunction.groupBy({
@@ -120,6 +122,9 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
     costBy('fuelEntry', 'date', m3),
     receiptCosts(db as unknown as Prisma.TransactionClient, y1),
     receiptCosts(db as unknown as Prisma.TransactionClient, m3),
+    // Work cards (Revisions 1) are maintenance too.
+    costBy('workCard', 'date', y1),
+    costBy('workCard', 'date', m3),
   ]);
 
   const count = (rows: { vehicleId: string; _count: number }[]) =>
@@ -139,8 +144,8 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
     ]);
   }
   const lastFill = new Map(lastFuel.map((f) => [f.vehicleId, f]));
-  const maint12 = add(service12, repair12);
-  const maint3 = add(service3, repair3);
+  const maint12 = add(service12, repair12, work12);
+  const maint3 = add(service3, repair3, work3);
 
   return vehicles.map(
     ({ id, type, department, location, supplier, currentItems, purchasePrice, ...v }) => {

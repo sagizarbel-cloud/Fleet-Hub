@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { ROLES, VEHICLE_CATEGORIES } from './enums';
+import {
+  CUSTOM_FIELD_KEYS,
+  CUSTOM_FIELD_TYPES,
+  ROLES,
+  VEHICLE_CATEGORIES,
+} from './enums';
 
 // ---------- Settings lists (SPEC 5.9) ----------
 
@@ -9,6 +14,7 @@ export const LOOKUP_KINDS = [
   'locations',
   'vehicleTypes',
   'fluidTypes',
+  'fuelTypes',
   'receiptCategories',
 ] as const;
 export type LookupKind = (typeof LOOKUP_KINDS)[number];
@@ -213,3 +219,64 @@ export const vehiclePictureParams = z.object({
   serial: z.string().min(1).max(40),
   slot: z.enum(VEHICLE_PICTURES),
 });
+
+// ---------- App settings (admin) ----------
+
+/** Fuel entry fields an admin can make mandatory (Revisions 1). */
+export const FUEL_DETAIL_FIELDS = ['place', 'fueledBy', 'fuelType', 'provider'] as const;
+export type FuelDetailField = (typeof FUEL_DETAIL_FIELDS)[number];
+
+export const fuelRequiredSchema = z.object({
+  place: z.boolean().default(false),
+  fueledBy: z.boolean().default(false),
+  fuelType: z.boolean().default(false),
+  provider: z.boolean().default(false),
+});
+export type FuelRequired = z.output<typeof fuelRequiredSchema>;
+
+/** An extra field an admin adds to a record kind (Revisions 1), named in both languages. */
+export const customFieldDef = z.object({
+  key: z.enum(CUSTOM_FIELD_KEYS),
+  labelEn: z.string().trim().min(1).max(40),
+  labelHe: z.string().trim().min(1).max(40),
+  type: z.enum(CUSTOM_FIELD_TYPES),
+});
+export type CustomFieldDef = z.output<typeof customFieldDef>;
+const customFieldList = z
+  .array(customFieldDef)
+  .max(CUSTOM_FIELD_KEYS.length)
+  .refine((l) => new Set(l.map((f) => f.key)).size === l.length, { message: 'duplicate' });
+
+/** Every app setting with its value; each key is stored as one AppSetting row. */
+export const appSettingsBody = z.object({
+  fuelRequired: fuelRequiredSchema,
+  /** Extra fields on location changes (Revisions 1, fleet manager). */
+  movementFields: customFieldList.default([]),
+});
+export type AppSettings = z.output<typeof appSettingsBody>;
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  fuelRequired: { place: false, fueledBy: false, fuelType: false, provider: false },
+  movementFields: [],
+};
+
+/** Image types a company logo can be (Revisions 1); SVG is left out so no script can ride in. */
+export const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+/** Largest logo, in bytes. */
+export const LOGO_MAX_BYTES = 300 * 1024;
+/** A company logo for printed vehicle reports, as a data URL (admins only). */
+export const logoBody = z.object({
+  dataUrl: z
+    .string()
+    .max(Math.ceil((LOGO_MAX_BYTES * 4) / 3) + 64)
+    .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/),
+});
+
+/** The mandatory fuel fields this input leaves empty. */
+export function missingFuelFields(
+  required: FuelRequired,
+  input: Partial<Record<FuelDetailField, unknown>>,
+): FuelDetailField[] {
+  return FUEL_DETAIL_FIELDS.filter(
+    (f) => required[f] && (input[f] === null || input[f] === undefined || input[f] === ''),
+  );
+}

@@ -31,7 +31,13 @@ const ID = {
 } as const;
 
 /** Records a receipt can point at, and how each is named in the list. */
-const LINKABLE = ['service', 'malfunctions', 'inspections', 'fuel'] as const satisfies RecordKind[];
+const LINKABLE = [
+  'service',
+  'workCards',
+  'malfunctions',
+  'inspections',
+  'fuel',
+] as const satisfies RecordKind[];
 
 const DATE = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',

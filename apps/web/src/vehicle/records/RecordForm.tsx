@@ -1,12 +1,28 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RECORD_BODIES, type RecordKind, type UsageUnit } from '@fleet-hub/shared';
+import {
+  missingFuelFields,
+  RECORD_BODIES,
+  type RecordKind,
+  type UsageUnit,
+} from '@fleet-hub/shared';
+import { lookupName } from '@/fleet/data';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
-import { useQueryClient } from '@tanstack/react-query';
-import { refreshAfterWrite, uploadFiles, useSaveRecord, type RecordRow } from './api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  fetchAllRecords,
+  recordsKey,
+  refreshAfterWrite,
+  uploadFiles,
+  useAppSettings,
+  useFuelSuggestions,
+  useDocuments,
+  useSaveRecord,
+  type RecordRow,
+} from './api';
 import { AttachmentList, FilePicker } from './Attachments';
 import { useFormatCtx } from './format';
 import { fieldOfPath, KIND_UI, toBody, toForm, type Field, type FormValues } from './kinds';
@@ -34,6 +50,8 @@ export function RecordForm({
   unit,
   location,
   row,
+  last,
+  preset,
   canEdit,
   reduced,
   onClose,
@@ -45,19 +63,51 @@ export function RecordForm({
   location: string | null;
   /** The record being edited; absent when adding. */
   row?: RecordRow;
+  /** The newest record of this kind, for defaults (e.g. last time's fuel type). */
+  last?: RecordRow;
+  /** Values a new record starts with, over the kind's defaults (e.g. contracted). */
+  preset?: FormValues;
   canEdit: boolean;
   reduced: boolean;
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const ctx = useFormatCtx(unit);
   const ui = KIND_UI[kind];
   const isNew = !row;
   const [values, setValues] = useState<FormValues>(() =>
-    row ? toForm(kind, row, unit) : ui.defaults({ unit, location }),
+    row
+      ? toForm(kind, row, unit)
+      : {
+          ...ui.defaults({
+            unit,
+            location,
+            last,
+            locationName: location
+              ? (lookupName(
+                  ctx.lookups?.locations.find((l) => l.code === location),
+                  ctx.lang,
+                ) ?? null)
+              : null,
+          }),
+          ...preset,
+        },
   );
+  const { data: settings } = useAppSettings();
+  const suggestions = useFuelSuggestions(ui.fields.some((f) => f.suggest)).data;
+  /** Required by the form itself, or made mandatory by an admin (fuel details). */
+  const isRequired = (f: Field) =>
+    !!f.required || (!!f.adminRequired && !!settings?.fuelRequired[f.adminRequired]);
   const [errors, setErrors] = useState<Errors>({});
+  // Extra fields an admin defined for this kind (Revisions 1), as typed text by key.
+  const customDefs = kind === 'movements' ? (settings?.movementFields ?? []) : [];
+  const [custom, setCustom] = useState<Record<string, string>>(() => {
+    const stored = (row?.custom ?? {}) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(stored).map(([k, v]) => [k, v === null || v === undefined ? '' : String(v)]),
+    );
+  });
   const [files, setFiles] = useState<File[]>([]);
   const [failed, setFailed] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -76,6 +126,23 @@ export function RecordForm({
     e.preventDefault();
     setFailed(null);
     const body = toBody(kind, values, unit, isNew);
+    if (customDefs.length) {
+      const bad: Errors = {};
+      body.custom = Object.fromEntries(
+        customDefs.map((f) => {
+          const raw = (custom[f.key] ?? '').trim();
+          if (!raw) return [f.key, null];
+          if (f.type !== 'number') return [f.key, raw];
+          const num = Number(raw);
+          if (!Number.isFinite(num)) bad[`custom.${f.key}`] = 'records.error.invalid';
+          return [f.key, num];
+        }),
+      );
+      if (Object.keys(bad).length) {
+        setErrors(bad);
+        return;
+      }
+    }
     // The same rules the server applies, so mistakes show by the field before saving.
     const parsed = RECORD_BODIES[kind].safeParse(body);
     if (!parsed.success) {
@@ -87,6 +154,13 @@ export function RecordForm({
       }
       setErrors(next);
       return;
+    }
+    if (kind === 'fuel' && settings) {
+      const missing = missingFuelFields(settings.fuelRequired, parsed.data as object);
+      if (missing.length) {
+        setErrors(Object.fromEntries(missing.map((f) => [f, 'records.error.required'])));
+        return;
+      }
     }
     try {
       const { item } = await save.mutateAsync({ id: row?.id ?? savedId ?? undefined, body });
@@ -112,7 +186,17 @@ export function RecordForm({
       onSaved(t(isNew ? 'records.added' : 'records.saved'));
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) setFailed('records.error.forbidden');
-      else setFailed('records.error.save');
+      else if (err instanceof ApiError && err.issues.length) {
+        // E.g. an admin made a fuel field mandatory while this form was open.
+        setErrors(
+          Object.fromEntries(
+            err.issues.map((i) => [
+              fieldOfPath(i.path),
+              i.code === 'required' ? 'records.error.required' : 'records.error.invalid',
+            ]),
+          ),
+        );
+      } else setFailed('records.error.save');
     }
   };
 
@@ -142,15 +226,67 @@ export function RecordForm({
       }
     >
       <form id="record-form" noValidate onSubmit={submit} className="space-y-4" data-kind={kind}>
-        {visible.map((f) => (
+        {visible.map((f) =>
+          f.type === 'services' ? (
+            <ServicePicker
+              key={f.key}
+              serial={serial}
+              unit={unit}
+              cardId={row?.id ?? savedId}
+              label={t(f.label as never)}
+              value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
+              onChange={(v) => set(f.key, v)}
+            />
+          ) : f.type === 'receipts' ? (
+            <ReceiptPicker
+              key={f.key}
+              serial={serial}
+              cardId={row?.id ?? savedId}
+              label={t(f.label as never)}
+              value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
+              onChange={(v) => set(f.key, v)}
+            />
+          ) : (
+            <FieldInput
+              key={f.key}
+              field={{ ...f, required: isRequired(f) }}
+              suggestions={
+                f.suggest
+                  ? [
+                      ...(f.suggest === 'place'
+                        ? (ctx.lookups?.locations ?? []).map(
+                            (l) => lookupName(l, ctx.lang) ?? l.code,
+                          )
+                        : []),
+                      ...(suggestions?.[f.suggest] ?? []),
+                    ]
+                  : undefined
+              }
+              value={values[f.key]}
+              error={errors[f.key]}
+              unit={unit}
+              options={f.options?.(ctx)}
+              onChange={(v) => set(f.key, v)}
+            />
+          ),
+        )}
+        {customDefs.map((f) => (
           <FieldInput
             key={f.key}
-            field={f}
-            value={values[f.key]}
-            error={errors[f.key]}
+            field={{
+              key: `custom.${f.key}`,
+              label: 'records.col.extra',
+              title: i18n.language === 'he' ? f.labelHe : f.labelEn,
+              type: f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text',
+              step: f.type === 'number' ? 1 : undefined,
+            }}
+            value={custom[f.key] ?? ''}
+            error={errors[`custom.${f.key}`]}
             unit={unit}
-            options={f.options?.(ctx)}
-            onChange={(v) => set(f.key, v)}
+            onChange={(v) => {
+              setCustom((c) => ({ ...c, [f.key]: String(v) }));
+              setErrors(({ [`custom.${f.key}`]: _gone, ...rest }) => rest);
+            }}
           />
         ))}
         <fieldset className="space-y-2">
@@ -163,6 +299,142 @@ export function RecordForm({
   );
 }
 
+/**
+ * The vehicle's approved receipts a work card can be linked to (Revisions 1): those not linked
+ * to anything yet, and those already linked to this card.
+ */
+function ReceiptPicker({
+  serial,
+  cardId,
+  label,
+  value,
+  onChange,
+}: {
+  serial: string;
+  cardId: string | null;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const { data } = useDocuments(serial);
+  const ctx = useFormatCtx('KM');
+  const chosen = new Set(value ? value.split(',') : []);
+  const usable = (data?.items ?? []).filter(
+    (d) =>
+      d.approved &&
+      (!d.linkedRecordId ||
+        chosen.has(d.id) ||
+        (d.linkedRecordType === 'WorkCard' && d.linkedRecordId === cardId)),
+  );
+  const toggle = (id: string, on: boolean) => {
+    const next = new Set(chosen);
+    if (on) next.add(id);
+    else next.delete(id);
+    onChange([...next].join(','));
+  };
+  return (
+    <fieldset className="space-y-1.5" data-testid="receipt-picker">
+      <legend className="mb-1 text-xs font-medium">{label}</legend>
+      {usable.length === 0 ? (
+        <p className="text-muted text-xs">{t('records.field.noReceipts')}</p>
+      ) : (
+        <ul className="border-border max-h-48 divide-y overflow-y-auto rounded-md border">
+          {usable.map((d) => (
+            <li key={d.id}>
+              <label className="flex items-center gap-2 px-2.5 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={chosen.has(d.id)}
+                  onChange={(e) => toggle(d.id, e.target.checked)}
+                  className="accent-[var(--fh-accent)] size-4 shrink-0"
+                />
+                <span className="num text-muted shrink-0 text-xs">{ctx.date(d.date)}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {d.vendor ? <bdi>{d.vendor}</bdi> : t(`records.documentKind.${d.kind}` as never)}
+                </span>
+                {d.amount !== null && (
+                  <span className="num shrink-0 text-xs" lang={i18n.language}>
+                    {ctx.money(d.amount)}
+                  </span>
+                )}
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+    </fieldset>
+  );
+}
+
+/**
+ * Existing services of the vehicle a work card gathers (Sagi, 2026-11-05): those on no card
+ * yet, and those already on this one.
+ */
+function ServicePicker({
+  serial,
+  unit,
+  cardId,
+  label,
+  value,
+  onChange,
+}: {
+  serial: string;
+  unit: UsageUnit;
+  cardId: string | null;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  const ctx = useFormatCtx(unit);
+  const { data } = useQuery({
+    queryKey: [...recordsKey(serial, 'service'), 'for-work-card'],
+    queryFn: () => fetchAllRecords(serial, 'service', {}),
+  });
+  const chosen = new Set(value ? value.split(',') : []);
+  const usable = (data?.items ?? []).filter(
+    (r) => !r.workCardId || r.workCardId === cardId || chosen.has(r.id),
+  );
+  const toggle = (id: string, on: boolean) => {
+    const next = new Set(chosen);
+    if (on) next.add(id);
+    else next.delete(id);
+    onChange([...next].join(','));
+  };
+  return (
+    <fieldset className="space-y-1.5" data-testid="service-picker">
+      <legend className="mb-1 text-xs font-medium">{label}</legend>
+      {usable.length === 0 ? (
+        <p className="text-muted text-xs">{t('records.field.noServices')}</p>
+      ) : (
+        <ul className="border-border max-h-48 divide-y overflow-y-auto rounded-md border">
+          {usable.map((r) => (
+            <li key={r.id}>
+              <label className="flex items-center gap-2 px-2.5 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={chosen.has(r.id)}
+                  onChange={(e) => toggle(r.id, e.target.checked)}
+                  className="size-4 shrink-0 accent-[var(--fh-accent)]"
+                />
+                <span className="num text-muted shrink-0 text-xs">{ctx.date(String(r.date))}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  <bdi>{String(r.description ?? '')}</bdi>
+                </span>
+                {typeof r.cost === 'number' && (
+                  <span className="num shrink-0 text-xs">{ctx.money(r.cost)}</span>
+                )}
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-muted text-xs">{t('records.field.servicesHint')}</p>
+    </fieldset>
+  );
+}
+
 const INPUT =
   'border-border-strong bg-surface w-full rounded-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)]';
 
@@ -172,6 +444,7 @@ function FieldInput({
   error,
   unit,
   options,
+  suggestions,
   onChange,
 }: {
   field: Field;
@@ -179,12 +452,15 @@ function FieldInput({
   error: string | undefined;
   unit: UsageUnit;
   options?: { value: string; label: string }[];
+  /** Typed values offered as you type (a datalist); any other text is fine too. */
+  suggestions?: string[];
   onChange: (value: string | boolean) => void;
 }) {
   const { t } = useTranslation();
   const id = `field-${field.key}`;
-  const label =
-    field.type === 'reading'
+  const label = field.title
+    ? field.title
+    : field.type === 'reading'
       ? t(field.label as never, { unit: t(`vehicle.info.usage_${unit}`) })
       : t(field.label as never);
   const described = [error && `${id}-error`, field.hint && `${id}-hint`].filter(Boolean).join(' ');
@@ -265,10 +541,19 @@ function FieldInput({
                   : '1'
           }
           min={field.type === 'date' || field.type === 'text' ? undefined : 0}
+          list={suggestions?.length ? `${id}-list` : undefined}
+          autoComplete={suggestions ? 'off' : undefined}
           value={str}
           onChange={(e) => onChange(e.target.value)}
           className={cn(INPUT, 'h-9', field.type !== 'text' && 'num')}
         />
+      )}
+      {suggestions && suggestions.length > 0 && (
+        <datalist id={`${id}-list`}>
+          {[...new Set(suggestions)].map((v) => (
+            <option key={v} value={v} />
+          ))}
+        </datalist>
       )}
       {field.hint && !error && (
         <p id={`${id}-hint`} className="text-muted text-xs">

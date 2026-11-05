@@ -1,12 +1,55 @@
 import { box, metres, track, wheel, type Solid } from '../iso';
 import { topView } from '../derive';
 import type { VehicleDrawingSource } from '../model';
+import type { ExcavatorTool } from '@fleet-hub/shared';
 
 // A 30-tonne class excavator (overall width about 3.2 m), in metres; +x is the front,
 // +y the side facing the viewer, z up. The arm is out in front with the bucket on the ground.
 
+/**
+ * The tool on the end of the stick (Revisions 1), drawn where the bucket sits when digging,
+ * shifted by `dx` for the folded arm. All tools share the bucket's part, so they tint alike.
+ */
+function toolSolids(tool: Exclude<ExcavatorTool, 'bucket'>, mid: number, dx = 0): Solid[] {
+  const shift = (profile: [number, number][]) => profile.map(([x, z]) => [x + dx, z] as const);
+  switch (tool) {
+    case 'hammer':
+      // Hydraulic hammer: a long housing hanging from the stick, a chisel at the bottom.
+      return [
+        {
+          part: 'bucket',
+          profile: shift([
+            [6.25, 0.95],
+            [6.85, 0.95],
+            [6.8, 0.4],
+            [6.65, 0.3],
+            [6.45, 0.3],
+            [6.3, 0.4],
+          ]),
+          y: [mid - 0.32, mid + 0.32],
+          decals: [
+            [
+              [6.3 + dx, mid + 0.32, 0.78],
+              [6.8 + dx, mid + 0.32, 0.78],
+            ],
+          ],
+        },
+        {
+          part: 'bucket',
+          profile: shift([
+            [6.48, 0.3],
+            [6.62, 0.3],
+            [6.58, 0.02],
+            [6.52, 0.02],
+          ]),
+          y: [mid - 0.08, mid + 0.08],
+        },
+      ];
+  }
+}
+
 /** Arm out in front, bucket on the ground (isometric and side views). */
-function digArm(z: number, mid: number): Solid[] {
+function digArm(z: number, mid: number, tool: ExcavatorTool): Solid[] {
   return [
     {
       part: 'boom',
@@ -37,22 +80,26 @@ function digArm(z: number, mid: number): Solid[] {
       ],
       y: [mid - 0.25, mid + 0.25],
     },
-    {
-      part: 'bucket',
-      profile: [
-        [6.2, 1.0],
-        [6.95, 0.9],
-        [7.25, 0.2],
-        [6.95, 0.0],
-        [6.35, 0.25],
-      ],
-      y: [mid - 0.6, mid + 0.6],
-    },
+    ...(tool !== 'bucket'
+      ? toolSolids(tool, mid)
+      : [
+          {
+            part: 'bucket' as const,
+            profile: [
+              [6.2, 1.0],
+              [6.95, 0.9],
+              [7.25, 0.2],
+              [6.95, 0.0],
+              [6.35, 0.25],
+            ] as const,
+            y: [mid - 0.6, mid + 0.6] as const,
+          },
+        ]),
   ];
 }
 
 /** Arm folded in, as parked: keeps the top view compact enough for a grid tile. */
-function foldedArm(z: number, mid: number): Solid[] {
+function foldedArm(z: number, mid: number, tool: ExcavatorTool): Solid[] {
   return [
     {
       part: 'boom',
@@ -77,22 +124,26 @@ function foldedArm(z: number, mid: number): Solid[] {
       ],
       y: [mid - 0.25, mid + 0.25],
     },
-    {
-      part: 'bucket',
-      profile: [
-        [2.9, 0.9],
-        [3.75, 0.95],
-        [3.85, 0.3],
-        [3.4, 0.05],
-        [2.9, 0.35],
-      ],
-      y: [mid - 0.6, mid + 0.6],
-    },
+    ...(tool !== 'bucket'
+      ? toolSolids(tool, mid, -3.05)
+      : [
+          {
+            part: 'bucket' as const,
+            profile: [
+              [2.9, 0.9],
+              [3.75, 0.95],
+              [3.85, 0.3],
+              [3.4, 0.05],
+              [2.9, 0.35],
+            ] as const,
+            y: [mid - 0.6, mid + 0.6] as const,
+          },
+        ]),
   ];
 }
 
 /** Upper structure: house, counterweight, engine cover, cab on the near front corner, and the arm. */
-function upper(z: number, w: number, folded = false): Solid[] {
+function upper(z: number, w: number, folded: boolean, tool: ExcavatorTool): Solid[] {
   const mid = w / 2;
   return [
     box('body', [-1.9, 1.3], [0.1, w - 0.1], [z, z + 1.1]),
@@ -145,25 +196,26 @@ function upper(z: number, w: number, folded = false): Solid[] {
         ],
       ],
     },
-    ...(folded ? foldedArm(z, mid) : digArm(z, mid)),
+    ...(folded ? foldedArm(z, mid, tool) : digArm(z, mid, tool)),
   ];
 }
 
-const crawler = (folded: boolean) =>
+const crawler = (folded: boolean, tool: ExcavatorTool) =>
   metres([
     track('tracks', [-2.4, 2.4], 1.0, [0, 0.65]),
     box('body', [-1.2, 1.2], [0.65, 2.55], [0.45, 1.05]),
-    ...upper(1.1, 3.2, folded),
+    ...upper(1.1, 3.2, folded, tool),
     track('tracks', [-2.4, 2.4], 1.0, [2.55, 3.2]),
   ]);
 
-export const trackedExcavator: VehicleDrawingSource = {
+export const trackedExcavatorWith = (tool: ExcavatorTool): VehicleDrawingSource => ({
   represents: 'tracked_excavator',
-  iso: crawler(false),
-  top: topView(crawler(true)),
-};
+  iso: crawler(false, tool),
+  top: topView(crawler(true, tool)),
+});
+export const trackedExcavator = trackedExcavatorWith('bucket');
 
-const wheeled = (folded: boolean) =>
+const wheeled = (folded: boolean, tool: ExcavatorTool) =>
   metres([
     wheel('wheels', -1.35, 0.55, 0.55, [0, 0.5]),
     wheel('wheels', 1.35, 0.55, 0.55, [0, 0.5]),
@@ -181,13 +233,14 @@ const wheeled = (folded: boolean) =>
       ],
       y: [0, 2.5],
     },
-    ...upper(1.25, 2.5, folded),
+    ...upper(1.25, 2.5, folded, tool),
     wheel('wheels', -1.35, 0.55, 0.55, [2.0, 2.5]),
     wheel('wheels', 1.35, 0.55, 0.55, [2.0, 2.5]),
   ]);
 
-export const wheeledExcavator: VehicleDrawingSource = {
+export const wheeledExcavatorWith = (tool: ExcavatorTool): VehicleDrawingSource => ({
   represents: 'wheeled_excavator',
-  iso: wheeled(false),
-  top: topView(wheeled(true)),
-};
+  iso: wheeled(false, tool),
+  top: topView(wheeled(true, tool)),
+});
+export const wheeledExcavator = wheeledExcavatorWith('bucket');

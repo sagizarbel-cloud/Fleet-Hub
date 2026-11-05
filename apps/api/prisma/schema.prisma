@@ -53,6 +53,9 @@ enum EventType {
   QUOTE_LINKED
   QUOTE_UNLINKED
   NOTE_ADDED
+  WORK_CARD
+  MALFUNCTION_PROGRESS
+  TOOL_CHANGED
   RECORD_EDITED
   RECORD_DELETED
   RECORD_RESTORED
@@ -75,6 +78,18 @@ enum InspectionKind {
   ANNUAL_TEST
   INSURANCE
   SAFETY_CHECK
+}
+
+/// Revisions 1: what kind of work a work card records.
+enum WorkType {
+  ROUTINE
+  MECHANICAL
+}
+
+/// Revisions 1: whether our own team did the work or a contractor did.
+enum WorkPerformer {
+  IN_HOUSE
+  CONTRACTED
 }
 
 enum DocumentKind {
@@ -151,6 +166,16 @@ model FluidType {
   additions FluidAddition[]
 }
 
+model FuelType {
+  id        String      @id @default(cuid())
+  code      String      @unique
+  nameEn    String
+  nameHe    String
+  sortOrder Int         @default(0)
+  active    Boolean     @default(true)
+  entries   FuelEntry[]
+}
+
 model ReceiptCategory {
   id        String     @id @default(cuid())
   code      String     @unique
@@ -216,6 +241,8 @@ model Vehicle {
   /// The photo pair for the photo style: the top photo crossfades into the side photo.
   topPhotoId    String?
   sidePhotoId   String?
+  /// The tool on an excavator's arm (Revisions 1), e.g. "bucket" or "hammer"; null = the default bucket.
+  tool          String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -228,6 +255,7 @@ model Vehicle {
   movements       Movement[]
   inspections     Inspection[]
   notes           Note[]
+  workCards       WorkCard[]
   itemAssignments ItemAssignment[]
   currentItems    Item[]            @relation("CurrentVehicle")
   documents       DocumentVehicle[]
@@ -274,33 +302,83 @@ model ServiceRecord {
   description String
   vendor      String?
   cost        Decimal?  @db.Decimal(12, 2)
+  /// Revisions 1: the work card this service is part of, if any.
+  workCardId  String?
+  workCard    WorkCard? @relation(fields: [workCardId], references: [id], onDelete: SetNull)
   createdById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
   @@index([vehicleId, date])
+  @@index([workCardId])
 }
 
 model Malfunction {
-  id            String              @id @default(cuid())
+  id            String                @id @default(cuid())
   vehicleId     String
-  vehicle       Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle       Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   reportedAt    DateTime
   resolvedAt    DateTime?
   severity      MalfunctionSeverity
-  state         MalfunctionState    @default(OPEN)
-  isAccident    Boolean             @default(false)
+  state         MalfunctionState      @default(OPEN)
+  isAccident    Boolean               @default(false)
   description   String
   downtimeHours Int?
-  cost          Decimal?            @db.Decimal(12, 2)
+  cost          Decimal?              @db.Decimal(12, 2)
+  /// Progress updates: what was done so far (Revisions 1).
+  progress      MalfunctionProgress[]
   createdById   String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
   deletedAt     DateTime?
 
   @@index([vehicleId, reportedAt])
   @@index([state])
+}
+
+/// One progress update on a malfunction: what was found or done, when and by whom (Revisions 1).
+model MalfunctionProgress {
+  id            String      @id @default(cuid())
+  malfunctionId String
+  malfunction   Malfunction @relation(fields: [malfunctionId], references: [id], onDelete: Cascade)
+  at            DateTime
+  body          String
+  createdById   String?
+  createdAt     DateTime    @default(now())
+  deletedAt     DateTime?
+
+  @@index([malfunctionId, at])
+}
+
+/// A work card (Revisions 1): routine or mechanical work done on a vehicle, in-house or by a
+/// contractor. Receipts link to it through Document.linkedRecordType = "WorkCard".
+model WorkCard {
+  id          String        @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date        DateTime
+  workType    WorkType
+  performedBy WorkPerformer
+  description String
+  /// The team members (in-house) or the contractor's name.
+  doneBy      String?
+  /// Where the work was done.
+  place       String?
+  laborHours  Decimal?      @db.Decimal(8, 2)
+  odometerKm  Int?
+  engineHours Int?
+  cost        Decimal?      @db.Decimal(12, 2)
+  notes       String?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  services ServiceRecord[]
+
+  @@index([vehicleId, date])
+  @@index([performedBy])
 }
 
 model FluidAddition {
@@ -329,6 +407,14 @@ model FuelEntry {
   odometerKm  Int?
   engineHours Int?
   cost        Decimal?  @db.Decimal(12, 2)
+  /// Where it was fueled: free text, suggested from the locations list (Revisions 1).
+  place       String?
+  /// Who fueled: free text, suggested from user names.
+  fueledBy    String?
+  fuelTypeId  String?
+  fuelType    FuelType? @relation(fields: [fuelTypeId], references: [id])
+  /// Who provided the fuel (station, company, tanker).
+  provider    String?
   createdById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -346,6 +432,13 @@ model Movement {
   fromLocation   Location? @relation("MovementFrom", fields: [fromLocationId], references: [id])
   toLocationId   String
   toLocation     Location  @relation("MovementTo", fields: [toLocationId], references: [id])
+  /// Revisions 1: who moved it (transport contractor), what it cost, how long and how far.
+  contractor     String?
+  cost           Decimal?  @db.Decimal(12, 2)
+  durationHours  Decimal?  @db.Decimal(6, 1)
+  distanceKm     Int?
+  /// Values of the admin-defined extra fields (c1..c3), by key.
+  custom         Json?
   notes          String?
   createdById    String?
   createdAt      DateTime  @default(now())
@@ -584,14 +677,16 @@ model AuditLog {
 }
 
 model UserPreference {
-  userId       String   @id
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pinnedVitals String[] @default([])
-  detailView   String   @default("side")
-  language     String?
-  theme        String?
+  userId        String   @id
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pinnedVitals  String[] @default([])
+  detailView    String   @default("side")
+  /// How the dashboard groups the fleet (Revisions 1): "location" (the lot) or "type".
+  fleetGrouping String   @default("location")
+  language      String?
+  theme         String?
   /// Saved view the fleet table opens with; null means the built-in view.
-  fleetViewId  String?
+  fleetViewId   String?
 }
 
 /// A fleet table view (SPEC 5.4). Every user can pick any view; its creator or an admin changes it.
@@ -650,4 +745,12 @@ model ImportRun {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   events    Event[]
+}
+
+/// App-wide settings an admin changes, by key (e.g. "fuel.required"). Changes go to AuditLog.
+model AppSetting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
 }

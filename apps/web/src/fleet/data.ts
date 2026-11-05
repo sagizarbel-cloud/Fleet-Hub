@@ -29,6 +29,8 @@ export interface Tile {
   department: string | null;
   location: string | null;
   openIssues: number;
+  /** An excavator's tool (Revisions 1); null means the bucket. */
+  tool: string | null;
 }
 export interface Dashboard {
   kpis: {
@@ -51,6 +53,7 @@ export interface Lookups {
   locations: LookupItem[];
   vehicleTypes: (LookupItem & { category: VehicleCategory; usageUnit: string })[];
   fluidTypes: LookupItem[];
+  fuelTypes: LookupItem[];
   receiptCategories: LookupItem[];
 }
 
@@ -75,6 +78,13 @@ export function useEvents(opts: { types?: EventType[]; vehicle?: string; first?:
       return api<EventPage>(`/events?${qs}`);
     },
     getNextPageParam: (last) => last.nextCursor ?? undefined,
+    // Changing the filter keeps the current list on screen until the new one arrives, so the
+    // list never collapses to a spinner and the page doesn't jump (Sagi, 2026-11-05). Only
+    // within the same vehicle (or the whole fleet), never another vehicle's entries.
+    placeholderData: (prev, prevQuery) =>
+      (prevQuery?.queryKey[1] as { vehicle: string } | undefined)?.vehicle === (vehicle ?? '')
+        ? prev
+        : undefined,
     initialData: first
       ? ({ pages: [first], pageParams: [''] } satisfies InfiniteData<EventPage, string>)
       : undefined,

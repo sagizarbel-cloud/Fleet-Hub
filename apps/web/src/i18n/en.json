@@ -106,7 +106,8 @@
       "inspections": "Inspections",
       "items": "Items",
       "documents": "Receipts and quotes",
-      "notes": "Notes"
+      "notes": "Notes",
+      "workCards": "Work cards"
     },
     "filters": {
       "label": "Filter the fleet",
@@ -126,7 +127,30 @@
     "notSet": "Not set",
     "error": "Couldn't load the dashboard.",
     "retry": "Try again",
-    "openVehicle": "Open {{serial}}"
+    "openVehicle": "Open {{serial}}",
+    "dueList": {
+      "title": "Due within 30 days",
+      "none": "Nothing is due in the next 30 days.",
+      "overdue": "overdue",
+      "kind": {
+        "service": "Service",
+        "annualTest": "Annual test",
+        "insurance": "Insurance"
+      }
+    },
+    "spendList": {
+      "title": "Spent this month",
+      "none": "No receipts this month yet.",
+      "total": "Total",
+      "noVehicle": "Not tagged to a vehicle",
+      "shared": "shared by {{count}} vehicles"
+    },
+    "groupBy": {
+      "label": "Group by",
+      "location": "Location",
+      "type": "Type",
+      "noLocation": "No location"
+    }
   },
   "events": {
     "VEHICLE_CREATED": "Vehicle added to the fleet",
@@ -158,7 +182,11 @@
     "QUOTE_UNLINKED": "Price quote from {{supplier}} unlinked",
     "VEHICLE_UPDATED_fields": "Vehicle details updated: {{fields}}",
     "imported": "Imported",
-    "importedHint": "Added by an Excel import"
+    "importedHint": "Added by an Excel import",
+    "WORK_CARD": "Work card ({{performer}}): {{description}}",
+    "WORK_CARD_by": "Work card ({{performer}}, {{by}}): {{description}}",
+    "MALFUNCTION_PROGRESS": "Malfunction progress: {{progress}}",
+    "TOOL_CHANGED": "Tool changed: {{from}} → {{to}}"
   },
   "severity": {
     "LOW": "low",
@@ -203,8 +231,11 @@
         "fuel": "Fill-up",
         "movements": "Location change",
         "inspections": "Inspection",
-        "notes": "Note"
-      }
+        "notes": "Note",
+        "workCards": "Work card"
+      },
+      "workCards": "Work cards",
+      "contracted": "Contracted work"
     },
     "copy": "Click to copy",
     "copied": "Copied",
@@ -297,7 +328,13 @@
       "set": "Set status",
       "clear": "Back to automatic"
     },
-    "backToTable": "Back to the fleet table"
+    "backToTable": "Back to the fleet table",
+    "tool": {
+      "label": "Tool",
+      "change": "Change the tool",
+      "saved": "Tool changed",
+      "failed": "The tool wasn't changed. Try again."
+    }
   },
   "malfunctionState": {
     "OPEN": "Open",
@@ -376,13 +413,34 @@
       "lines": "Lines",
       "total": "Total",
       "purchasePrice": "Purchase price",
-      "warrantyTerms": "Warranty terms"
+      "warrantyTerms": "Warranty terms",
+      "fuelType": "Fuel type",
+      "place": "Where fueled",
+      "fueledBy": "Who fueled",
+      "provider": "Fuel provider",
+      "workType": "Work type",
+      "performedBy": "In-house or contracted",
+      "workDone": "Work done",
+      "doneBy": "Done by",
+      "workPlace": "Where it was done",
+      "laborHours": "Labour hours",
+      "receipts": "Receipts",
+      "extra": "Extra field",
+      "contractor": "Transport contractor",
+      "duration": "Time, hours",
+      "distance": "Distance",
+      "services": "Services included"
     },
     "field": {
       "nextServiceDate": "Next service date (optional)",
       "nextServiceReading": "Next service at, {{unit}} (optional)",
       "readingHint": "The reading at this fill-up; it's what economy is worked out from.",
-      "resolvedHint": "Leave empty for today."
+      "resolvedHint": "Leave empty for today.",
+      "doneByHint": "The technician, garage or contractor.",
+      "noReceipts": "No approved receipts on this vehicle to link.",
+      "contractorHint": "Leave empty when the team moved it.",
+      "noServices": "No services on this vehicle to include.",
+      "servicesHint": "Tick services already recorded that are part of this work. New work goes in the fields above."
     },
     "filter": {
       "accidents": "Accidents only",
@@ -437,7 +495,9 @@
       "APPROVED": "Approved",
       "ORDERED": "Ordered",
       "REJECTED": "Rejected"
-    }
+    },
+    "resizeColumn": "Resize column",
+    "resizeColumnHint": "Drag to resize, double-click to reset"
   },
   "fleet": {
     "count": "{{shown}} of {{total}} vehicles",
@@ -731,7 +791,9 @@
       "mine": "My settings",
       "lists": "Lists",
       "users": "Users and roles",
-      "import": "Excel import"
+      "import": "Excel import",
+      "required": "Record fields",
+      "report": "Printed reports"
     },
     "loadFailed": "Couldn't load this. Try again.",
     "mine": {
@@ -743,7 +805,9 @@
         "dark": "Dark",
         "light": "Light"
       },
-      "vitals": "Default vitals"
+      "vitals": "Default vitals",
+      "fleetGrouping": "Fleet on the dashboard",
+      "fleetGroupingHint": "How the fleet opens on the dashboard. It can also be changed there."
     },
     "password": {
       "title": "Change password",
@@ -764,7 +828,8 @@
         "locations": "Locations",
         "vehicleTypes": "Vehicle types",
         "fluidTypes": "Fluid types",
-        "receiptCategories": "Receipt categories"
+        "receiptCategories": "Receipt categories",
+        "fuelTypes": "Fuel types"
       },
       "add": "Add value",
       "addTitle": "Add to {{list}}",
@@ -827,6 +892,44 @@
       "done": "Done",
       "messageNew": "Hi {{name}}, here is your link to set a password for {{app}}: {{url}}",
       "messageReset": "Hi {{name}}, here is your link to set a new password for {{app}}: {{url}}"
+    },
+    "required": {
+      "fuel": "Fuel entries",
+      "fuelHint": "Ticked fields must be filled when a fill-up is added or edited.",
+      "importNote": "Excel imports of old sheets are not checked.",
+      "saved": "Saved.",
+      "saveFailed": "Couldn't save. Try again."
+    },
+    "logo": {
+      "title": "Company logo",
+      "hint": "Printed at the top of vehicle reports.",
+      "alt": "Company logo",
+      "none": "No logo yet",
+      "upload": "Upload a logo",
+      "replace": "Replace the logo",
+      "remove": "Remove the logo",
+      "limits": "PNG, JPEG or WebP, up to 300 KB. A wide logo on a white or clear background prints best.",
+      "badType": "Use a PNG, JPEG or WebP image.",
+      "tooBig": "The logo is over 300 KB.",
+      "failed": "The logo wasn't saved. Try again."
+    },
+    "extra": {
+      "title": "Extra fields on location changes",
+      "hint": "Up to three fields of your own, for example a permit number or the escort. They show in the form, the table, the report and the exports.",
+      "none": "No extra fields yet.",
+      "field": "Extra field {{n}}",
+      "labelEn": "Name in English",
+      "labelHe": "Name in Hebrew",
+      "type": "Kind of value",
+      "types": {
+        "text": "Text",
+        "number": "Number",
+        "date": "Date"
+      },
+      "add": "Add a field",
+      "remove": "Remove the field",
+      "invalid": "Each field needs a name in English and in Hebrew.",
+      "note": "Removing a field hides it; values already saved are kept."
     }
   },
   "reset": {
@@ -1078,7 +1181,93 @@
       "name": "Item",
       "spec": "Spec",
       "itemSerial": "Item serial",
-      "vehicle": "On vehicle"
+      "vehicle": "On vehicle",
+      "place": "Where fueled",
+      "fueledBy": "Who fueled",
+      "fuelType": "Fuel type",
+      "provider": "Fuel provider"
     }
+  },
+  "report": {
+    "title": "{{record}} report",
+    "open": "Open the {{record}} report",
+    "view": "View report",
+    "issue": "The issue",
+    "whatHappened": "What happened",
+    "details": "Details",
+    "history": "History",
+    "noHistory": "No history yet.",
+    "noFiles": "No files.",
+    "by": "by {{name}}",
+    "addedBy": "Added by {{name}}",
+    "stillOpen": "Still open",
+    "notFound": "This record is no longer here. It may have been deleted.",
+    "backToList": "Back to the list",
+    "openTitle": "Open malfunctions",
+    "fleetOpenTitle": "Open malfunctions in the fleet",
+    "noneOpen": "No open malfunctions.",
+    "expand": "Full screen",
+    "restore": "Smaller",
+    "resize": "Resize",
+    "resizeHint": "Drag to resize, double-click for full screen",
+    "receipts": "Receipts",
+    "noReceipts": "No receipts linked.",
+    "progress": "Progress",
+    "noProgress": "No updates yet.",
+    "addProgress": "Add an update",
+    "progressPlaceholder": "What was found or done",
+    "progressDate": "Date",
+    "saveProgress": "Add update",
+    "removeProgress": "Remove update",
+    "progressFailed": "The update wasn't saved. Try again.",
+    "statusHint": "Status: {{status}}. Open malfunctions: {{count}}",
+    "services": "Services included",
+    "noServices": "No services included."
+  },
+  "workCard": {
+    "type": {
+      "ROUTINE": "Routine",
+      "MECHANICAL": "Mechanical"
+    },
+    "performer": {
+      "IN_HOUSE": "In-house",
+      "CONTRACTED": "Contracted"
+    }
+  },
+  "tool": {
+    "bucket": "Bucket",
+    "hammer": "Hydraulic hammer"
+  },
+  "vreport": {
+    "button": "Vehicle report",
+    "title": "Vehicle report",
+    "hint": "Everything done to the vehicle in the chosen dates, in one document to print or save as PDF.",
+    "dates": "Dates",
+    "include": "Include",
+    "costs": "Cost summary",
+    "receipts": "Receipts and invoices",
+    "logo": "Company logo",
+    "noLogo": "No logo is set. An admin can add one in Settings.",
+    "all": "All",
+    "none": "None",
+    "open": "Open the report",
+    "pickOne": "Choose at least one section.",
+    "print": "Print or save as PDF",
+    "back": "Back to the vehicle",
+    "period": "Period: {{from}} – {{to}}",
+    "allTime": "All dates",
+    "created": "Created {{date}} by {{name}}",
+    "details": "Vehicle",
+    "empty": "Nothing in these dates.",
+    "total": "Total",
+    "rows": "Rows: {{count}}",
+    "section": "Section",
+    "recordsCost": "Cost in records",
+    "receiptsTotal": "Receipts total",
+    "costNote": "Receipts often repeat a cost already in a record, so the two totals are shown apart.",
+    "loading": "Preparing the report…",
+    "failed": "The report couldn't load. Try again.",
+    "linkedTo": "Linked to",
+    "page": "Fleet Hub · {{serial}}"
   }
 }

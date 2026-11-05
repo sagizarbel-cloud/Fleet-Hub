@@ -11,6 +11,7 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
       // Never saved yet: the SPEC A6 defaults. An empty saved list means "nothing pinned".
       pinnedVitals: pref ? pref.pinnedVitals : DEFAULT_PINNED_VITALS,
       detailView: pref?.detailView === 'iso' ? 'iso' : 'side',
+      fleetGrouping: pref?.fleetGrouping === 'type' ? 'type' : 'location',
       fleetViewId: pref?.fleetViewId ?? null,
       // Null: follow the device (browser language, system theme).
       language: pref?.language === 'en' || pref?.language === 'he' ? pref.language : null,

@@ -27,10 +27,13 @@ import type { VehicleDetail } from '../data';
 import { useRecords, useSetDeleted, type RecordFilters, type RecordRow } from './api';
 import { AttachmentList } from './Attachments';
 import { cellText, useFormatCtx } from './format';
-import { createdByCol, KIND_UI, type Column, type FormatCtx } from './kinds';
+import { colTitle, createdByCol, KIND_UI, type Column, type FormatCtx } from './kinds';
+import { useKindColumns } from './columns';
 import { RecordForm } from './RecordForm';
 import { useExport } from './useExport';
 import { useOfferUndo } from './Undo';
+import { useRecordLink } from './recordLink';
+import { useColumnWidths } from './columnWidths';
 
 const FuelChart = lazy(() => import('./FuelChart'));
 
@@ -69,12 +72,15 @@ export default function RecordPanel({
   kind,
   vehicle,
   reduced,
+  fixed,
 }: {
   kind: RecordKind;
   vehicle: VehicleDetail;
   reduced: boolean;
+  /** Filters this panel always applies and doesn't offer (e.g. contracted work only). */
+  fixed?: RecordFilters;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const serial = vehicle.serial;
   const ui = KIND_UI[kind];
   const ctx = useFormatCtx(vehicle.usageUnit);
@@ -83,12 +89,20 @@ export default function RecordPanel({
   const [filters, setFilters] = useState<RecordFilters>({});
   const [search, setSearch] = useState('');
   const q = useDeferredValue(search.trim());
-  const active = useMemo(() => ({ ...filters, q: q || undefined }), [filters, q]);
+  const active = useMemo(() => ({ ...filters, ...fixed, q: q || undefined }), [filters, fixed, q]);
+  const cols = useColumnWidths(
+    fixed ? `${kind}.${Object.values(fixed).join('.')}` : kind,
+    i18n.dir() === 'rtl',
+  );
   const records = useRecords(serial, kind, active);
   const remove = useSetDeleted(serial, kind);
   const exporter = useExport();
   const [editing, setEditing] = useState<RecordRow | 'new' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const report = useRecordLink();
+  /** Table columns: everything except the report-only ones (e.g. what was done, who fueled). */
+  const allCols = useKindColumns(kind);
+  const tableCols = useMemo(() => allCols.filter((c) => !c.report), [allCols]);
 
   const isEditor = !!user && hasRole(user.role, 'EDITOR');
   const canAdd = !!user && (isEditor || kind === 'notes');
@@ -97,7 +111,7 @@ export default function RecordPanel({
 
   const rows = useMemo(() => records.data?.pages.flatMap((p) => p.items) ?? [], [records.data]);
   const total = records.data?.pages[0]?.total ?? 0;
-  const filtered = Object.values(active).some(Boolean);
+  const filtered = Object.values({ ...filters, q: q || undefined }).some(Boolean);
 
   const sorting: SortingState = filters.sort
     ? [{ id: filters.sort, desc: (filters.dir ?? 'desc') === 'desc' }]
@@ -107,9 +121,9 @@ export default function RecordPanel({
 
   const columns = useMemo<ColumnDef<RecordRow>[]>(
     () => [
-      ...ui.columns.map((col): ColumnDef<RecordRow> => ({
+      ...tableCols.map((col): ColumnDef<RecordRow> => ({
         id: col.sort ?? col.key,
-        header: () => t(col.header as never),
+        header: () => colTitle(col, t, i18n.language),
         enableSorting: !!col.sort,
         cell: ({ row }) => <CellView col={col} row={row.original} ctx={ctx} />,
         meta: col,
@@ -129,7 +143,7 @@ export default function RecordPanel({
           ) : null,
       },
     ],
-    [ui.columns, ctx, t, serial],
+    [tableCols, ctx, t, i18n.language, serial],
   );
 
   // TanStack Table returns fresh functions each render; this component simply opts out of memoizing.
@@ -166,9 +180,16 @@ export default function RecordPanel({
       kind,
       vehicle,
       filters: active,
-      columns: [...ui.columns, ...(kind === 'notes' ? [] : [createdByCol])],
+      columns: [...allCols, ...(kind === 'notes' ? [] : [createdByCol])],
       ctx,
     });
+
+  /** A click anywhere on a row opens its report, except on its own buttons and file links. */
+  const openFromRow = (e: React.MouseEvent, row: RecordRow) => {
+    if ((e.target as HTMLElement).closest('button, a, input, select')) return;
+    if (window.getSelection()?.toString()) return; // selecting text to copy isn't a click
+    report.open(kind, row.id);
+  };
 
   const actions = (row: RecordRow) =>
     canChange(row) && (
@@ -235,34 +256,36 @@ export default function RecordPanel({
             className={cn(CONTROL, 'num')}
           />
         </label>
-        {ui.filters.map((f) =>
-          f.type === 'select' ? (
-            <select
-              key={f.key}
-              value={filters[f.key] ?? ''}
-              onChange={(e) => setFilter(f.key, e.target.value)}
-              aria-label={t(f.label as never)}
-              className={CONTROL}
-            >
-              <option value="">{t('records.filterAll', { name: t(f.label as never) })}</option>
-              {f.options?.(ctx).map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <label key={f.key} className="flex items-center gap-1.5 text-xs">
-              <input
-                type="checkbox"
-                checked={filters[f.key] === '1'}
-                onChange={(e) => setFilter(f.key, e.target.checked ? '1' : undefined)}
-                className="accent-[var(--fh-accent)] size-4"
-              />
-              {t(f.label as never)}
-            </label>
-          ),
-        )}
+        {ui.filters
+          .filter((f) => !fixed?.[f.key])
+          .map((f) =>
+            f.type === 'select' ? (
+              <select
+                key={f.key}
+                value={filters[f.key] ?? ''}
+                onChange={(e) => setFilter(f.key, e.target.value)}
+                aria-label={t(f.label as never)}
+                className={CONTROL}
+              >
+                <option value="">{t('records.filterAll', { name: t(f.label as never) })}</option>
+                {f.options?.(ctx).map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <label key={f.key} className="flex items-center gap-1.5 text-xs">
+                <input
+                  type="checkbox"
+                  checked={filters[f.key] === '1'}
+                  onChange={(e) => setFilter(f.key, e.target.checked ? '1' : undefined)}
+                  className="accent-[var(--fh-accent)] size-4"
+                />
+                {t(f.label as never)}
+              </label>
+            ),
+          )}
         <div className="ms-auto flex gap-2">
           <Button
             variant="outline"
@@ -325,8 +348,9 @@ export default function RecordPanel({
                                 ? 'descending'
                                 : undefined
                           }
+                          style={cols.style(h.id)}
                           className={cn(
-                            'px-1.5 py-2 font-medium',
+                            'group relative px-1.5 py-2 font-medium',
                             numeric ? 'text-end' : 'text-start',
                           )}
                         >
@@ -343,6 +367,21 @@ export default function RecordPanel({
                           ) : (
                             flexRender(h.column.columnDef.header, h.getContext())
                           )}
+                          {col && (
+                            <span
+                              {...cols.handle(
+                                h.id,
+                                t('records.resizeColumn'),
+                                t('records.resizeColumnHint'),
+                              )}
+                              className={cn(
+                                'absolute inset-y-1 -end-1 z-10 w-2 cursor-col-resize touch-none rounded-full',
+                                'hover:bg-[var(--fh-accent)]/60 focus-visible:bg-[var(--fh-accent)] focus-visible:outline-none',
+                                cols.widths[h.id] && 'bg-border-strong/60',
+                              )}
+                              data-testid="col-resize"
+                            />
+                          )}
                         </th>
                       );
                     })}
@@ -356,22 +395,42 @@ export default function RecordPanel({
                 {table.getRowModel().rows.map((r) => (
                   <tr
                     key={r.id}
-                    className="border-border hover:bg-border/40 border-b align-top last:border-0"
+                    className="border-border hover:bg-border/40 cursor-pointer border-b align-top last:border-0"
                     data-row={r.id}
+                    onClick={(e) => openFromRow(e, r.original)}
                   >
-                    {r.getVisibleCells().map((c) => {
+                    {r.getVisibleCells().map((c, i) => {
                       const col = c.column.columnDef.meta as Column | undefined;
                       const numeric = col?.kind === 'number' || col?.kind === 'money';
+                      const sized = !!cols.widths[c.column.id];
                       return (
                         <td
                           key={c.id}
+                          style={cols.style(c.column.id)}
                           className={cn(
                             'px-1.5 py-2',
-                            numeric && 'text-end',
-                            col?.kind === 'long' && 'min-w-48 max-w-96',
+                            numeric && 'text-end whitespace-nowrap',
+                            col?.kind === 'date' && 'whitespace-nowrap',
+                            sized
+                              ? 'overflow-hidden break-words'
+                              : col?.kind === 'long' && 'min-w-48 max-w-96',
                           )}
                         >
-                          {flexRender(c.column.columnDef.cell, c.getContext())}
+                          {i === 0 ? (
+                            // The row's keyboard way into its report.
+                            <button
+                              type="button"
+                              className="hover:text-accent-ink text-start underline-offset-2 hover:underline"
+                              onClick={() => report.open(kind, r.original.id)}
+                              aria-label={t('report.open', {
+                                record: t(`vehicle.records.one.${kind}`),
+                              })}
+                            >
+                              {flexRender(c.column.columnDef.cell, c.getContext())}
+                            </button>
+                          ) : (
+                            flexRender(c.column.columnDef.cell, c.getContext())
+                          )}
                         </td>
                       );
                     })}
@@ -385,13 +444,18 @@ export default function RecordPanel({
           {/* Phones: one card per record, main values only. */}
           <ul className="space-y-2 sm:hidden" data-testid="record-cards-list">
             {rows.map((row) => (
-              <li key={row.id} className="border-border rounded-lg border p-3" data-row={row.id}>
+              <li
+                key={row.id}
+                className="border-border active:bg-border/40 cursor-pointer rounded-lg border p-3"
+                data-row={row.id}
+                onClick={(e) => openFromRow(e, row)}
+              >
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-                  {ui.columns
+                  {tableCols
                     .filter((c) => !c.minor)
                     .map((col) => (
                       <div key={col.key} className={cn(col.kind === 'long' && 'col-span-2')}>
-                        <dt className="text-muted text-xs">{t(col.header as never)}</dt>
+                        <dt className="text-muted text-xs">{colTitle(col, t, i18n.language)}</dt>
                         <dd>
                           <CellView col={col} row={row} ctx={ctx} />
                         </dd>
@@ -405,6 +469,13 @@ export default function RecordPanel({
                       <span className="num">{row.attachments.length}</span>
                     </span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => report.open(kind, row.id)}
+                    className="text-accent-ink text-xs font-medium"
+                  >
+                    {t('report.view')}
+                  </button>
                   <div className="ms-auto">{actions(row)}</div>
                 </div>
               </li>
@@ -436,6 +507,8 @@ export default function RecordPanel({
           unit={vehicle.usageUnit}
           location={vehicle.location}
           row={editing === 'new' ? undefined : editing}
+          preset={fixed as Record<string, string> | undefined}
+          last={filters.sort ? undefined : rows[0]}
           canEdit={editing === 'new' || canChange(editing)}
           reduced={reduced}
           onClose={() => setEditing(null)}

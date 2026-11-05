@@ -111,11 +111,17 @@ describe('Excel export', () => {
       'Economy (L/h)',
       'Sudden drop',
       'Cost (₪)',
+      'Fuel type',
+      'Where fueled',
+      'Who fueled',
+      'Fuel provider',
       'Files',
     ]);
     const row = ws.getRow(5).values as unknown[];
     expect(row[1]).toBeInstanceOf(Date);
-    expect(row.slice(2)).toEqual([210.5, 8_623, 22.9, 'Yes', 1_558, 'pump.jpg']);
+    // The fuel details (Revisions 1) are empty on this row, so ExcelJS leaves those cells out.
+    expect(row.slice(2, 7)).toEqual([210.5, 8_623, 22.9, 'Yes', 1_558]);
+    expect(row.at(-1)).toBe('pump.jpg');
   });
 
   it('sets Hebrew sheets right to left, in Hebrew', async () => {

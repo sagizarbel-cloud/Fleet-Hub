@@ -1,7 +1,16 @@
 import { z } from 'zod';
-import { MALFUNCTION_SEVERITIES, MALFUNCTION_STATES, ROLES, VEHICLE_STATUSES } from './enums';
+import {
+  CUSTOM_FIELD_KEYS,
+  EXCAVATOR_TOOLS,
+  MALFUNCTION_SEVERITIES,
+  MALFUNCTION_STATES,
+  ROLES,
+  VEHICLE_STATUSES,
+  WORK_PERFORMERS,
+  WORK_TYPES,
+} from './enums';
 import { INSPECTION_KINDS, RECORD_KINDS, SORT_DIRS, type RecordKind } from './records';
-import { DETAIL_VIEWS, VITAL_KEYS } from './vitals';
+import { DETAIL_VIEWS, FLEET_GROUPINGS, VITAL_KEYS } from './vitals';
 import { ALL_FLEET_COLUMNS, FLEET_GROUP_BY, FLEET_GROUPS } from './fleet';
 import {
   DOCUMENT_KINDS,
@@ -48,6 +57,7 @@ export const preferencesBody = z.object({
     .refine((keys) => new Set(keys).size === keys.length, 'duplicate')
     .optional(),
   detailView: z.enum(DETAIL_VIEWS).optional(),
+  fleetGrouping: z.enum(FLEET_GROUPINGS).optional(),
   /** The saved view the fleet table opens with; null for the built-in one. */
   fleetViewId: z.string().min(1).max(40).nullable().optional(),
   /** Defaults that follow the user to every device; null = this device decides. */
@@ -123,13 +133,32 @@ export const fuelBody = z.object({
   odometerKm: reading,
   engineHours: reading,
   cost: money,
+  // Revisions 1. Each is optional here; an admin can make them mandatory (checked by the API).
+  place: optText(120),
+  fueledBy: optText(120),
+  fuelType: nullable(code),
+  provider: optText(120),
 });
+
+/** Values of admin-defined extra fields (Revisions 1): text, a number or a day, by key. */
+export const customValues = z
+  .partialRecord(
+    z.enum(CUSTOM_FIELD_KEYS),
+    z.union([z.string().trim().max(200), z.number().min(-1e9).max(1e9), z.null()]),
+  )
+  .nullable()
+  .default(null);
 
 export const movementBody = z
   .object({
     date: day,
     fromLocation: nullable(code),
     toLocation: code,
+    contractor: optText(200),
+    cost: money,
+    durationHours: nullable(z.number().min(0).max(10_000)),
+    distanceKm: nullable(z.number().int().min(0).max(100_000)),
+    custom: customValues,
     notes: optText(500),
   })
   .refine((m) => m.fromLocation !== m.toLocation, { path: ['toLocation'], message: 'same' });
@@ -148,6 +177,36 @@ export const inspectionBody = z
 
 export const noteBody = z.object({ body: text(4000) });
 
+/** A work card (Revisions 1): work done on a vehicle, in-house or by a contractor. */
+export const workCardBody = z.object({
+  date: day,
+  workType: z.enum(WORK_TYPES),
+  performedBy: z.enum(WORK_PERFORMERS),
+  description: text(2000),
+  doneBy: optText(200),
+  place: optText(120),
+  laborHours: nullable(z.number().min(0).max(10_000)),
+  odometerKm: reading,
+  engineHours: reading,
+  cost: money,
+  notes: optText(1000),
+  /** Receipts of this vehicle linked to the card; replaces the card's current links. */
+  receiptIds: z.array(z.string().min(1).max(40)).max(50).default([]),
+  /** Existing services of the vehicle that are part of this work (Sagi, 2026-11-05). */
+  serviceIds: z.array(z.string().min(1).max(40)).max(50).default([]),
+});
+
+/** A progress update on a malfunction (Revisions 1): what was found or done so far. */
+export const progressBody = z.object({ at: nullable(day), body: text(2000) });
+export const progressParams = z.object({
+  serial: z.string().min(1).max(40),
+  id: z.string().min(1).max(40),
+});
+export const progressItemParams = progressParams.extend({ progressId: z.string().min(1).max(40) });
+
+/** Changing an excavator's tool (Revisions 1). */
+export const toolBody = z.object({ tool: z.enum(EXCAVATOR_TOOLS) });
+
 export const RECORD_BODIES = {
   service: serviceBody,
   malfunctions: malfunctionBody,
@@ -156,6 +215,7 @@ export const RECORD_BODIES = {
   movements: movementBody,
   inspections: inspectionBody,
   notes: noteBody,
+  workCards: workCardBody,
 } satisfies Record<RecordKind, z.ZodType>;
 export type RecordBody<K extends RecordKind> = z.input<(typeof RECORD_BODIES)[K]>;
 export type RecordInput<K extends RecordKind> = z.output<(typeof RECORD_BODIES)[K]>;
@@ -185,6 +245,9 @@ export const recordsQuery = z.object({
   severity: z.enum(MALFUNCTION_SEVERITIES).optional(),
   accident: flag,
   fluid: code.optional(),
+  fuelType: code.optional(),
+  performedBy: z.enum(WORK_PERFORMERS).optional(),
+  workType: z.enum(WORK_TYPES).optional(),
   location: code.optional(),
   inspection: z.enum(INSPECTION_KINDS).optional(),
   drops: flag,
@@ -213,6 +276,7 @@ export const ATTACHMENT_OWNERS = [
   'Movement',
   'Inspection',
   'Note',
+  'WorkCard',
   'Vehicle',
   'Document',
   'Quote',

@@ -1,24 +1,46 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, NavLink } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { FileSpreadsheet, ListChecks, UserRound, Users, type LucideIcon } from 'lucide-react';
+import {
+  Asterisk,
+  FileSpreadsheet,
+  ListChecks,
+  Printer,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { hasRole, type Role } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { cn } from '@/lib/cn';
 import { ListsEditor } from './ListsEditor';
 import { MySettings } from './MySettings';
+import { RequiredFields } from './RequiredFields';
+import { MovementFields } from './MovementFields';
+import { ReportLogo } from './ReportLogo';
 import { UsersAdmin } from './UsersAdmin';
 
 // ExcelJS is large: it loads only when someone opens the import page.
 const ImportPage = lazy(() => import('./ImportPage'));
 
-export const SETTINGS_SECTIONS = ['mine', 'lists', 'users', 'import'] as const;
+export const SETTINGS_SECTIONS = [
+  'mine',
+  'lists',
+  'required',
+  'report',
+  'users',
+  'import',
+] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
 const SECTIONS: Record<SettingsSection, { path: string; icon: LucideIcon; role: Role }> = {
   mine: { path: '/settings', icon: UserRound, role: 'VIEWER' },
   // Editors manage the lists too (Sagi, 2026-10-27).
   lists: { path: '/settings/lists', icon: ListChecks, role: 'EDITOR' },
+  // Which fields must be filled (Revisions 1): admins only.
+  required: { path: '/settings/required', icon: Asterisk, role: 'ADMIN' },
+  // The logo printed on vehicle reports (Revisions 1).
+  report: { path: '/settings/report', icon: Printer, role: 'ADMIN' },
   users: { path: '/settings/users', icon: Users, role: 'ADMIN' },
   import: { path: '/settings/import', icon: FileSpreadsheet, role: 'ADMIN' },
 };
@@ -71,6 +93,13 @@ export function SettingsPage({ section }: { section: SettingsSection }) {
         </h1>
         {section === 'mine' && <MySettings />}
         {section === 'lists' && <ListsEditor />}
+        {section === 'required' && (
+          <div className="space-y-4">
+            <RequiredFields />
+            <MovementFields />
+          </div>
+        )}
+        {section === 'report' && <ReportLogo />}
         {section === 'users' && <UsersAdmin />}
         {section === 'import' && (
           <Suspense fallback={<SettingsSkeleton />}>

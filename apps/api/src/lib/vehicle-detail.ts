@@ -39,6 +39,7 @@ const detailSelect = {
   topPhotoId: true,
   sidePhotoId: true,
   customImageId: true,
+  tool: true,
   supplier: { select: { name: true } },
   type: { select: { code: true, category: true, usageUnit: true } },
   department: { select: { code: true } },
@@ -88,6 +89,9 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
     documents,
     quotes,
     notes,
+    workCards,
+    contracted,
+    workCost,
     serviceCost,
     malfunctionCost,
     recentFuel,
@@ -111,6 +115,12 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
     app.db.documentVehicle.count({ where: { vehicleId, document: { deletedAt: null } } }),
     app.db.quoteVehicle.count({ where: { vehicleId, quote: visibleQuotesWhere(user) } }),
     app.db.note.count({ where: live }),
+    app.db.workCard.count({ where: live }),
+    app.db.workCard.count({ where: { ...live, performedBy: 'CONTRACTED' } }),
+    app.db.workCard.aggregate({
+      _sum: { cost: true },
+      where: { ...live, date: { gte: yearStart } },
+    }),
     app.db.serviceRecord.aggregate({
       _sum: { cost: true },
       where: { ...live, date: { gte: yearStart } },
@@ -169,6 +179,7 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
   const costYtd =
     (serviceCost._sum.cost?.toNumber() ?? 0) +
     (malfunctionCost._sum.cost?.toNumber() ?? 0) +
+    (workCost._sum.cost?.toNumber() ?? 0) +
     (receipts.get(vehicleId)?.maintenance ?? 0);
 
   return {
@@ -205,6 +216,8 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
       documents,
       quotes,
       notes,
+      workCards,
+      contracted,
     },
     items: items.map(({ assignments, ...item }) => ({
       ...item,

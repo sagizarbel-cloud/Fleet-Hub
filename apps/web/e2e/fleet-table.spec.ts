@@ -176,6 +176,7 @@ test.describe('fleet table', () => {
       'Location changes',
       'Inspections & compliance',
       'Notes',
+      'Work cards',
       'Assigned items',
     ]);
     expect(fleet.wb.getWorksheet('Vehicles')!.rowCount).toBe(4 + SEEDED);

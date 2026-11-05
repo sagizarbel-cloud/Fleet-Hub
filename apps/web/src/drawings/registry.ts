@@ -1,8 +1,13 @@
-import type { VehicleTypeCode } from '@fleet-hub/shared';
+import { EXCAVATOR_TOOLS, type ExcavatorTool, type VehicleTypeCode } from '@fleet-hub/shared';
 import { sideView, topView } from './derive';
 import type { VehicleDrawingDef, VehicleDrawingSource } from './model';
 import { pickup } from './types/pickup';
-import { trackedExcavator, wheeledExcavator } from './types/excavators';
+import {
+  trackedExcavator,
+  trackedExcavatorWith,
+  wheeledExcavator,
+  wheeledExcavatorWith,
+} from './types/excavators';
 import { wheelLoader } from './types/wheel-loader';
 import { trailer } from './types/trailer';
 import { compressor, forklift, other, skidSteer, tractor } from './types/small-machines';
@@ -41,6 +46,26 @@ export const DRAWINGS: Partial<Record<VehicleTypeCode, VehicleDrawingDef>> = Obj
 /** True when `type` has a drawing of its own (not the generic one). */
 export const hasOwnDrawing = (type: string) => type in DRAWINGS;
 
-export function drawingFor(type: string): VehicleDrawingDef {
+const WITH_TOOL: Partial<Record<VehicleTypeCode, (tool: ExcavatorTool) => VehicleDrawingSource>> = {
+  tracked_excavator: trackedExcavatorWith,
+  wheeled_excavator: wheeledExcavatorWith,
+};
+const toolDrawings = new Map<string, VehicleDrawingDef>();
+
+/**
+ * The drawing for a type. Excavators show the tool on their arm (Revisions 1); any other tool
+ * than the bucket gets its own drawing, built once.
+ */
+export function drawingFor(type: string, tool?: string | null): VehicleDrawingDef {
+  const build = WITH_TOOL[type as VehicleTypeCode];
+  if (build && tool && tool !== 'bucket' && (EXCAVATOR_TOOLS as readonly string[]).includes(tool)) {
+    const key = `${type}.${tool}`;
+    let def = toolDrawings.get(key);
+    if (!def) {
+      def = complete(build(tool as ExcavatorTool));
+      toolDrawings.set(key, def);
+    }
+    return def;
+  }
   return DRAWINGS[type as VehicleTypeCode] ?? DRAWINGS.other!;
 }

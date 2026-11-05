@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Hand } from 'lucide-react';
+import { Hand, SlidersHorizontal, TriangleAlert } from 'lucide-react';
 import { hasRole, VEHICLE_STATUSES, type VehicleStatus } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { Popover } from '@/components/Popover';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import type { VehicleDetail } from './data';
 import { useStatusOverride } from './records/api';
+import { useRecordLink } from './records/recordLink';
 
 /**
  * The status pill. Admins can set the colour by hand, with a reason, and go back to the
@@ -39,17 +40,44 @@ export function StatusControl({
       )}
     </span>
   );
-  if (!vehicle || !user || !hasRole(user.role, 'ADMIN')) return badge;
+  const report = useRecordLink();
+  const open = vehicle?.computed.openMalfunctions ?? 0;
+  // Revisions 1 (fleet manager): the status opens the malfunction report, for everyone.
+  const opener = vehicle ? (
+    <button
+      type="button"
+      onClick={() => report.open('malfunctions', 'open')}
+      className="hover:ring-border-strong inline-flex items-center gap-1 rounded-full hover:ring-1"
+      aria-label={t('report.statusHint', { status: t(`status.${status}`), count: open })}
+      title={t('report.statusHint', { status: t(`status.${status}`), count: open })}
+      data-testid="open-issues"
+    >
+      {badge}
+      {open > 0 && (
+        <span className="text-warn inline-flex items-center gap-0.5 pe-1.5 text-xs font-medium">
+          <TriangleAlert aria-hidden className="size-3.5" />
+          <span className="num">{open}</span>
+        </span>
+      )}
+    </button>
+  ) : (
+    badge
+  );
+
+  if (!vehicle || !user || !hasRole(user.role, 'ADMIN')) return opener;
 
   return (
-    <Popover
-      label={t('vehicle.override.title')}
-      trigger={badge}
-      className="[&>button]:h-auto [&>button]:border-transparent [&>button]:p-0.5"
-      panelClassName="w-72"
-    >
-      {(close) => <OverrideForm vehicle={vehicle} close={close} />}
-    </Popover>
+    <span className="inline-flex items-center gap-1">
+      {opener}
+      <Popover
+        label={t('vehicle.override.title')}
+        trigger={<SlidersHorizontal aria-hidden className="size-3.5" />}
+        className="[&>button]:text-muted [&>button]:hover:text-text [&>button]:size-7 [&>button]:p-0"
+        panelClassName="w-72"
+      >
+        {(close) => <OverrideForm vehicle={vehicle} close={close} />}
+      </Popover>
+    </span>
   );
 }
 

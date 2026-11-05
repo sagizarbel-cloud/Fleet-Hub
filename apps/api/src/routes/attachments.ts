@@ -25,6 +25,7 @@ const KIND_OF: Record<Exclude<AttachmentOwner, 'Vehicle' | 'Document' | 'Quote'>
   Movement: 'movements',
   Inspection: 'inspections',
   Note: 'notes',
+  WorkCard: 'workCards',
 };
 const MAX_FILES = 10;
 

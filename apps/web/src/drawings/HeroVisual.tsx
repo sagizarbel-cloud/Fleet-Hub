@@ -12,6 +12,8 @@ export type HeroPose = 'flat' | 'iso' | 'side';
 
 interface Props {
   type: string;
+  /** An excavator's tool (Revisions 1); the bucket when absent. */
+  tool?: string | null;
   status: VehicleStatus;
   pose: HeroPose;
   /** Height of the flat top-down drawing in px; the stage is a square of this size. */
@@ -42,6 +44,7 @@ const ISO_TILT = { rotateX: 54.74, rotateZ: 135 };
  */
 export function HeroVisual({
   type,
+  tool,
   status,
   pose,
   size,
@@ -50,7 +53,7 @@ export function HeroVisual({
   pictures,
   reduced = false,
 }: Props) {
-  const def = drawingFor(type);
+  const def = drawingFor(type, tool);
   const { top, side } = def;
   const width = (size * top.width) / top.height;
   const tilted = pose !== 'flat';
@@ -74,7 +77,7 @@ export function HeroVisual({
     sideRef.current
       ?.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon')
       .forEach((el) => el.setAttribute('pathLength', '1'));
-  }, [type, pose]);
+  }, [type, tool, pose]);
 
   return (
     <div

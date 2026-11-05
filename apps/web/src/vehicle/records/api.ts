@@ -5,7 +5,14 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import type { RecordKind, UsageUnit, VehicleStatus } from '@fleet-hub/shared';
+import {
+  DEFAULT_APP_SETTINGS,
+  type AppSettings,
+  type RecordKind,
+  type UsageUnit,
+  type VehicleStatus,
+} from '@fleet-hub/shared';
+import type { FleetEvent } from '@/fleet/data';
 import { api, ApiError } from '@/lib/api';
 
 export interface Attachment {
@@ -40,11 +47,14 @@ export type RecordFilters = Partial<
     | 'state'
     | 'severity'
     | 'fluid'
+    | 'fuelType'
     | 'location'
     | 'inspection'
     | 'accident'
     | 'drops'
     | 'mine'
+    | 'performedBy'
+    | 'workType'
     | 'sort'
     | 'dir',
     string
@@ -76,6 +86,91 @@ export function useRecords(serial: string, kind: RecordKind, filters: RecordFilt
   });
 }
 
+/** A timeline entry about one record, with who wrote it. */
+export type RecordHistoryEntry = Omit<FleetEvent, 'vehicle'> & { by: string | null };
+
+/** One "what was done so far" update on a malfunction (Revisions 1). */
+export interface ProgressEntry {
+  id: string;
+  at: string;
+  body: string;
+  createdById: string | null;
+  createdBy: string | null;
+}
+
+/** Adds or removes a malfunction progress update; the report and timelines refresh. */
+export function useProgress(serial: string, malfunctionId: string) {
+  const qc = useQueryClient();
+  const base = `/vehicles/${enc(serial)}/records/malfunctions/${enc(malfunctionId)}/progress`;
+  const add = useMutation({
+    mutationFn: (body: { at: string | null; body: string }) =>
+      api<{ progress: ProgressEntry[] }>(base, { method: 'POST', json: body }),
+    onSuccess: () => refreshAfterWrite(qc, serial),
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) =>
+      api<{ progress: ProgressEntry[] }>(`${base}/${enc(id)}`, { method: 'DELETE' }),
+    onSuccess: () => refreshAfterWrite(qc, serial),
+  });
+  return { add, remove };
+}
+
+/** Changes an excavator's tool (Revisions 1). */
+export function useSetTool(serial: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tool: string) =>
+      api<{ tool: string }>(`/vehicles/${enc(serial)}/tool`, { method: 'PUT', json: { tool } }),
+    onSuccess: () => refreshAfterWrite(qc, serial),
+  });
+}
+
+/** One record and its history, for the record report (Revisions 1). */
+export function useRecord(serial: string, kind: RecordKind, id: string) {
+  return useQuery({
+    queryKey: [...recordsKey(serial, kind), 'one', id],
+    queryFn: () =>
+      api<{ item: RecordRow; history: RecordHistoryEntry[] }>(
+        `/vehicles/${enc(serial)}/records/${kind}/${enc(id)}`,
+      ),
+    retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
+  });
+}
+
+/** App-wide settings (e.g. which fuel fields are mandatory). Everyone reads them. */
+export const useAppSettings = () =>
+  useQuery({
+    queryKey: ['app-settings'],
+    queryFn: () => api<AppSettings>('/settings/app'),
+    staleTime: 60_000,
+    placeholderData: DEFAULT_APP_SETTINGS,
+  });
+
+export function useSaveAppSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AppSettings) =>
+      api<AppSettings>('/settings/app', { method: 'PUT', json: body }),
+    // A switch moves at once; it goes back if the save fails.
+    onMutate: (body) => {
+      const before = qc.getQueryData<AppSettings>(['app-settings']);
+      qc.setQueryData(['app-settings'], body);
+      return { before };
+    },
+    onError: (_err, _body, context) => qc.setQueryData(['app-settings'], context?.before),
+    onSuccess: (data) => qc.setQueryData(['app-settings'], data),
+  });
+}
+
+export type FuelSuggestions = Record<'place' | 'fueledBy' | 'provider', string[]>;
+export const useFuelSuggestions = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['fuel-suggestions'],
+    queryFn: () => api<FuelSuggestions>('/lookups/fuel-suggestions'),
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+
 /** Every row matching the panel's filters, for the export. */
 export const fetchAllRecords = (serial: string, kind: RecordKind, filters: RecordFilters) =>
   api<RecordPage>(`/vehicles/${enc(serial)}/records/${kind}?${query(filters, { all: '1' })}`);
@@ -92,6 +187,7 @@ export function refreshAfterWrite(qc: QueryClient, serial: string) {
     // Receipts and quotes carry files too.
     qc.invalidateQueries({ queryKey: ['receipts'] }),
     qc.invalidateQueries({ queryKey: ['quotes'] }),
+    qc.invalidateQueries({ queryKey: ['fuel-suggestions'] }),
   ]);
 }
 
@@ -183,6 +279,9 @@ export interface DocumentRow {
   amount: number | null;
   category: string | null;
   notes: string | null;
+  approved: boolean;
+  linkedRecordType: string | null;
+  linkedRecordId: string | null;
   attachments: Attachment[];
 }
 export const useDocuments = (serial: string) =>
