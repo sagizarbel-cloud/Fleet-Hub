@@ -154,7 +154,13 @@ test('admins add an extra field to location changes; it shows in the form and re
   await page.goto('/vehicles/EX-101?panel=movements');
   await page.getByTestId('add-record').click();
   const form = page.locator('#record-form');
-  await form.getByRole('combobox', { name: 'To', exact: true }).selectOption({ index: 2 });
+  // Any place other than where the vehicle is now (earlier runs may have moved it).
+  const from = await form.getByRole('combobox', { name: 'From', exact: true }).inputValue();
+  const to = form.getByRole('combobox', { name: 'To', exact: true });
+  const places = await to
+    .locator('option')
+    .evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
+  await to.selectOption(places.find((v) => v !== from)!);
   await form.getByLabel('Transport contractor').fill('E2E Haulage');
   await form.getByLabel('Permit no.').fill('P-123');
   await page.getByRole('button', { name: 'Save' }).click();

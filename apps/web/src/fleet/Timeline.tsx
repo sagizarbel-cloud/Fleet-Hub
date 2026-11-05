@@ -208,7 +208,11 @@ export const Timeline = memo(function Timeline({ first }: { first: EventPage }) 
         })}
       </div>
       <div
-        className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 lg:max-h-[calc(100dvh-24rem)]"
+        className={cn(
+          '-mx-1 min-h-0 flex-1 overflow-y-auto px-1 transition-opacity lg:max-h-[calc(100dvh-24rem)]',
+          events.isPlaceholderData && 'opacity-60',
+        )}
+        aria-busy={events.isPlaceholderData || undefined}
         data-scroll="timeline"
       >
         {events.isPending ? (

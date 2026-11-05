@@ -1,3 +1,4 @@
+import { cn } from '@/lib/cn';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
@@ -98,7 +99,15 @@ export function Activity({
           );
         })}
       </div>
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto" data-scroll="activity">
+      <div
+        ref={scroller}
+        className={cn(
+          'min-h-0 flex-1 overflow-y-auto transition-opacity',
+          events.isPlaceholderData && 'opacity-60',
+        )}
+        aria-busy={events.isPlaceholderData || undefined}
+        data-scroll="activity"
+      >
         {events.isPending ? (
           <Loader2 aria-hidden className="text-muted mx-auto my-8 size-5 animate-spin" />
         ) : empty ? (
