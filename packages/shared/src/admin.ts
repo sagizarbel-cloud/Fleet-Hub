@@ -247,11 +247,14 @@ export const appSettingsBody = z.object({
   fuelRequired: fuelRequiredSchema,
   /** Extra fields on location changes (Revisions 1, fleet manager). */
   movementFields: customFieldList.default([]),
+  /** Yard play, the optional fling mini-game: an admin turns it on (only when the build has it). */
+  yardPlay: z.boolean().default(false),
 });
 export type AppSettings = z.output<typeof appSettingsBody>;
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   fuelRequired: { place: false, fueledBy: false, fuelType: false, provider: false },
   movementFields: [],
+  yardPlay: false,
 };
 
 /** Image types a company logo can be (Revisions 1); SVG is left out so no script can ride in. */

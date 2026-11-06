@@ -9,6 +9,8 @@ const ALLOWED = new Set(
   [
     'Fleet Hub',
     'English',
+    // The word typed to open Yard play stays as typed
+    'yard',
     // Brands and models in the fake fleet
     'Caterpillar Komatsu Volvo Bobcat Toyota Mitsubishi Ford Humbaur Atlas Copco Mercedes-Benz',
     'John Deere Hilux Triton Transit Actros EW160 PC210 S650 FH 8FD25 XAS HS',

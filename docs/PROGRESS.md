@@ -35,6 +35,13 @@ Round 3 (Sagi, 2026-11-05):
 
 - Tests: 13 api tests in `test/revisions1.test.ts`, 11 e2e tests in `e2e/report.spec.ts`. The "Back mid-flight" motion e2e test misses its 1.5 s budget by about 0.1 s in this container with and without these changes.
 
+### Yard play (optional mini-game) — 2026-11-06 (plan: https://claude.ai/artifact/K1N5e1MTK99HGx5YQTLKwN)
+
+- Branch `feature/yard-play`, on top of the Yard signage design. Sagi approved Matter.js (2D physics, MIT).
+- Two switches: `YARD_PLAY=on` in `.env` (or `deploy/.env`) builds it in; without it the build has none of it (checked: no Matter.js in an off build; an on build adds one 90 KB lazy chunk, 29 KB gzipped). An admin then turns it on for everyone in My settings (`AppSetting.yardPlay`).
+- Five quick taps on the Fleet heading, or typing "yard" on the dashboard, lifts the vehicles onto a canvas over the lot. They're thrown with a finger or the mouse and weigh what their class weighs. A 45-second shift clock runs 06:00 to 18:00; at 18:00 every vehicle drives back to its bay and the game closes. Exit and Esc end it at once. It is off under reduced motion.
+- Purely visual: the lot's filters and tiles are covered while it runs, and `e2e/yard-play.spec.ts` checks that no write request goes out (it skips when the build has no Yard play).
+
 ### Yard signage design — 2026-11-05 (mock-up: https://claude.ai/artifact/8UnbivhgHJExuBWbg2Mf8N)
 
 - Sagi wanted the site to look less machine-made and picked "Yard signage": painted on asphalt, read from a cab. It is now the default design. Today's look stays as "Classic", picked in My settings and saved to the account (`UserPreference.design`, `fh.design` on the device, `data-design` on `<html>`).

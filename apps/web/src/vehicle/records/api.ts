@@ -138,12 +138,13 @@ export function useRecord(serial: string, kind: RecordKind, id: string) {
 }
 
 /** App-wide settings (e.g. which fuel fields are mandatory). Everyone reads them. */
-export const useAppSettings = () =>
+export const useAppSettings = (enabled = true) =>
   useQuery({
     queryKey: ['app-settings'],
     queryFn: () => api<AppSettings>('/settings/app'),
     staleTime: 60_000,
     placeholderData: DEFAULT_APP_SETTINGS,
+    enabled,
   });
 
 export function useSaveAppSettings() {

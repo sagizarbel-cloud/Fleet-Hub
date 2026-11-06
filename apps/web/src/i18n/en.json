@@ -935,6 +935,11 @@
       "remove": "Remove the field",
       "invalid": "Each field needs a name in English and in Hebrew.",
       "note": "Removing a field hides it; values already saved are kept."
+    },
+    "yardPlay": {
+      "title": "Yard play",
+      "hint": "A hidden mini-game on the dashboard: tap the Fleet heading five times, or type \"yard\". It only moves pictures and never changes data.",
+      "on": "On for everyone"
     }
   },
   "reset": {
@@ -1274,5 +1279,11 @@
     "failed": "The report couldn't load. Try again.",
     "linkedTo": "Linked to",
     "page": "Fleet Hub · {{serial}}"
+  },
+  "play": {
+    "hint": "Grab a vehicle and throw it",
+    "endOfShift": "End of shift: back to the bays",
+    "exit": "Exit",
+    "canvas": "Yard play: the fleet's vehicles, which can be thrown around the lot"
   }
 }

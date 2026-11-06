@@ -38,12 +38,16 @@ import type { PickedItem } from './EquipmentTray';
 import { Chip } from './Timeline';
 import { dateFormat, localeOf } from '@/lib/intl';
 import { usePreferences, useSavePreferences } from '@/vehicle/data';
+import { useAppSettings } from '@/vehicle/records/api';
+import { useYardPlayTrigger } from '@/play/trigger';
 
 // Both load only when used: a file dropped on a tile, or the equipment tray opened.
 const ReceiptForm = lazy(() =>
   import('@/money/ReceiptForm').then((m) => ({ default: m.ReceiptForm })),
 );
 const EquipmentTray = lazy(() => import('./EquipmentTray'));
+// Yard play is an optional install: without YARD_PLAY=on the build has none of it.
+const YardPlay = __YARD_PLAY__ ? lazy(() => import('@/play/YardPlay')) : null;
 
 type DropWhat = 'file' | 'item';
 
@@ -355,6 +359,8 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
   const prefs = usePreferences();
   const savePrefs = useSavePreferences();
   const grouping: FleetGrouping = prefs.data?.fleetGrouping ?? 'location';
+  const appSettings = useAppSettings(__YARD_PLAY__);
+  const [play, setPlay] = useState<{ root: HTMLElement; tiles: Tile[] } | null>(null);
 
   useEffect(() => {
     if (!notice) return;
@@ -423,6 +429,10 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
       return next;
     });
   const filtered = statuses.length > 0 || !!type || !!department;
+  const onFleetTitle = useYardPlayTrigger({
+    allowed: __YARD_PLAY__ && !!appSettings.data?.yardPlay && !reduced && !away && !play,
+    start: () => rootRef.current && setPlay({ root: rootRef.current, tiles: visible }),
+  });
   const canAdd = !!user && hasRole(user.role, 'EDITOR');
   const lang = i18n.language;
 
@@ -455,6 +465,7 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
       className="relative isolate p-3"
       ref={rootRef}
       data-testid="fleet-grid"
+      data-playing={play ? '' : undefined}
     >
       {/* The panel itself fades after the tiles, so nothing of the grid shows behind the vehicle. */}
       <motion.div
@@ -468,9 +479,9 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
         initial={false}
         animate={{ opacity: away ? 0 : 1 }}
         transition={fade.base}
-        className="mb-3 flex flex-wrap items-center gap-2"
+        className="fh-toolbar mb-3 flex flex-wrap items-center gap-2"
       >
-        <h2 id="fleet-title" className="me-auto text-sm font-semibold">
+        <h2 id="fleet-title" className="me-auto text-sm font-semibold" onClick={onFleetTitle}>
           {t('dashboard.fleet')}
         </h2>
         <div
@@ -722,6 +733,12 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
             </Suspense>
           )}
         </motion.div>
+      )}
+
+      {YardPlay && play && (
+        <Suspense fallback={null}>
+          <YardPlay root={play.root} tiles={play.tiles} onExit={() => setPlay(null)} />
+        </Suspense>
       )}
 
       {createPortal(
