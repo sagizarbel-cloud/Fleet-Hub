@@ -43,9 +43,23 @@ const ACCEL = 0.35;
 const TURN = 0.075;
 /** How much sideways slide the tyres (or tracks) keep each step: low = more grip. */
 const SLIDE = 0.8;
+/**
+ * Drifting (Sagi, 2026-11-07): light machines hold less grip, so with speed and a hard turn the
+ * tail steps out. The handbrake lets the rear slide almost freely and tightens the turn.
+ */
+const DRIFTERS: Record<string, number> = { pickup: 0.93, van: 0.88 };
+const HANDBRAKE_SLIDE = 0.975;
+const HANDBRAKE_TURN = 1.7;
+/** Sideways speed (px per step) above which the tyres leave marks and dust. */
+const MARK_SLIDE = 1.1;
+const MARK_LIFE_MS = 4500;
+const DUST_LIFE_MS = 650;
 /** Tracked machines turn on the spot; wheeled ones only while rolling. */
 const PIVOTS = new Set(['tracked_excavator', 'skid_steer']);
-const KEYS: Record<string, 'up' | 'down' | 'left' | 'right'> = {
+const KEYS: Record<string, 'up' | 'down' | 'left' | 'right' | 'brake'> = {
+  Space: 'brake',
+  ShiftLeft: 'brake',
+  ShiftRight: 'brake',
   ArrowUp: 'up',
   KeyW: 'up',
   ArrowDown: 'down',
@@ -120,6 +134,7 @@ export default function YardPlay({
   const [driving, setDriving] = useState<string | null>(null);
   const [touch] = useState(coarse);
   const stickRef = useRef<StickValue>({ x: 0, y: 0 });
+  const brakeRef = useRef(false);
   const exitRef = useRef(onExit);
   useEffect(() => {
     exitRef.current = onExit;
@@ -140,6 +155,9 @@ export default function YardPlay({
     const tone = { GREEN: color('--fh-ok'), AMBER: color('--fh-warn'), RED: color('--fh-bad') };
     const text = color('--fh-text');
     const accent = color('--fh-accent');
+    const muted = color('--fh-muted');
+    // Rubber on asphalt: near-black on a dark lot, darker grey on a light one.
+    const markColor = document.documentElement.dataset.theme === 'light' ? '#3a3a3a' : '#050505';
     const mono = css.getPropertyValue('--font-mono').trim() || 'monospace';
 
     const engine = Matter.Engine.create({ gravity: { x: 0, y: 0 } });
@@ -229,8 +247,15 @@ export default function YardPlay({
     canvas.addEventListener('pointerup', onPointerUp);
 
     const held = new Set<string>();
-    const drive = () => {
-      if (!driven) return;
+    // Tyre marks (pairs of rear-wheel points) and dust puffs, both fading with age.
+    const marks: { ax: number; ay: number; bx: number; by: number; born: number }[] = [];
+    const dust: { x: number; y: number; vx: number; vy: number; born: number }[] = [];
+    let rear: { x: number; y: number }[] | null = null;
+    const drive = (now: number) => {
+      if (!driven) {
+        rear = null;
+        return;
+      }
       const stick = stickRef.current;
       const throttle = (held.has('up') ? 1 : 0) - (held.has('down') ? 1 : 0) || -stick.y;
       const steer = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0) || stick.x;
@@ -245,15 +270,54 @@ export default function YardPlay({
       const ly = v.y - along * fy;
       const top = TOP_SPEED / heavy;
       const target = throttle >= 0 ? throttle * top : throttle * top * 0.5;
-      const next = along + Math.max(-ACCEL / heavy, Math.min(ACCEL / heavy, target - along));
+      const brake = held.has('brake') || brakeRef.current;
+      let next = along + Math.max(-ACCEL / heavy, Math.min(ACCEL / heavy, target - along));
+      if (brake) next *= 0.985; // locked rear wheels scrub speed
+      const lateral = Math.hypot(lx, ly);
+      const drifter = DRIFTERS[driven.tile.type];
+      // At speed with the wheel turned, a light machine lets its tail go.
+      const loose = drifter
+        ? drifter * Math.min(1, (Math.abs(next) / top) * Math.abs(steer) * 1.4)
+        : 0;
+      const slide = Math.max(SLIDE, loose, brake ? (drifter ? HANDBRAKE_SLIDE : 0.9) : 0);
       Matter.Body.setVelocity(body, {
-        x: next * fx + lx * SLIDE,
-        y: next * fy + ly * SLIDE,
+        x: next * fx + lx * slide,
+        y: next * fy + ly * slide,
       });
       const rolling = Math.min(1, Math.abs(next) / (top * 0.5));
       const pivot = PIVOTS.has(driven.tile.type) ? 0.5 : 0;
-      const turn = (steer * TURN * Math.max(rolling, pivot)) / heavy;
+      // Once sliding, a drifter's nose keeps swinging into the turn (oversteer).
+      const oversteer = drifter ? 1 + Math.min(1, lateral / 3) * 0.6 : 1;
+      const turn =
+        (steer * TURN * Math.max(rolling, pivot) * oversteer * (brake ? HANDBRAKE_TURN : 1)) /
+        heavy;
       Matter.Body.setAngularVelocity(body, next < -0.05 ? -turn : turn);
+
+      // Rear wheels: a little behind the middle, at both sides.
+      const back = driven.height * 0.32;
+      const side = driven.width * 0.38;
+      const { x, y } = body.position;
+      const wheels = [-1, 1].map((k) => ({
+        x: x - fx * back + -fy * side * k,
+        y: y - fy * back + fx * side * k,
+      }));
+      if (lateral > MARK_SLIDE || (brake && Math.abs(next) > 1)) {
+        if (rear)
+          wheels.forEach((w, i) =>
+            marks.push({ ax: rear![i]!.x, ay: rear![i]!.y, bx: w.x, by: w.y, born: now }),
+          );
+        for (const w of wheels)
+          dust.push({
+            x: w.x,
+            y: w.y,
+            vx: (Math.random() - 0.5) * 0.6 - v.x * 0.15,
+            vy: (Math.random() - 0.5) * 0.6 - v.y * 0.15,
+            born: now,
+          });
+        rear = wheels;
+      } else rear = null;
+      while (marks.length > 900) marks.shift();
+      while (dust.length > 120) dust.shift();
     };
 
     let elapsed = 0;
@@ -275,6 +339,34 @@ export default function YardPlay({
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, box.width, box.height);
       ctx.globalAlpha = 1;
+
+      // Tyre marks under everything, then dust.
+      const now = performance.now();
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = markColor;
+      for (const m of marks) {
+        const age = (now - m.born) / MARK_LIFE_MS;
+        if (age >= 1) continue;
+        ctx.globalAlpha = 0.6 * (1 - age);
+        ctx.beginPath();
+        ctx.moveTo(m.ax, m.ay);
+        ctx.lineTo(m.bx, m.by);
+        ctx.stroke();
+      }
+      ctx.fillStyle = muted;
+      for (const d of dust) {
+        const age = (now - d.born) / DUST_LIFE_MS;
+        if (age >= 1) continue;
+        d.x += d.vx;
+        d.y += d.vy;
+        ctx.globalAlpha = 0.28 * (1 - age);
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 3 + age * 9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      while (marks.length && now - marks[0]!.born > MARK_LIFE_MS) marks.shift();
 
       ctx.font = `12px ${mono}`;
       ctx.textAlign = 'center';
@@ -334,7 +426,7 @@ export default function YardPlay({
         }
       } else {
         elapsed += dt;
-        drive();
+        drive(now);
         Matter.Engine.update(engine, dt);
         draw();
         const minute = clock(elapsed / SHIFT_MS);
@@ -440,7 +532,24 @@ export default function YardPlay({
           {t('play.exit')}
         </Button>
       </div>
-      {touch && driving && !ending && <Stick valueRef={stickRef} />}
+      {touch && driving && !ending && (
+        <>
+          <Stick valueRef={stickRef} />
+          <button
+            type="button"
+            className="border-border-strong bg-surface/80 active:bg-accent active:text-accent-contrast fixed end-5 bottom-5 z-50 grid size-24 touch-none place-items-center rounded-full border-2 text-sm font-medium select-none"
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              brakeRef.current = true;
+            }}
+            onPointerUp={() => (brakeRef.current = false)}
+            onPointerCancel={() => (brakeRef.current = false)}
+            data-testid="yard-play-handbrake"
+          >
+            {t('play.handbrake')}
+          </button>
+        </>
+      )}
     </div>
   );
 }

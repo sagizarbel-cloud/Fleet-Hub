@@ -1285,8 +1285,9 @@
     "endOfShift": "End of shift: back to the bays",
     "exit": "Exit",
     "canvas": "Yard play: the fleet's vehicles, which can be thrown around the lot",
-    "driveKeys": "Driving {{serial}}: arrow keys or WASD. Tap it again to let go.",
-    "driveTouch": "Driving {{serial}}: use the stick. Tap it again to let go.",
-    "stick": "Steering stick"
+    "driveKeys": "Driving {{serial}}: arrow keys or WASD, Space for the handbrake. Tap it again to let go.",
+    "driveTouch": "Driving {{serial}}: use the stick and the handbrake. Tap it again to let go.",
+    "stick": "Steering stick",
+    "handbrake": "Handbrake"
   }
 }
