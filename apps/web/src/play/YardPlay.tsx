@@ -47,11 +47,12 @@ const DRAG = 0.045;
 const DRIVEN_DRAG = 0.012;
 const TURN = 0.05;
 /**
- * Steering (Sagi, 2026-11-07): the input builds up the longer it is held (full lock after about
- * 0.7 s) and settles back quicker when let go, so taps make small corrections.
+ * Steering (Sagi, 2026-11-07): the input builds up along a slight arc while held, reaching full
+ * lock after 0.3 s (18 steps), and settles back quicker when let go, so taps stay small.
  */
-const STEER_BUILD = 1 / 42;
-const STEER_RELEASE = 1 / 12;
+const STEER_BUILD = 1 / 18;
+const STEER_RELEASE = 1 / 8;
+const STEER_ARC = 1.5;
 /** How quickly weight moves to the rear under power or to the front under braking. */
 const PITCH_RATE = 0.07;
 /** How much of the turn a full load on the rear axle takes away at top speed (understeer). */
@@ -302,23 +303,27 @@ export default function YardPlay({
     const dust: { x: number; y: number; vx: number; vy: number; born: number }[] = [];
     let rear: { x: number; y: number }[] | null = null;
     // The driven machine's steering input, weight transfer (+1 rear, -1 front) and body roll.
-    let steerIn = 0;
+    let steerHeld = 0; // 0..1, how far the build-up has gone
+    let steerSide = 0; // -1 left, 1 right
     let pitch = 0;
     let roll = 0;
     let shake = 0;
     const drive = (now: number) => {
       if (!driven) {
         rear = null;
-        steerIn = pitch = roll = 0;
+        steerHeld = steerSide = pitch = roll = 0;
         return;
       }
       const stick = stickRef.current;
       const throttle = (held.has('up') ? 1 : 0) - (held.has('down') ? 1 : 0) || -stick.y;
       const wanted = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0) || stick.x;
-      const building = wanted !== 0 && (steerIn === 0 || Math.sign(wanted) === Math.sign(steerIn));
-      const rate = building ? STEER_BUILD : STEER_RELEASE;
-      steerIn += Math.max(-rate, Math.min(rate, wanted - steerIn));
-      const steer = steerIn;
+      // A stick held part way caps the build-up there; switching sides unwinds first.
+      const towards = Math.sign(wanted);
+      if (towards !== 0 && (steerHeld === 0 || towards === steerSide)) {
+        steerSide = towards;
+        steerHeld = Math.min(Math.abs(wanted), steerHeld + STEER_BUILD);
+      } else steerHeld = Math.max(0, steerHeld - STEER_RELEASE);
+      const steer = steerSide * steerHeld ** STEER_ARC;
       const body = driven.body;
       const heavy = Math.sqrt(DENSITY[driven.tile.type] ?? 1.5);
       const fx = Math.sin(body.angle);
