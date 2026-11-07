@@ -65,10 +65,13 @@ function understeerShare(speed: number) {
   if (speed <= 8) return 0.3 * (speed / 8);
   return 0.3 + 0.45 * Math.min(1, (speed - 8) / 4);
 }
-/** Once the tyres let go, they grip again only when the slide has nearly stopped. */
-const LOST_SLIDE = 0.9;
-const LOST_DRIFTER_SLIDE = 0.94;
-const REGAIN_BELOW = 0.5;
+/**
+ * Once the tyres let go (it takes the same slide as before, MARK_SLIDE), they keep sliding long
+ * and grip again only when the slide has all but stopped (Sagi, 2026-11-07).
+ */
+const LOST_SLIDE = 0.94;
+const LOST_DRIFTER_SLIDE = 0.965;
+const REGAIN_BELOW = 0.3;
 /** Relative speed (px per step) above which a crash shakes the lot and throws dust. */
 const HARD_HIT = 4;
 /** How much sideways slide the tyres (or tracks) keep each step: low = more grip. */
@@ -86,6 +89,19 @@ const MARK_LIFE_MS = 4500;
 const DUST_LIFE_MS = 650;
 /** Tracked machines turn on the spot; wheeled ones only while rolling. */
 const PIVOTS = new Set(['tracked_excavator', 'skid_steer']);
+/**
+ * Loaders steer by bending at the frame joint in front of the cab (Sagi, 2026-11-07): the two
+ * halves fold up to 35 degrees, at the pace of the steering rams, and the machine follows the
+ * bend, so it turns tightly but only while it rolls.
+ */
+const ARTICULATED = new Set(['wheel_loader']);
+const MAX_ART = (35 * Math.PI) / 180;
+const ART_RATE = MAX_ART / 14;
+/** The distance between the axles, as a share of the drawing's length. */
+const WHEELBASE = 0.42;
+/** The roof beacon: turns per second, and how far its beam reaches. */
+const BEACON_TURNS = 2;
+const BEACON_REACH = 24;
 const KEYS: Record<string, 'up' | 'down' | 'left' | 'right' | 'brake'> = {
   Space: 'brake',
   ShiftLeft: 'brake',
@@ -110,6 +126,27 @@ interface Piece {
   home: { x: number; y: number };
   /** Where the label sits below the drawing, relative to the body's centre. */
   labelDy: number;
+  /** Where the roof beacon sits (the cab's middle), relative to the body's centre. */
+  roof: { x: number; y: number };
+  /** Where an articulated frame bends (the front of the cab), as a y relative to the centre. */
+  hinge: number;
+  /** How far the frame is bent right now (radians, + to the right). */
+  art: number;
+}
+
+/** The drawing's cab (or the whole drawing when it has none), relative to the drawing's centre. */
+function cabBox(svg: SVGSVGElement, r: DOMRect) {
+  const parts = [...svg.querySelectorAll('[data-part="cab"]')].map((el) =>
+    el.getBoundingClientRect(),
+  );
+  if (!parts.length) return { x: 0, y: 0, top: 0 };
+  const left = Math.min(...parts.map((b) => b.left));
+  const right = Math.max(...parts.map((b) => b.right));
+  const top = Math.min(...parts.map((b) => b.top));
+  const bottom = Math.max(...parts.map((b) => b.bottom));
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+  return { x: (left + right) / 2 - cx, y: (top + bottom) / 2 - cy, top: top - cy };
 }
 
 /** An inline SVG as a standalone image, with the CSS-driven colours and strokes written onto it. */
@@ -186,7 +223,10 @@ export default function YardPlay({
     const text = color('--fh-text');
     const accent = color('--fh-accent');
     const muted = color('--fh-muted');
-    const shadowAlpha = document.documentElement.dataset.theme === 'light' ? 0.22 : 0.55;
+    // Caution lights are amber whatever the theme.
+    const lamp = '#FFA31A';
+    const light = document.documentElement.dataset.theme === 'light';
+    const shadowAlpha = light ? 0.22 : 0.55;
     // Rubber on asphalt: near-black on a dark lot, darker grey on a light one.
     const markColor = document.documentElement.dataset.theme === 'light' ? '#3a3a3a' : '#050505';
     const mono = css.getPropertyValue('--font-mono').trim() || 'monospace';
@@ -202,6 +242,7 @@ export default function YardPlay({
       const r = svg.getBoundingClientRect();
       if (r.width === 0) continue;
       const b = button.getBoundingClientRect();
+      const cab = cabBox(svg, r);
       const x = r.left - box.left + r.width / 2;
       const y = r.top - box.top + r.height / 2;
       const body = Matter.Bodies.rectangle(x, y, r.width, r.height, {
@@ -224,6 +265,9 @@ export default function YardPlay({
         height: r.height,
         home: { x, y },
         labelDy: b.bottom - box.top - 10 - y,
+        roof: { x: cab.x, y: cab.y },
+        hinge: cab.top,
+        art: 0,
       });
     }
     // The panel's edges are the yard's fence; its top runs under the game's own bar.
@@ -384,6 +428,9 @@ export default function YardPlay({
       });
       const rolling = Math.min(1, Math.abs(next) / (top * 0.5));
       const pivot = PIVOTS.has(driven.tile.type) ? 0.5 : 0;
+      const articulated = ARTICULATED.has(driven.tile.type);
+      if (articulated)
+        driven.art += Math.max(-ART_RATE, Math.min(ART_RATE, steer * MAX_ART - driven.art));
       // Everything turns wider at speed. Weight on the rear lifts the front tyres, so under
       // power the nose pushes wide (understeer); weight on the front gives them more bite.
       const share = understeerShare(Math.abs(next));
@@ -392,19 +439,24 @@ export default function YardPlay({
       const bite = 1 + 0.35 * Math.max(0, -pitch);
       // Once sliding with the rear light, a drifter's nose keeps swinging in (oversteer).
       const oversteer = drifter ? 1 + Math.min(1, lateral / 3) * 0.6 * planted : 1;
-      const turn =
-        (steer *
-          TURN *
-          Math.max(rolling, pivot) *
-          wider *
-          understeer *
-          bite *
-          oversteer *
-          (brake ? HANDBRAKE_TURN : 1)) /
-        heavy;
+      // A loader turns as far as its bend allows for the distance it rolls (backwards too), held
+      // to about the turn rate of the other machines.
+      const bend = (next * 2 * Math.tan(driven.art / 2)) / (driven.height * WHEELBASE);
+      const cap = (TURN * 1.3) / heavy;
+      const turn = articulated
+        ? Math.max(-cap, Math.min(cap, bend)) * wider * understeer * bite
+        : (steer *
+            TURN *
+            Math.max(rolling, pivot) *
+            wider *
+            understeer *
+            bite *
+            oversteer *
+            (brake ? HANDBRAKE_TURN : 1)) /
+          heavy;
       // Turning has inertia too: a heavy machine takes a moment to start and stop rotating.
       const spin = body.angularVelocity;
-      const wantSpin = next < -0.05 ? -turn : turn;
+      const wantSpin = !articulated && next < -0.05 ? -turn : turn;
       Matter.Body.setAngularVelocity(body, spin + (wantSpin - spin) * (0.22 / heavy));
       roll += (Math.max(-1, Math.min(1, body.angularVelocity * next * 3)) - roll) * 0.12;
 
@@ -440,6 +492,67 @@ export default function YardPlay({
     let frame = 0;
     let returning: { at: number; from: { x: number; y: number; angle: number }[] } | null = null;
     let shownMinute = '';
+
+    /** A vehicle's drawing, bent at its frame joint when it is an articulated loader. */
+    const drawBody = (p: Piece) => {
+      const { width: w, height: h } = p;
+      if (Math.abs(p.art) < 0.001) {
+        ctx.drawImage(p.image, -w / 2, -h / 2, w, h);
+        return;
+      }
+      // Rear half (behind the joint) then front half, each turned half the bend about the joint;
+      // the clips overlap a little so no seam shows.
+      for (const [half, from, to] of [
+        [-1, p.hinge - 1, h / 2],
+        [1, -h / 2, p.hinge + 1],
+      ] as const) {
+        ctx.save();
+        ctx.translate(0, p.hinge);
+        ctx.rotate((half * p.art) / 2);
+        ctx.translate(0, -p.hinge);
+        ctx.beginPath();
+        ctx.rect(-w, from, w * 2, to - from);
+        ctx.clip();
+        ctx.drawImage(p.image, -w / 2, -h / 2, w, h);
+        ctx.restore();
+      }
+    };
+
+    /** An amber roof beacon: a lamp with a beam sweeping round, BEACON_TURNS times a second. */
+    const beacon = (x: number, y: number, now: number) => {
+      const turnAt = ((now / 1000) * BEACON_TURNS * Math.PI * 2) % (Math.PI * 2);
+      const beam = ctx.createRadialGradient(x, y, 0, x, y, BEACON_REACH);
+      beam.addColorStop(0, lamp);
+      beam.addColorStop(1, 'transparent');
+      ctx.fillStyle = beam;
+      ctx.globalAlpha = 0.7;
+      // On a dark lot the beam adds light over the machine instead of covering it.
+      if (!light) ctx.globalCompositeOperation = 'lighter';
+      for (const offset of [0, Math.PI]) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.arc(x, y, BEACON_REACH, turnAt + offset - 0.45, turnAt + offset + 0.45);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      // The lamp brightens each time a beam faces forward.
+      ctx.globalAlpha = 0.75 + 0.25 * Math.abs(Math.cos(turnAt));
+      ctx.fillStyle = lamp;
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFF4D6';
+      ctx.beginPath();
+      ctx.arc(x, y, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = markColor;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    };
 
     const draw = () => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -502,23 +615,26 @@ export default function YardPlay({
             ctx.save();
             ctx.globalAlpha = shadowAlpha;
             ctx.filter = 'brightness(0)';
-            ctx.drawImage(p.image, -p.width / 2 + 2, -p.height / 2 + 3, p.width, p.height);
+            ctx.translate(2, 3);
+            drawBody(p);
             ctx.restore();
           }
           ctx.translate(-roll * 3, pitch * 3);
-          // The driven machine wears a safety-yellow frame with a notch at its front.
-          ctx.strokeStyle = accent;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(-p.width / 2 - 5, -p.height / 2 - 5, p.width + 10, p.height + 10);
-          ctx.fillStyle = accent;
-          ctx.beginPath();
-          ctx.moveTo(-6, -p.height / 2 - 5);
-          ctx.lineTo(6, -p.height / 2 - 5);
-          ctx.lineTo(0, -p.height / 2 - 12);
-          ctx.fill();
         }
-        if (p.image.complete)
-          ctx.drawImage(p.image, -p.width / 2, -p.height / 2, p.width, p.height);
+        if (p !== driven) p.art *= 0.85; // a parked loader straightens up
+        if (p.image.complete) drawBody(p);
+        // The driven machine has a caution light turning on its roof (on the cab, which rides on
+        // a loader's rear half).
+        if (p === driven) {
+          ctx.save();
+          if (Math.abs(p.art) > 0.001) {
+            ctx.translate(0, p.hinge);
+            ctx.rotate(-p.art / 2);
+            ctx.translate(0, -p.hinge);
+          }
+          beacon(p.roof.x, p.roof.y, now);
+          ctx.restore();
+        }
         ctx.restore();
         // The serial stays upright under its vehicle, with a dot in its status colour.
         const ly = y + p.labelDy;
