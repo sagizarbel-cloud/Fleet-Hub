@@ -45,7 +45,19 @@ const BRAKE = 0.42;
 /** Air and rolling drag: loose vehicles stop soon; the one being driven carries its momentum. */
 const DRAG = 0.045;
 const DRIVEN_DRAG = 0.012;
-const TURN = 0.075;
+const TURN = 0.05;
+/**
+ * Steering (Sagi, 2026-11-07): the input builds up the longer it is held (full lock after about
+ * 0.7 s) and settles back quicker when let go, so taps make small corrections.
+ */
+const STEER_BUILD = 1 / 42;
+const STEER_RELEASE = 1 / 12;
+/** How quickly weight moves to the rear under power or to the front under braking. */
+const PITCH_RATE = 0.07;
+/** How much of the turn a full load on the rear axle takes away at top speed (understeer). */
+const UNDERSTEER = 0.6;
+/** Relative speed (px per step) above which a crash shakes the lot and throws dust. */
+const HARD_HIT = 4;
 /** How much sideways slide the tyres (or tracks) keep each step: low = more grip. */
 const SLIDE = 0.8;
 /**
@@ -161,6 +173,7 @@ export default function YardPlay({
     const text = color('--fh-text');
     const accent = color('--fh-accent');
     const muted = color('--fh-muted');
+    const shadowAlpha = document.documentElement.dataset.theme === 'light' ? 0.22 : 0.55;
     // Rubber on asphalt: near-black on a dark lot, darker grey on a light one.
     const markColor = document.documentElement.dataset.theme === 'light' ? '#3a3a3a' : '#050505';
     const mono = css.getPropertyValue('--font-mono').trim() || 'monospace';
@@ -181,7 +194,13 @@ export default function YardPlay({
       const body = Matter.Bodies.rectangle(x, y, r.width, r.height, {
         density: BASE_DENSITY * (DENSITY[tile.type] ?? 1.5),
         frictionAir: DRAG,
-        restitution: 0.35,
+        // Heavy machines are dead weight in a crash; light ones bounce off them.
+        restitution:
+          (DENSITY[tile.type] ?? 1.5) >= 2.5
+            ? 0.08
+            : (DENSITY[tile.type] ?? 1.5) >= 1.8
+              ? 0.18
+              : 0.32,
         friction: 0.2,
       });
       pieces.push({
@@ -207,6 +226,30 @@ export default function YardPlay({
       Matter.Bodies.rectangle(x, y, w, h, { isStatic: true, restitution: 0.5 }),
     );
     Matter.Composite.add(engine.world, [...pieces.map((p) => p.body), ...fence]);
+
+    // Hard hits shake the lot a little and throw up dust where the machines meet.
+    Matter.Events.on(engine, 'collisionStart', (event) => {
+      for (const pair of event.pairs) {
+        const a = pair.bodyA.velocity;
+        const b = pair.bodyB.velocity;
+        const hit = Math.hypot(a.x - b.x, a.y - b.y);
+        if (hit < HARD_HIT) continue;
+        shake = Math.max(shake, Math.min(7, (hit - HARD_HIT) * 1.3));
+        const at = pair.collision.supports?.[0] ?? pair.bodyA.position;
+        const now = performance.now();
+        for (let i = 0; i < 8; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const push = 0.4 + Math.random() * hit * 0.15;
+          dust.push({
+            x: at.x,
+            y: at.y,
+            vx: Math.cos(angle) * push,
+            vy: Math.sin(angle) * push,
+            born: now,
+          });
+        }
+      }
+    });
 
     // Matter reads pointer positions in canvas pixels; this keeps them in page pixels.
     canvas.setAttribute('data-pixel-ratio', String(dpr));
@@ -258,14 +301,24 @@ export default function YardPlay({
     const marks: { ax: number; ay: number; bx: number; by: number; born: number }[] = [];
     const dust: { x: number; y: number; vx: number; vy: number; born: number }[] = [];
     let rear: { x: number; y: number }[] | null = null;
+    // The driven machine's steering input, weight transfer (+1 rear, -1 front) and body roll.
+    let steerIn = 0;
+    let pitch = 0;
+    let roll = 0;
+    let shake = 0;
     const drive = (now: number) => {
       if (!driven) {
         rear = null;
+        steerIn = pitch = roll = 0;
         return;
       }
       const stick = stickRef.current;
       const throttle = (held.has('up') ? 1 : 0) - (held.has('down') ? 1 : 0) || -stick.y;
-      const steer = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0) || stick.x;
+      const wanted = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0) || stick.x;
+      const building = wanted !== 0 && (steerIn === 0 || Math.sign(wanted) === Math.sign(steerIn));
+      const rate = building ? STEER_BUILD : STEER_RELEASE;
+      steerIn += Math.max(-rate, Math.min(rate, wanted - steerIn));
+      const steer = steerIn;
       const body = driven.body;
       const heavy = Math.sqrt(DENSITY[driven.tile.type] ?? 1.5);
       const fx = Math.sin(body.angle);
@@ -289,10 +342,15 @@ export default function YardPlay({
       if (brake) next *= 0.985; // locked rear wheels scrub speed
       const lateral = Math.hypot(lx, ly);
       const drifter = DRIFTERS[driven.tile.type];
-      // At speed with the wheel turned, a light machine lets its tail go.
-      const loose = drifter
-        ? drifter * Math.min(1, (Math.abs(next) / top) * Math.abs(steer) * 1.4)
-        : 0;
+      const speed = Math.min(1, Math.abs(next) / top);
+      // Weight moves back under power and forward under braking, at a pace set by the mass.
+      const load =
+        braking || brake ? -1 : throttle > 0 && gap > 0.05 ? throttle * (1 - 0.4 * speed) : 0;
+      pitch += (load - pitch) * (PITCH_RATE / heavy);
+      // With the weight off the rear (braking, lifting off) a light machine lets its tail go;
+      // under power the rear is planted.
+      const planted = pitch > 0.25 ? 0.35 : 1;
+      const loose = drifter ? drifter * Math.min(1, speed * Math.abs(steer) * 1.4) * planted : 0;
       const slide = Math.max(SLIDE, loose, brake ? (drifter ? HANDBRAKE_SLIDE : 0.9) : 0);
       Matter.Body.setVelocity(body, {
         x: next * fx + lx * slide,
@@ -300,12 +358,28 @@ export default function YardPlay({
       });
       const rolling = Math.min(1, Math.abs(next) / (top * 0.5));
       const pivot = PIVOTS.has(driven.tile.type) ? 0.5 : 0;
-      // Once sliding, a drifter's nose keeps swinging into the turn (oversteer).
-      const oversteer = drifter ? 1 + Math.min(1, lateral / 3) * 0.6 : 1;
+      // Everything turns wider at speed. Weight on the rear lifts the front tyres, so under
+      // power the nose pushes wide (understeer); weight on the front gives them more bite.
+      const wider = 1 / (1 + 1.4 * speed * speed);
+      const understeer = 1 - UNDERSTEER * Math.max(0, pitch) * speed;
+      const bite = 1 + 0.35 * Math.max(0, -pitch);
+      // Once sliding with the rear light, a drifter's nose keeps swinging in (oversteer).
+      const oversteer = drifter ? 1 + Math.min(1, lateral / 3) * 0.6 * planted : 1;
       const turn =
-        (steer * TURN * Math.max(rolling, pivot) * oversteer * (brake ? HANDBRAKE_TURN : 1)) /
+        (steer *
+          TURN *
+          Math.max(rolling, pivot) *
+          wider *
+          understeer *
+          bite *
+          oversteer *
+          (brake ? HANDBRAKE_TURN : 1)) /
         heavy;
-      Matter.Body.setAngularVelocity(body, next < -0.05 ? -turn : turn);
+      // Turning has inertia too: a heavy machine takes a moment to start and stop rotating.
+      const spin = body.angularVelocity;
+      const wantSpin = next < -0.05 ? -turn : turn;
+      Matter.Body.setAngularVelocity(body, spin + (wantSpin - spin) * (0.22 / heavy));
+      roll += (Math.max(-1, Math.min(1, body.angularVelocity * next * 3)) - roll) * 0.12;
 
       // Rear wheels: a little behind the middle, at both sides.
       const back = driven.height * 0.32;
@@ -343,6 +417,10 @@ export default function YardPlay({
     const draw = () => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, box.width, box.height);
+      if (shake > 0.2) {
+        ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+        shake *= 0.86;
+      } else shake = 0;
       // A light sweep crosses the lot as the shift goes on.
       const sweep = (elapsed / SHIFT_MS) * (box.width + 240) - 120;
       const g = ctx.createLinearGradient(sweep - 120, 0, sweep + 120, 0);
@@ -391,6 +469,16 @@ export default function YardPlay({
         ctx.translate(x, y);
         ctx.rotate(p.body.angle);
         if (p === driven) {
+          // Its shadow stays put while the body squats back under power, dives under braking
+          // and leans out of turns.
+          if (p.image.complete) {
+            ctx.save();
+            ctx.globalAlpha = shadowAlpha;
+            ctx.filter = 'brightness(0)';
+            ctx.drawImage(p.image, -p.width / 2 + 2, -p.height / 2 + 3, p.width, p.height);
+            ctx.restore();
+          }
+          ctx.translate(-roll * 3, pitch * 3);
           // The driven machine wears a safety-yellow frame with a notch at its front.
           ctx.strokeStyle = accent;
           ctx.lineWidth = 2;
