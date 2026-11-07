@@ -14,7 +14,7 @@ function built() {
 test.describe('yard play', () => {
   test.skip(!built(), 'the build has no Yard play (YARD_PLAY is off)');
 
-  test('starts from the easter egg, throws vehicles, writes nothing, and Esc ends it', async ({
+  test('starts from the easter egg, throws and drives vehicles, writes nothing, and Esc ends it', async ({
     page,
   }) => {
     await page.goto('/');
@@ -36,6 +36,17 @@ test.describe('yard play', () => {
       await expect(page.getByTestId('yard-play')).toBeVisible();
       await expect(page.getByTestId('fleet-grid')).toHaveAttribute('data-playing', '');
 
+      // A tap on a vehicle takes its wheel; the arrows drive it instead of scrolling the page.
+      const scrolled = await page.evaluate(() => scrollY);
+      const driven = (await page.locator('[data-tile-visual]').nth(1).boundingBox())!;
+      await page.mouse.click(driven.x + driven.width / 2, driven.y + driven.height / 2);
+      await expect(page.getByTestId('yard-play')).toContainText('Driving');
+      await page.keyboard.down('ArrowUp');
+      await page.waitForTimeout(600);
+      await page.keyboard.up('ArrowUp');
+      expect(await page.evaluate(() => scrollY)).toBe(scrolled);
+
+      // A drag throws another one.
       const box = (await page.locator('[data-tile-visual]').first().boundingBox())!;
       const x = box.x + box.width / 2;
       const y = box.y + box.height / 2;
