@@ -48,15 +48,27 @@ const DRIVEN_DRAG = 0.012;
 const TURN = 0.05;
 /**
  * Steering (Sagi, 2026-11-07): the input builds up along a slight arc while held, reaching full
- * lock after 0.3 s (18 steps), and settles back quicker when let go, so taps stay small.
+ * lock after 0.15 s (9 steps), and settles back quicker when let go, so taps stay small.
  */
-const STEER_BUILD = 1 / 18;
-const STEER_RELEASE = 1 / 8;
+const STEER_BUILD = 1 / 9;
+const STEER_RELEASE = 1 / 6;
 const STEER_ARC = 1.5;
 /** How quickly weight moves to the rear under power or to the front under braking. */
 const PITCH_RATE = 0.07;
 /** How much of the turn a full load on the rear axle takes away at top speed (understeer). */
 const UNDERSTEER = 0.6;
+/**
+ * How much of the understeer applies at a given speed (px per step), Sagi 2026-11-07: little up
+ * to 8, then rising, but still lighter than before at the top speed of 12.
+ */
+function understeerShare(speed: number) {
+  if (speed <= 8) return 0.3 * (speed / 8);
+  return 0.3 + 0.45 * Math.min(1, (speed - 8) / 4);
+}
+/** Once the tyres let go, they grip again only when the slide has nearly stopped. */
+const LOST_SLIDE = 0.9;
+const LOST_DRIFTER_SLIDE = 0.94;
+const REGAIN_BELOW = 0.5;
 /** Relative speed (px per step) above which a crash shakes the lot and throws dust. */
 const HARD_HIT = 4;
 /** How much sideways slide the tyres (or tracks) keep each step: low = more grip. */
@@ -306,12 +318,14 @@ export default function YardPlay({
     let steerHeld = 0; // 0..1, how far the build-up has gone
     let steerSide = 0; // -1 left, 1 right
     let pitch = 0;
+    let lost = false; // the tyres have broken away and are still sliding
     let roll = 0;
     let shake = 0;
     const drive = (now: number) => {
       if (!driven) {
         rear = null;
         steerHeld = steerSide = pitch = roll = 0;
+        lost = false;
         return;
       }
       const stick = stickRef.current;
@@ -356,7 +370,14 @@ export default function YardPlay({
       // under power the rear is planted.
       const planted = pitch > 0.25 ? 0.35 : 1;
       const loose = drifter ? drifter * Math.min(1, speed * Math.abs(steer) * 1.4) * planted : 0;
-      const slide = Math.max(SLIDE, loose, brake ? (drifter ? HANDBRAKE_SLIDE : 0.9) : 0);
+      if (lateral > MARK_SLIDE) lost = true;
+      else if (lateral < REGAIN_BELOW) lost = false;
+      const slide = Math.max(
+        SLIDE,
+        loose,
+        brake ? (drifter ? HANDBRAKE_SLIDE : 0.9) : 0,
+        lost ? (drifter ? LOST_DRIFTER_SLIDE : LOST_SLIDE) : 0,
+      );
       Matter.Body.setVelocity(body, {
         x: next * fx + lx * slide,
         y: next * fy + ly * slide,
@@ -365,8 +386,9 @@ export default function YardPlay({
       const pivot = PIVOTS.has(driven.tile.type) ? 0.5 : 0;
       // Everything turns wider at speed. Weight on the rear lifts the front tyres, so under
       // power the nose pushes wide (understeer); weight on the front gives them more bite.
-      const wider = 1 / (1 + 1.4 * speed * speed);
-      const understeer = 1 - UNDERSTEER * Math.max(0, pitch) * speed;
+      const share = understeerShare(Math.abs(next));
+      const wider = 1 / (1 + 1.4 * speed * speed * share);
+      const understeer = 1 - UNDERSTEER * Math.max(0, pitch) * speed * share;
       const bite = 1 + 0.35 * Math.max(0, -pitch);
       // Once sliding with the rear light, a drifter's nose keeps swinging in (oversteer).
       const oversteer = drifter ? 1 + Math.min(1, lateral / 3) * 0.6 * planted : 1;
