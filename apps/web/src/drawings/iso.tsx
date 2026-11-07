@@ -18,6 +18,11 @@ export interface Solid {
   smooth?: boolean;
   /** Detail lines drawn on top of this solid (windows, bed rails, hubs). */
   decals?: readonly (readonly P3[])[];
+  /**
+   * Paint after every solid of a lower layer (default 0), for parts the general order gets wrong,
+   * such as a forklift's mast standing just ahead of a taller body.
+   */
+  layer?: number;
 }
 
 export const box = (
@@ -85,6 +90,21 @@ export const wheel = (part: PartName, cx: number, cz: number, r: number, y: P2):
   y,
   smooth: true,
   decals: [circle(cx, cz, r * 0.38).map(([x, z]) => [x, y[1], z] as const)],
+});
+
+/** A mudguard: three flat plates bent round a wheel at (cx, cz), from `from` to `to` degrees (0 = front). */
+export const fender = (
+  part: PartName,
+  cx: number,
+  cz: number,
+  r: number,
+  y: P2,
+  [from, to]: P2 = [15, 165],
+  t = 0.07,
+): Solid => ({
+  part,
+  profile: [...arc(cx, cz, r + t, from, to, 3), ...arc(cx, cz, r, to, from, 3)],
+  y,
 });
 
 export function circle(cx: number, cz: number, r: number, n = 28): P2[] {
@@ -168,12 +188,15 @@ const depth = (s: Solid) => {
   return [(s.y[0] + s.y[1]) / 2, Math.min(...zs), (Math.min(...xs) + Math.max(...xs)) / 2] as const;
 };
 
-/** Far-to-near paint order: across the width first, then low before high, then back to front. */
+/**
+ * Far-to-near paint order: by layer, then across the width, then low before high, then back to
+ * front.
+ */
 function paintOrder(solids: readonly Solid[]) {
   return [...solids].sort((a, b) => {
     const [ay, az, ax] = depth(a);
     const [by, bz, bx] = depth(b);
-    return ay - by || az - bz || ax - bx;
+    return (a.layer ?? 0) - (b.layer ?? 0) || ay - by || az - bz || ax - bx;
   });
 }
 
