@@ -38,8 +38,13 @@ const DENSITY: Record<string, number> = {
 const BASE_DENSITY = 0.0015;
 
 /** Driving: top speed and turn rate per physics step, divided by the root of the weight. */
-const TOP_SPEED = 7;
-const ACCEL = 0.35;
+const TOP_SPEED = 12;
+const ACCEL = 0.3;
+/** Braking (throttle against the motion) bites harder than the engine pulls. */
+const BRAKE = 0.42;
+/** Air and rolling drag: loose vehicles stop soon; the one being driven carries its momentum. */
+const DRAG = 0.045;
+const DRIVEN_DRAG = 0.012;
 const TURN = 0.075;
 /** How much sideways slide the tyres (or tracks) keep each step: low = more grip. */
 const SLIDE = 0.8;
@@ -175,7 +180,7 @@ export default function YardPlay({
       const y = r.top - box.top + r.height / 2;
       const body = Matter.Bodies.rectangle(x, y, r.width, r.height, {
         density: BASE_DENSITY * (DENSITY[tile.type] ?? 1.5),
-        frictionAir: 0.045,
+        frictionAir: DRAG,
         restitution: 0.35,
         friction: 0.2,
       });
@@ -240,7 +245,9 @@ export default function YardPlay({
       );
       const piece = pieces.find((p) => p.body === hit) ?? null;
       if (!piece) return;
+      if (driven) driven.body.frictionAir = DRAG;
       driven = driven === piece ? null : piece;
+      if (driven) driven.body.frictionAir = DRIVEN_DRAG;
       setDriving(driven?.tile.serial ?? null);
     };
     canvas.addEventListener('pointerdown', onPointerDown);
@@ -271,7 +278,14 @@ export default function YardPlay({
       const top = TOP_SPEED / heavy;
       const target = throttle >= 0 ? throttle * top : throttle * top * 0.5;
       const brake = held.has('brake') || brakeRef.current;
-      let next = along + Math.max(-ACCEL / heavy, Math.min(ACCEL / heavy, target - along));
+      // The engine pulls hard from a standstill and fades towards top speed; braking is
+      // stronger; with no throttle the machine coasts on its momentum.
+      const gap = target - along;
+      const braking =
+        throttle !== 0 && Math.sign(gap) !== Math.sign(along) && Math.abs(along) > 0.2;
+      const fade = 1 - 0.75 * Math.min(1, (Math.abs(along) / top) ** 2);
+      const pull = throttle === 0 ? 0 : (braking ? BRAKE : ACCEL * fade) / heavy;
+      let next = along + Math.max(-pull, Math.min(pull, gap));
       if (brake) next *= 0.985; // locked rear wheels scrub speed
       const lateral = Math.hypot(lx, ly);
       const drifter = DRIFTERS[driven.tile.type];
