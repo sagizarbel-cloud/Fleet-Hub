@@ -1,13 +1,14 @@
-import { box, cylinder, extrude, model, type V2, type V3 } from '../kit';
+import { box, cylinder, extrude, hull, model, type V2, type V3 } from '../kit';
 
 /**
- * Double-cab pickup at one-tonne size, in metres (+x front, +y the near side, z up), measured off
- * dimensioned side, front and plan views (Sagi, 2026-11-08): 5.34 m long, 1.82 m high, 3.09 m
- * wheelbase. Open bed with walls, wheel-well humps and a ribbed floor, flared arches, four
- * doors, a sloping hood with creases, side steps, mirrors, lights and bumpers.
+ * Double-cab pickup at one-tonne size, in metres (+x front, +y the near side, z up), traced off
+ * dimensioned side, front and plan views (Sagi, 2026-11-08): 5.34 m long, 1.86 m wide, 1.81 m
+ * high, about 3.1 m wheelbase. Open bed with walls, wheel-well humps and a ribbed floor; a cab
+ * whose glass leans in to a narrower roof; a long hood that slopes to a nose rounded in plan;
+ * flared arches, four doors, mirrors, lights and bumpers.
  */
 
-const arc = (cx: number, cz: number, r: number, from: number, to: number, n = 10): V2[] =>
+const arc = (cx: number, cz: number, r: number, from: number, to: number, n = 12): V2[] =>
   Array.from({ length: n + 1 }, (_, i) => {
     const a = ((from + ((to - from) * i) / n) * Math.PI) / 180;
     return [cx + r * Math.cos(a), cz + r * Math.sin(a)] as const;
@@ -19,32 +20,6 @@ const ring = (cx: number, y: number, cz: number, r: number): V3[] =>
     return [cx + r * Math.cos(a), y, cz + r * Math.sin(a)];
   });
 
-const R = 0.37;
-const REAR = -1.48;
-const FRONT = 1.61;
-const SILL = 0.45;
-const ARCH = 0.5;
-const FAR = 0.05;
-const NEAR = 1.81;
-const BELT = 1.3;
-const FLOOR = 0.92;
-const RAIL = 1.34;
-const CAB_BACK = -0.89;
-const HOOD: V2 = [0.97, 1.32];
-const NOSE: V2 = [2.6, 1.05];
-
-/** A wheel arch over a tyre, meeting the sill. */
-const arch = (cx: number): V2[] => {
-  const a0 = (Math.asin((SILL - R) / ARCH) * 180) / Math.PI;
-  return arc(cx, R, ARCH, 180 - a0, a0);
-};
-
-/** A tyre with the rim and hub drawn on both faces. */
-const tyre = (cx: number, [y0, y1]: V2) =>
-  cylinder('wheels', 'y', [y0, y1], [cx, R], R, 32, [
-    ...[y0, y1].flatMap((y) => [ring(cx, y, R, R * 0.66), ring(cx, y, R, R * 0.22)]),
-  ]);
-
 const outline = (pts: V3[]): V3[] => [...pts, pts[0]!];
 const onX = (x: number, [y0, y1]: V2, [z0, z1]: V2): V3[] =>
   outline([
@@ -54,174 +29,313 @@ const onX = (x: number, [y0, y1]: V2, [z0, z1]: V2): V3[] =>
     [x, y0, z1],
   ]);
 
-/** x of the windscreen at height z. */
-const screen = (z: number) => 0.97 - (0.92 * (z - BELT)) / 0.44;
-/** Height of the hood's top at x. */
-const hood = (x: number) => HOOD[1] + ((NOSE[1] - HOOD[1]) * (x - HOOD[0])) / (NOSE[0] - HOOD[0]);
+/** Tyres: radius, axle positions, and the arch cut-outs and flares over them. */
+const R = 0.37;
+const REAR = -1.47;
+const FRONT = 1.64;
+const REAR_ARCH = 0.5;
+const FRONT_ARCH = 0.45;
+/** Width: the body sides (flares stand 0.04 proud of them) and the centre line. */
+const W = 1.86;
+const C = W / 2;
+const SIDE: V2 = [0.04, W - 0.04];
+/** Heights: rocker, bottom of the bed's sides, bed floor, bed rail, beltline, roof. */
+const ROCKER = 0.33;
+const BED_LOW = 0.55;
+const FLOOR = 0.9;
+const RAIL = 1.32;
+const BELT = 1.3;
+const ROOF = 1.81;
+/** Lengths: tailgate, bed front, cab back, windscreen base. */
+const TAIL = -2.58;
+const BED_FRONT = -0.97;
+const CAB_BACK = -0.92;
+const SCREEN = 1.3;
+/** The nose: where the plan starts to round off, and the front face. */
+const NOSE_START = 2.09;
+const NOSE = 2.66;
+/** The hood ends just shy of the bumper's front. */
+const HOOD_END = 2.58;
 
-const CAB_Y = NEAR - 0.06;
+/** The hood's top, traced off the side view: nearly flat back by the windscreen, curving down
+ * towards the nose but ending at 1.08 m. */
+const HOOD: [number, number][] = [
+  [SCREEN, BELT],
+  [2.09, 1.21],
+  [2.25, 1.18],
+  [2.36, 1.155],
+  [2.47, 1.13],
+  [HOOD_END, 1.08],
+];
+/** Height of the hood's top at x. */
+const hood = (x: number) => {
+  const i = Math.max(
+    1,
+    HOOD.findIndex(([hx]) => hx >= x),
+  );
+  const [x0, z0] = HOOD[i - 1]!;
+  const [x1, z1] = HOOD[i]!;
+  return z0 + ((z1 - z0) * (x - x0)) / (x1 - x0);
+};
+/** x of the windscreen at height z. */
+const screen = (z: number) => SCREEN - ((SCREEN - 0.58) * (z - BELT)) / (1.76 - BELT);
+/** Half-width of the cab's side glass at height z (it leans in from the belt to the roof). */
+const glass = (z: number) => 0.8 - (0.11 * (z - BELT)) / (1.76 - BELT);
+/** A point on the cab's near side glass. */
+const onGlass = (x: number, z: number): V3 => [x, C + glass(z), z];
+const both = (pts: [number, number, number][]): V3[] =>
+  pts.flatMap(([x, h, z]) => [[x, C - h, z] as V3, [x, C + h, z] as V3]);
+
+/** Where an arch of radius r round the axle at cx meets height z, behind (-1) or ahead (+1). */
+const meet = (cx: number, r: number, z: number, side: -1 | 1) =>
+  cx + side * Math.sqrt(r * r - (z - R) * (z - R));
+const archArc = (cx: number, r: number, zBack: number, zFront: number): V2[] => {
+  const deg = (z: number) => (Math.asin((z - R) / r) * 180) / Math.PI;
+  return arc(cx, R, r, 180 - deg(zBack), deg(zFront), 14);
+};
+
+/** The nose's half-width in plan, by x (traced off the plan view). */
+const TAPER: [number, number][] = [
+  [NOSE_START, 0.89],
+  [2.25, 0.885],
+  [2.36, 0.82],
+  [2.47, 0.7],
+  [2.58, 0.58],
+  [NOSE, 0.5],
+];
+/** The upper nose stops at the hood's end. */
+const UPPER: [number, number][] = TAPER.map(([x, h]) => [Math.min(x, HOOD_END), h]);
+
+/** A tyre with the rim and hub drawn on both faces. */
+const tyre = (cx: number, [y0, y1]: V2) =>
+  cylinder('wheels', 'y', [y0, y1], [cx, R], R, 32, [
+    ...[y0, y1].flatMap((y) => [ring(cx, y, R, R * 0.66), ring(cx, y, R, R * 0.22)]),
+  ]);
+
+const TYRE = 0.26;
+const NEAR = SIDE[1];
 
 export const pickup3d = () =>
   model(
-    ...[REAR, FRONT].flatMap((x) => [tyre(x, [FAR, FAR + 0.26]), tyre(x, [NEAR - 0.26, NEAR])]),
-    // Lower body: arches, the bed floor behind the cab, the hood sloping down to the nose.
+    ...[REAR, FRONT].flatMap((x) => [
+      tyre(x, [SIDE[0] + 0.01, SIDE[0] + 0.01 + TYRE]),
+      tyre(x, [NEAR - 0.01 - TYRE, NEAR - 0.01]),
+    ]),
+    // Lower body: the bed's sides behind the cab, the doors, the front wing up to the hood.
     extrude(
       'body',
       [
-        [-2.62, SILL + 0.1],
-        [-2.5, SILL],
-        ...arch(REAR),
-        ...arch(FRONT),
-        [2.5, SILL],
-        [2.67, 0.62],
-        [2.67, 0.98],
-        NOSE,
-        HOOD,
+        [TAIL, BED_LOW],
+        [meet(REAR, REAR_ARCH, BED_LOW, -1), BED_LOW],
+        ...archArc(REAR, REAR_ARCH, BED_LOW, ROCKER),
+        [meet(FRONT, FRONT_ARCH, ROCKER, -1), ROCKER],
+        ...archArc(FRONT, FRONT_ARCH, ROCKER, 0.4),
+        [NOSE_START, 0.4],
+        [NOSE_START, 0.86],
+        [SCREEN, 0.86],
+        [SCREEN, BELT],
         [CAB_BACK, BELT],
         [CAB_BACK, FLOOR],
-        [-2.62, FLOOR],
+        [TAIL, FLOOR],
       ],
-      [FAR, NEAR],
+      SIDE,
       [
-        // Door edges and handles.
-        ...[1.15, 0.02, CAB_BACK + 0.04].map((x): V3[] => [
-          [x, NEAR, SILL + 0.03],
+        // Door edges, the door bottoms, and the handles.
+        ...[1.16, 0.05, -0.85].map((x): V3[] => [
+          [x, NEAR, 0.43],
           [x, NEAR, BELT],
         ]),
-        ...[0.55, -0.42].map((x): V3[] => [
-          [x, NEAR, 1.2],
-          [x + 0.15, NEAR, 1.2],
-        ]),
-        // The crease along the side, from the tail lamp to the headlight.
         [
-          [-2.55, NEAR, 1.08],
-          [2.45, NEAR, 1.0],
+          [-0.85, NEAR, 0.43],
+          [1.1, NEAR, 0.43],
         ],
-        // Creases along the hood, and the bed's ribbed floor, seen from above.
-        ...[0.5, 1.36].map((y): V3[] => [
-          [1.1, y, hood(1.1)],
-          [2.45, y, hood(2.45)],
-        ]),
-        ...Array.from({ length: 8 }, (_, i): V3[] => {
-          const y = 0.3 + i * 0.17;
+        ...[0.12, -0.78].map((x): V3[] =>
+          outline([
+            [x, NEAR, 1.14],
+            [x + 0.26, NEAR, 1.14],
+            [x + 0.26, NEAR, 1.19],
+            [x, NEAR, 1.19],
+          ]),
+        ),
+        // Creases: low along the doors, high along the bed side.
+        [
+          [-0.8, NEAR, 0.6],
+          [1.05, NEAR, 0.62],
+        ],
+        // Ribbed bed floor, seen from above.
+        ...Array.from({ length: 11 }, (_, i): V3[] => {
+          const y = C - 0.7 + i * 0.14;
           return [
-            [-2.5, y, FLOOR],
-            [CAB_BACK - 0.12, y, FLOOR],
+            [TAIL + 0.08, y, FLOOR],
+            [BED_FRONT - 0.1, y, FLOOR],
           ];
         }),
-        // Grille, swept headlights.
-        onX(2.67, [0.55, 1.31], [0.64, 0.95]),
-        ...[0.74, 0.85].map((z): V3[] => [
-          [2.67, 0.6, z],
-          [2.67, 1.26, z],
-        ]),
-        outline([
-          [2.67, 0.1, 0.86],
-          [2.67, 0.46, 0.9],
-          [2.67, 0.46, 0.97],
-          [2.67, 0.1, 0.97],
-        ]),
-        outline([
-          [2.67, 1.4, 0.9],
-          [2.67, 1.76, 0.86],
-          [2.67, 1.76, 0.97],
-          [2.67, 1.4, 0.97],
-        ]),
       ],
     ),
-    // Flares round both arches on the near side.
-    ...[REAR, FRONT].map((x) =>
-      extrude(
-        'body',
-        [...arc(x, R, ARCH + 0.07, 170, 10), ...arc(x, R, ARCH, 10, 170)],
-        [NEAR, NEAR + 0.04],
+    // Hood and the upper nose: shoulders rolling in, rounded off in plan towards the front.
+    hull(
+      'body',
+      [
+        ...both([
+          [SCREEN, 0.89, 0.86],
+          [SCREEN, 0.89, BELT - 0.11],
+          [SCREEN, 0.78, BELT],
+        ]),
+        ...UPPER.flatMap(([x, h]) =>
+          both([
+            [x, h, 0.86],
+            [x, h, hood(x) - 0.11],
+            [x, h - 0.11, hood(x)],
+          ]),
+        ),
+      ],
+      [
+        // Creases along the hood.
+        ...[-1, 1].map((s): V3[] => [
+          ...[1.52, NOSE_START, 2.25, 2.36, 2.4].map((x): V3 => [
+            x,
+            C + s * (0.6 - (0.17 * (x - 1.52)) / 0.88),
+            hood(x),
+          ]),
+        ]),
+        // Grille with its bars, and the headlights either side.
+        onX(HOOD_END, [C - 0.3, C + 0.3], [0.9, 0.97]),
+        ...[-1, 1].map((s) =>
+          onX(HOOD_END, s < 0 ? [C - 0.48, C - 0.32] : [C + 0.32, C + 0.48], [0.91, 0.97]),
+        ),
+      ],
+    ),
+    // Front bumper below the nose, rounded the same way, with the grille, intake and fog lights.
+    hull(
+      'body',
+      [
+        ...both([
+          [NOSE_START - 0.01, 0.89, 0.4],
+          [NOSE_START - 0.01, 0.89, 0.86],
+          [2.45, 0.6, 0.33],
+        ]),
+        ...TAPER.slice(1).flatMap(([x, h]) =>
+          both([
+            [x, h, x === NOSE ? 0.45 : 0.42],
+            [x, h, 0.86],
+          ]),
+        ),
+      ],
+      [
+        onX(NOSE, [C - 0.3, C + 0.3], [0.62, 0.86]),
+        ...[0.68, 0.74, 0.8].map((z): V3[] => [
+          [NOSE, C - 0.28, z],
+          [NOSE, C + 0.28, z],
+        ]),
+        onX(NOSE, [C - 0.22, C + 0.22], [0.48, 0.56]),
+        onX(NOSE, [C - 0.46, C - 0.36], [0.5, 0.56]),
+        onX(NOSE, [C + 0.36, C + 0.46], [0.5, 0.56]),
+      ],
+    ),
+    // Flares round both arches, on both sides.
+    ...[
+      [REAR, REAR_ARCH],
+      [FRONT, FRONT_ARCH],
+    ].flatMap(([x, r]) =>
+      (
+        [
+          [0, SIDE[0]],
+          [NEAR, W],
+        ] as V2[]
+      ).map((y) =>
+        extrude('body', [...arc(x!, R, r! + 0.05, 172, 8), ...arc(x!, R, r!, 8, 172)], y),
       ),
     ),
-    // The bed: side walls flush with the body, wheel-well humps, front wall and tailgate.
-    box('bed', [-2.62, CAB_BACK], [FAR, FAR + 0.07], [FLOOR, RAIL]),
+    // The bed: side walls flush with the body, with the tail lamps and the bed crease; the
+    // wheel-well humps, front wall and tailgate.
+    box('bed', [TAIL, BED_FRONT], [SIDE[0], SIDE[0] + 0.07], [FLOOR, RAIL]),
     box(
       'bed',
-      [-2.62, CAB_BACK],
+      [TAIL, BED_FRONT],
       [NEAR - 0.07, NEAR],
       [FLOOR, RAIL],
       [
         [
-          [-2.55, NEAR, RAIL - 0.1],
-          [CAB_BACK - 0.08, NEAR, RAIL - 0.1],
+          [-2.38, NEAR, 1.05],
+          [-1.25, NEAR, 1.05],
+          [-1.05, NEAR, 0.95],
         ],
+        outline([
+          [TAIL, NEAR, 1.24],
+          [-2.52, NEAR, 1.24],
+          [-2.4, NEAR, 1.04],
+          [-2.45, NEAR, 0.97],
+          [TAIL, NEAR, 0.97],
+        ]),
       ],
     ),
     ...[
-      [FAR + 0.07, 0.36],
-      [NEAR - 0.36, NEAR - 0.07],
-    ].map(([y0, y1]) => box('bed', [REAR - 0.42, REAR + 0.42], [y0!, y1!], [FLOOR, FLOOR + 0.2])),
-    box('bed', [CAB_BACK - 0.07, CAB_BACK], [FAR + 0.07, NEAR - 0.07], [FLOOR, RAIL]),
+      [SIDE[0] + 0.07, C - 0.58],
+      [C + 0.58, NEAR - 0.07],
+    ].map(([y0, y1]) => box('bed', [-1.8, -1.08], [y0!, y1!], [FLOOR, FLOOR + 0.2])),
+    box('bed', [BED_FRONT - 0.07, BED_FRONT], [SIDE[0] + 0.07, NEAR - 0.07], [FLOOR, RAIL]),
     box(
       'bed',
-      [-2.7, -2.62],
-      [FAR, NEAR],
-      [0.6, RAIL],
+      [TAIL - 0.07, TAIL],
+      SIDE,
+      [0.78, RAIL],
       [
-        onX(-2.7, [FAR + 0.02, FAR + 0.14], [0.9, 1.28]),
-        onX(-2.7, [NEAR - 0.14, NEAR - 0.02], [0.9, 1.28]),
-        [
-          [-2.7, 0.75, 1.18],
-          [-2.7, 1.11, 1.18],
-        ],
+        onX(TAIL - 0.07, [SIDE[0] + 0.02, SIDE[0] + 0.14], [0.97, 1.24]),
+        onX(TAIL - 0.07, [NEAR - 0.14, NEAR - 0.02], [0.97, 1.24]),
+        onX(TAIL - 0.07, [C - 0.12, C + 0.12], [1.16, 1.2]),
       ],
     ),
-    // Cab: raked windscreen, a roof with inset edges, door windows split by the pillar.
-    extrude(
+    // Rear step bumper.
+    box('body', [-2.68, -2.45], [C - 0.8, C + 0.8], [0.5, 0.78]),
+    // Cab: glass leaning in from the belt to a narrower, crowned roof; raked windscreen.
+    hull(
       'cab',
       [
-        [CAB_BACK, BELT],
-        [0.97, BELT],
-        [0.05, 1.74],
-        [-0.05, 1.76],
-        [-0.8, 1.74],
-        [-0.87, 1.66],
+        ...both([
+          [CAB_BACK, glass(BELT), BELT],
+          [SCREEN, glass(BELT), BELT],
+          [CAB_BACK + 0.03, glass(1.76), 1.76],
+          [0.58, glass(1.76), 1.76],
+          [CAB_BACK + 0.07, 0.5, ROOF],
+          [0.15, 0.5, ROOF],
+        ]),
       ],
-      [FAR + 0.06, CAB_Y],
       [
+        // Rear and front door glass, split by the pillar.
         outline([
-          [0.08, CAB_Y, 1.35],
-          [0.9, CAB_Y, 1.35],
-          [0.1, CAB_Y, 1.71],
-          [0.08, CAB_Y, 1.71],
+          onGlass(-0.7, 1.34),
+          onGlass(-0.03, 1.34),
+          onGlass(-0.03, 1.7),
+          onGlass(-0.76, 1.7),
+          onGlass(-0.8, 1.5),
         ]),
         outline([
-          [-0.8, CAB_Y, 1.35],
-          [-0.04, CAB_Y, 1.35],
-          [-0.04, CAB_Y, 1.71],
-          [-0.76, CAB_Y, 1.71],
+          onGlass(0.1, 1.34),
+          onGlass(screen(1.34) - 0.12, 1.34),
+          onGlass(screen(1.7) - 0.08, 1.7),
+          onGlass(0.1, 1.7),
         ]),
+        // Windscreen.
         outline([
-          [screen(1.36), 0.22, 1.36],
-          [screen(1.36), 1.64, 1.36],
-          [screen(1.7), 1.64, 1.7],
-          [screen(1.7), 0.22, 1.7],
+          [screen(1.35), C - glass(1.35) + 0.1, 1.35],
+          [screen(1.35), C + glass(1.35) - 0.1, 1.35],
+          [screen(1.72), C + glass(1.72) - 0.08, 1.72],
+          [screen(1.72), C - glass(1.72) + 0.08, 1.72],
         ]),
-        onX(CAB_BACK, [0.4, 1.46], [1.38, 1.62]),
-        // Roof panel, inset from its edges.
+        // Rear window and the roof's creases.
         outline([
-          [-0.72, 0.25, 1.743],
-          [-0.08, 0.25, 1.759],
-          [-0.08, 1.61, 1.759],
-          [-0.72, 1.61, 1.743],
+          [CAB_BACK + 0.008, C - 0.5, 1.4],
+          [CAB_BACK + 0.008, C + 0.5, 1.4],
+          [CAB_BACK + 0.026, C + 0.46, 1.68],
+          [CAB_BACK + 0.026, C - 0.46, 1.68],
+        ]),
+        ...[-0.3, -0.12, 0.12, 0.3].map((dy): V3[] => [
+          [-0.75, C + dy, ROOF],
+          [0.1, C + dy * 0.85, ROOF],
         ]),
       ],
     ),
-    // Mirrors on both doors.
-    box('cab', [0.84, 0.98], [CAB_Y, NEAR + 0.16], [1.32, 1.46]),
-    box('cab', [0.84, 0.98], [FAR - 0.1, FAR + 0.06], [1.32, 1.46]),
-    // Side step between the arches, and both bumpers with fog lights in the front one.
-    box('body', [-0.9, 1.05], [NEAR - 0.02, NEAR + 0.1], [0.36, 0.41]),
-    box(
-      'body',
-      [2.6, 2.74],
-      [FAR + 0.08, NEAR - 0.08],
-      [0.33, 0.62],
-      [onX(2.74, [0.22, 0.4], [0.44, 0.52]), onX(2.74, [1.46, 1.64], [0.44, 0.52])],
-    ),
-    box('body', [-2.78, -2.62], [FAR + 0.08, NEAR - 0.08], [0.45, 0.62]),
+    // Mirrors on both front doors.
+    box('cab', [0.86, 1.06], [NEAR - 0.02, NEAR + 0.15], [1.22, 1.38]),
+    box('cab', [0.86, 1.06], [SIDE[0] - 0.15, SIDE[0] + 0.02], [1.22, 1.38]),
   );
