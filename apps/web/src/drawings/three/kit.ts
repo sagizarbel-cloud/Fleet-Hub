@@ -43,13 +43,14 @@ export function extrude(
   profile: readonly V2[],
   [y0, y1]: V2,
   decals?: PieceData['decals'],
+  smooth = false,
 ) {
   const shape = new THREE.Shape(profile.map(([x, z]) => new THREE.Vector2(x, z)));
   const geometry = new THREE.ExtrudeGeometry(shape, { depth: y1 - y0, bevelEnabled: false });
   // Shape x stays x, shape y becomes z, and the extrusion runs from y1 back to y0.
   geometry.rotateX(Math.PI / 2);
   geometry.translate(0, y1, 0);
-  return tag(new THREE.Mesh(geometry, material), { part, decals });
+  return tag(new THREE.Mesh(geometry, material), { part, decals, smooth });
 }
 
 /** A round bar or drum along an axis, from `a0` to `a1` on that axis, centred at (u, v). */

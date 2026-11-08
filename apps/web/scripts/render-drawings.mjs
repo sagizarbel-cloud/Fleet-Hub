@@ -21,11 +21,11 @@ try {
   const only = process.argv.slice(2);
   const out = join(root, 'src/drawings/generated');
   mkdirSync(out, { recursive: true });
-  for (const [type, build] of Object.entries(MODELS)) {
+  for (const [type, spec] of Object.entries(MODELS)) {
     if (only.length && !only.includes(type)) continue;
     const started = Date.now();
     const views = Object.fromEntries(
-      ['top', 'side', 'iso'].map((view) => [view, renderView(build(), view)]),
+      ['top', 'side', 'iso'].map((view) => [view, renderView(spec.build(view), view, spec.unit)]),
     );
     writeFileSync(join(out, `${type}.json`), `${JSON.stringify(views)}\n`);
     console.log(`${type}: ${Date.now() - started} ms`);

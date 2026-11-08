@@ -54,8 +54,13 @@ export function VehicleVisual({
   className,
 }: Props) {
   const def = drawingFor(type, tool);
-  // A 3D model covers the type with its standard tool; other tools keep the 2D drawing for now.
-  const modelled = engine === '3d' && (!tool || tool === 'bucket') ? GENERATED[type] : undefined;
+  // Excavators with another tool than the bucket have a model of their own (`type.tool`).
+  const modelled =
+    engine === '3d'
+      ? ((tool && tool !== 'bucket' ? GENERATED[`${type}.${tool}`] : undefined) ??
+        GENERATED[type] ??
+        GENERATED.other)
+      : undefined;
   const svgRef = useRef<SVGSVGElement>(null);
   const style = { '--vd-color': STATUS_VAR[status] } as CSSProperties;
 

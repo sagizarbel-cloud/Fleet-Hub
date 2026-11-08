@@ -203,7 +203,8 @@ export function renderView(root: THREE.Object3D, view: ViewName, unit = 44, pad 
     m.set(b, (m.get(b) ?? 0) + 1);
     front.set(a, m);
   };
-  const eps = 0.02 * unit;
+  // Depth slack in drawing units (44 per metre): about 1 cm, whatever units the model uses.
+  const eps = 0.5;
 
   projected.forEach((tris, id) => {
     for (const tri of tris) {
