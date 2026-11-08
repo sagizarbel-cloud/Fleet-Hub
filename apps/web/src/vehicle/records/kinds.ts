@@ -11,6 +11,7 @@ import {
   WORK_PERFORMERS,
   WORK_TYPES,
   wiggleFailed,
+  wiggleScale,
   type WiggleItem,
 } from '@fleet-hub/shared';
 import { dateFormat, localeOf } from '@/lib/intl';
@@ -181,7 +182,7 @@ function label(t: TFunction, prefix: string, value: string) {
 
 const resultsOf = (r: RecordRow) =>
   (r.results && typeof r.results === 'object' ? r.results : {}) as Partial<Record<string, string>>;
-/** "3 items: Cameras, LiDARs" style list of what failed, in the active language. */
+/** What failed, as a list in the active language, e.g. "Back camera and Fluids". */
 export function wiggleFailedText(r: RecordRow, ctx: FormatCtx) {
   return new Intl.ListFormat(ctx.lang === 'he' ? 'he' : 'en', { type: 'conjunction' }).format(
     wiggleFailed(resultsOf(r)).map((i) => ctx.t(`wiggle.item.${i}`)),
@@ -191,14 +192,14 @@ const wiggleResultText = (r: RecordRow, ctx: FormatCtx) => {
   const count = n(r.failCount) ?? 0;
   return count ? ctx.t('wiggle.failedCount', { count }) : ctx.t('wiggle.allOk');
 };
-/** One column per checklist item (report and Excel only), shown as V or X. */
+/** One column per checklist item (report and Excel only): V / X, full / missing and so on. */
 export const wiggleItemColumns: Column[] = WIGGLE_ITEMS.map((item: WiggleItem) => ({
   key: `results.${item}`,
   header: `wiggle.item.${item}`,
   kind: 'text',
   value: (r, ctx) => {
     const v = resultsOf(r)[item];
-    return v === 'PASS' ? ctx.t('wiggle.pass') : v === 'FAIL' ? ctx.t('wiggle.fail') : null;
+    return v === 'PASS' || v === 'FAIL' ? ctx.t(`wiggle.answer.${wiggleScale(item)}.${v}`) : null;
   },
   report: true,
 }));

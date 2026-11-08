@@ -1,46 +1,80 @@
 import { z } from 'zod';
 
 /**
- * Wiggle test (Sagi, 2026-11-08): a quick V / X check of a heavy machine's steering, cameras,
- * LiDARs and communications, with an optional note at the end. Only heavy machinery takes it;
- * which vehicle types do, and with which checklist, is an admin setting (`wiggleTypes`).
+ * Wiggle test (Sagi, 2026-11-08): a quick pass / fail check of a heavy machine, with an optional
+ * note at the end. Only heavy machinery takes it; which vehicle types do, and with which
+ * checklist, is an admin setting (`wiggleTypes`). Round 2 (Sagi, same day): one steering item,
+ * a camera per side and the cab on loaders, a front-down camera on excavators, IMUs, signal and
+ * instruments in place of "communications", and fluids, mechanical and hydraulic tools.
  */
 export const WIGGLE_PROFILES = ['loader', 'excavator', 'wheeledExcavator', 'skidSteer'] as const;
 export type WiggleProfile = (typeof WIGGLE_PROFILES)[number];
 
-/** Steering differs by machine: articulated loaders, tracked excavators, wheeled ones, skid steers. */
-export const WIGGLE_STEERING = {
-  loader: ['articulation', 'steeringCylinders', 'steeringResponse'],
-  excavator: ['tracksTravel', 'swing', 'undercarriage'],
-  wheeledExcavator: ['steeringResponse', 'axles', 'swing'],
-  skidSteer: ['driveSides', 'wheels'],
-} as const satisfies Record<WiggleProfile, readonly string[]>;
-
-/** The same on every machine. */
-export const WIGGLE_SYSTEMS = ['cameras', 'lidars', 'communications'] as const;
-
 export const isWiggleProfile = (v: unknown): v is WiggleProfile =>
   typeof v === 'string' && (WIGGLE_PROFILES as readonly string[]).includes(v);
 
+/** Cameras differ by machine; the rest of the list is the same on every heavy machine. */
+export const WIGGLE_CAMERAS = {
+  loader: ['cameraFront', 'cameraBack', 'cameraLeft', 'cameraRight', 'cameraCab'],
+  excavator: ['cameras', 'cameraFrontDown'],
+  wheeledExcavator: ['cameras', 'cameraFrontDown'],
+  skidSteer: ['cameras'],
+} as const satisfies Record<WiggleProfile, readonly string[]>;
+
 /** Every item any checklist can have, in display order. */
 export const WIGGLE_ITEMS = [
-  'articulation',
-  'steeringCylinders',
-  'steeringResponse',
-  'tracksTravel',
-  'driveSides',
-  'axles',
-  'wheels',
-  'undercarriage',
-  'swing',
-  ...WIGGLE_SYSTEMS,
+  'steering',
+  'cameraFront',
+  'cameraBack',
+  'cameraLeft',
+  'cameraRight',
+  'cameraCab',
+  'cameras',
+  'cameraFrontDown',
+  'lidars',
+  'imus',
+  'signal',
+  'instruments',
+  'fluids',
+  'mechanical',
+  'hydraulicTools',
 ] as const;
 export type WiggleItem = (typeof WIGGLE_ITEMS)[number];
 
-/** A profile's whole checklist: its steering items, then the systems. */
-export function wiggleItems(profile: WiggleProfile): WiggleItem[] {
-  return [...WIGGLE_STEERING[profile], ...WIGGLE_SYSTEMS];
+/** The groups the form shows, in order. */
+export const WIGGLE_GROUPS = ['steering', 'cameras', 'sensors', 'machine'] as const;
+export type WiggleGroup = (typeof WIGGLE_GROUPS)[number];
+
+/** The items of one group of `profile`'s checklist. */
+export function wiggleGroupItems(profile: WiggleProfile, group: WiggleGroup): WiggleItem[] {
+  switch (group) {
+    case 'steering':
+      return ['steering'];
+    case 'cameras':
+      return [...WIGGLE_CAMERAS[profile]];
+    case 'sensors':
+      return ['lidars', 'imus', 'signal', 'instruments'];
+    case 'machine':
+      return ['fluids', 'mechanical', 'hydraulicTools'];
+  }
 }
+
+/** A profile's whole checklist, in form order. */
+export function wiggleItems(profile: WiggleProfile): WiggleItem[] {
+  return WIGGLE_GROUPS.flatMap((g) => wiggleGroupItems(profile, g));
+}
+
+/**
+ * How an item's two answers read. Most are V / X; fluids are full or missing, mechanical and
+ * hydraulic tools functional or requiring attention. Stored as PASS / FAIL either way.
+ */
+export type WiggleScale = 'vx' | 'fluid' | 'condition';
+export const wiggleScale = (item: WiggleItem): WiggleScale =>
+  item === 'fluids'
+    ? 'fluid'
+    : item === 'mechanical' || item === 'hydraulicTools'
+      ? 'condition'
+      : 'vx';
 
 /** Heavy machinery by default: loaders, excavators and skid steers. */
 export const DEFAULT_WIGGLE_TYPES: Record<string, WiggleProfile> = {

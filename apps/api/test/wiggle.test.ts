@@ -17,20 +17,31 @@ const req = (
 ) => app.inject({ method, url, headers: { cookie, origin: ORIGIN }, payload });
 
 const LOADER = {
-  articulation: 'PASS',
-  steeringCylinders: 'PASS',
-  steeringResponse: 'PASS',
-  cameras: 'PASS',
-  lidars: 'FAIL',
-  communications: 'PASS',
+  steering: 'PASS',
+  cameraFront: 'PASS',
+  cameraBack: 'FAIL',
+  cameraLeft: 'PASS',
+  cameraRight: 'PASS',
+  cameraCab: 'PASS',
+  lidars: 'PASS',
+  imus: 'PASS',
+  signal: 'PASS',
+  instruments: 'PASS',
+  fluids: 'PASS',
+  mechanical: 'PASS',
+  hydraulicTools: 'PASS',
 };
 const EXCAVATOR = {
-  tracksTravel: 'PASS',
-  swing: 'PASS',
-  undercarriage: 'PASS',
+  steering: 'PASS',
   cameras: 'PASS',
+  cameraFrontDown: 'PASS',
   lidars: 'PASS',
-  communications: 'PASS',
+  imus: 'PASS',
+  signal: 'PASS',
+  instruments: 'PASS',
+  fluids: 'PASS',
+  mechanical: 'PASS',
+  hydraulicTools: 'PASS',
 };
 
 async function vehicle(type: string) {
@@ -79,7 +90,7 @@ describe('wiggle tests', () => {
     const ev = await app.db.event.findFirstOrThrow({
       where: { sourceType: 'WiggleTest', sourceId: item.id, type: 'WIGGLE_TEST' },
     });
-    expect(ev.params).toEqual({ failed: ['lidars'] });
+    expect(ev.params).toEqual({ failed: ['cameraBack'] });
 
     const detail = (await req('GET', base, viewer)).json();
     expect(detail.counts.wiggleTests).toBe(1);
@@ -88,11 +99,11 @@ describe('wiggle tests', () => {
 
   it('needs every item of the machine’s own checklist, and only those', async () => {
     const loader = await vehicle('wheel_loader');
-    const { communications: _c, ...missing } = LOADER;
+    const { hydraulicTools: _h, ...missing } = LOADER;
     const a = await req('POST', `${loader}/records/wiggleTests`, editor, { results: missing });
     expect(a.statusCode).toBe(400);
-    expect(a.json().issues).toEqual([{ path: 'results.communications', code: 'required' }]);
-    // Excavator items on a loader: the steering checks differ.
+    expect(a.json().issues).toEqual([{ path: 'results.hydraulicTools', code: 'required' }]);
+    // Excavator items on a loader: the cameras differ.
     const b = await req('POST', `${loader}/records/wiggleTests`, editor, { results: EXCAVATOR });
     expect(b.statusCode).toBe(400);
     const c = await req('POST', `${loader}/records/wiggleTests`, editor, {
@@ -127,7 +138,7 @@ describe('wiggle tests', () => {
     const mine = (
       await req('POST', `${base}/records/wiggleTests`, viewer, { results: LOADER })
     ).json().item.id;
-    const fixed = { ...LOADER, lidars: 'PASS' };
+    const fixed = { ...LOADER, cameraBack: 'PASS' };
     expect(
       (await req('PUT', `${base}/records/wiggleTests/${mine}`, viewer2, { results: fixed }))
         .statusCode,
@@ -146,7 +157,7 @@ describe('wiggle tests', () => {
     const base = await vehicle('wheel_loader');
     await req('POST', `${base}/records/wiggleTests`, editor, { results: LOADER });
     await req('POST', `${base}/records/wiggleTests`, viewer, {
-      results: { ...LOADER, lidars: 'PASS' },
+      results: { ...LOADER, cameraBack: 'PASS' },
     });
     const all = (await req('GET', `${base}/records/wiggleTests?all=1`, viewer)).json();
     expect(all.total).toBe(2);
