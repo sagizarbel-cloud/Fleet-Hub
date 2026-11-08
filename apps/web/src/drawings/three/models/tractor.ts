@@ -33,7 +33,7 @@ const outline = (pts: V3[]): V3[] => [...pts, pts[0]!];
 const RX = -1.0;
 const RR = 0.8;
 const FX = 1.3;
-const FR = 0.5;
+const FR = 0.65;
 
 /** x of the cab's front glass at height z (it leans back a little). */
 const screen = (z: number) => -0.25 - (0.1 * (z - 1.7)) / 1.05;
@@ -47,11 +47,11 @@ export const tractor3d = () =>
     tyre(FX, FR, [1.58, 1.9]),
     fender(RX, RR, 0.9, [-0.05, 0.55], 18, 150),
     fender(RX, RR, 0.9, [1.65, 2.25], 18, 150),
-    fender(FX, FR, 0.56, [0.27, 0.65], 25, 150),
-    fender(FX, FR, 0.56, [1.55, 1.93], 25, 150),
+    fender(FX, FR, 0.71, [0.27, 0.65], 25, 150),
+    fender(FX, FR, 0.71, [1.55, 1.93], 25, 150),
     // Rear axle housings and the front beam axle.
     cylinder('body', 'y', [0.5, 1.7], [RX, RR], 0.16),
-    box('body', [FX - 0.1, FX + 0.1], [0.62, 1.58], [0.42, 0.58]),
+    box('body', [FX - 0.1, FX + 0.1], [0.62, 1.58], [FR - 0.08, FR + 0.08]),
     // Engine and gearbox under the hood.
     box('body', [-1.45, 2.0], [0.75, 1.45], [0.5, 1.0]),
     // Hood with a sloped nose, grille, headlights and side vents.

@@ -12,7 +12,7 @@ import { wheelLoader3d } from './wheel-loader';
 export interface ModelSpec {
   /** The model for a view (excavators park their arm folded for the top view). */
   build: (view: ViewName) => THREE.Group;
-  /** Drawing units per model unit: 44 for models in metres, 1 for converted drawings. */
+  /** Drawing units per model unit (44 per metre). */
   unit: number;
 }
 
@@ -28,7 +28,7 @@ const digger = (
 /** Every type (and excavator tool, as `type.tool`) drawn from a 3D model. */
 export const MODELS: Record<string, ModelSpec> = {
   wheel_loader: { build: () => wheelLoader3d(), unit: 44 },
-  pickup: { build: () => pickup3d(), unit: 1 },
+  pickup: { build: () => pickup3d(), unit: 44 },
   truck: { build: () => truck3d(), unit: 44 },
   van: { build: () => van3d(), unit: 44 },
   trailer: { build: () => trailer3d(), unit: 44 },
