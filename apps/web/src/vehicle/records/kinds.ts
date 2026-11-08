@@ -7,9 +7,14 @@ import {
   MALFUNCTION_STATES,
   type RecordKind,
   type UsageUnit,
+  WIGGLE_ITEMS,
   WORK_PERFORMERS,
   WORK_TYPES,
+  wiggleFailed,
+  wiggleScale,
+  type WiggleItem,
 } from '@fleet-hub/shared';
+import { dateFormat, localeOf } from '@/lib/intl';
 import { lookupName, type Lookups } from '@/fleet/data';
 import type { RecordFilters, RecordRow } from './api';
 
@@ -81,7 +86,9 @@ export type FieldType =
   /** The vehicle's approved receipts to link (work cards); the value is comma-separated ids. */
   | 'receipts'
   /** The vehicle's services a work card gathers; the value is comma-separated ids. */
-  | 'services';
+  | 'services'
+  /** A wiggle test's V / X items; the values are `results.<item>` = PASS or FAIL. */
+  | 'checklist';
 
 export interface Field {
   key: string;
@@ -170,6 +177,39 @@ function label(t: TFunction, prefix: string, value: string) {
   const text = t(`${prefix}.${value}` as never) as string;
   return prefix === 'severity' ? text.charAt(0).toLocaleUpperCase() + text.slice(1) : text;
 }
+
+// ---------- Wiggle tests (Sagi, 2026-11-08) ----------
+
+const resultsOf = (r: RecordRow) =>
+  (r.results && typeof r.results === 'object' ? r.results : {}) as Partial<Record<string, string>>;
+/** What failed, as a list in the active language, e.g. "Back camera and Fluids". */
+export function wiggleFailedText(r: RecordRow, ctx: FormatCtx) {
+  return new Intl.ListFormat(ctx.lang === 'he' ? 'he' : 'en', { type: 'conjunction' }).format(
+    wiggleFailed(resultsOf(r)).map((i) => ctx.t(`wiggle.item.${i}`)),
+  );
+}
+const wiggleResultText = (r: RecordRow, ctx: FormatCtx) => {
+  const count = n(r.failCount) ?? 0;
+  return count ? ctx.t('wiggle.failedCount', { count }) : ctx.t('wiggle.allOk');
+};
+/** One column per checklist item (report and Excel only): V / X, full / missing and so on. */
+export const wiggleItemColumns: Column[] = WIGGLE_ITEMS.map((item: WiggleItem) => ({
+  key: `results.${item}`,
+  header: `wiggle.item.${item}`,
+  kind: 'text',
+  value: (r, ctx) => {
+    const v = resultsOf(r)[item];
+    return v === 'PASS' || v === 'FAIL' ? ctx.t(`wiggle.answer.${wiggleScale(item)}.${v}`) : null;
+  },
+  report: true,
+}));
+/** Date and time, since several tests can be done on one day. */
+const doneAtText = (r: RecordRow, ctx: FormatCtx) => {
+  const v = s(r.date);
+  if (!v) return '';
+  const time = dateFormat(localeOf(ctx.lang), { hour: '2-digit', minute: '2-digit' });
+  return `${ctx.date(v)} ${time.format(new Date(v))}`;
+};
 
 const readingKey = (unit: UsageUnit) => (unit === 'KM' ? 'odometerKm' : 'engineHours');
 
@@ -727,6 +767,45 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
     ],
     defaults: () => ({ date: today(), workType: 'MECHANICAL', performedBy: 'IN_HOUSE' }),
   },
+  wiggleTests: {
+    ownerType: 'WiggleTest',
+    dateKey: 'date',
+    searchable: true,
+    fields: [
+      { key: 'results', label: 'wiggle.checklist', type: 'checklist', required: true },
+      {
+        key: 'notes',
+        label: 'wiggle.otherProblems',
+        type: 'textarea',
+        hint: 'wiggle.otherProblemsHint',
+      },
+    ],
+    columns: [
+      {
+        ...dateCol('date', 'wiggle.doneAt'),
+        text: doneAtText,
+        numFmt: 'dd/mm/yyyy hh:mm',
+      },
+      {
+        key: 'result',
+        header: 'wiggle.result',
+        sort: 'failCount',
+        kind: 'text',
+        value: (r, ctx) => wiggleResultText(r, ctx),
+      },
+      {
+        key: 'failed',
+        header: 'wiggle.failedItems',
+        kind: 'long',
+        value: (r, ctx) => wiggleFailedText(r, ctx) || null,
+      },
+      textCol('notes', 'wiggle.otherProblems', { kind: 'long' }),
+      textCol('createdBy', 'wiggle.doneBy'),
+      ...wiggleItemColumns,
+    ],
+    filters: [{ key: 'failed', label: 'wiggle.withIssues', type: 'toggle' }],
+    defaults: () => ({}),
+  },
 };
 
 /** The column "Added by" and the attachment list, shown or exported for every kind. */
@@ -740,6 +819,15 @@ export function toBody(kind: RecordKind, values: FormValues, unit: UsageUnit, is
     if (f.createOnly && !isNew) continue;
     if (f.when && !f.when(values)) continue;
     const raw = values[f.key];
+    if (f.type === 'checklist') {
+      const prefix = `${f.key}.`;
+      body[f.key] = Object.fromEntries(
+        Object.entries(values)
+          .filter(([k, v]) => k.startsWith(prefix) && (v === 'PASS' || v === 'FAIL'))
+          .map(([k, v]) => [k.slice(prefix.length), v]),
+      );
+      continue;
+    }
     if (f.type === 'bool') {
       body[f.key] = raw === true;
       continue;
@@ -769,6 +857,11 @@ export function toForm(kind: RecordKind, row: RecordRow, unit: UsageUnit): FormV
   for (const f of KIND_UI[kind].fields) {
     if (f.createOnly) continue;
     const raw = f.type === 'reading' ? row[readingKey(unit)] : row[f.key];
+    if (f.type === 'checklist') {
+      for (const [item, v] of Object.entries(resultsOf(row)))
+        if (typeof v === 'string') values[`${f.key}.${item}`] = v;
+      continue;
+    }
     if (f.type === 'receipts' || f.type === 'services') {
       const list = f.type === 'receipts' ? row.receipts : row.services;
       const linked = Array.isArray(list) ? (list as { id: string }[]) : [];
@@ -785,5 +878,6 @@ export function toForm(kind: RecordKind, row: RecordRow, unit: UsageUnit): FormV
 export function fieldOfPath(path: string) {
   if (path === 'odometerKm' || path === 'engineHours') return 'reading';
   if (path === 'nextServiceKm' || path === 'nextServiceHours') return 'nextServiceReading';
+  if (path.startsWith('results')) return 'results';
   return path;
 }

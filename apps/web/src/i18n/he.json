@@ -108,7 +108,8 @@
       "items": "פריטים",
       "documents": "קבלות והצעות מחיר",
       "notes": "הערות",
-      "workCards": "כרטיסי עבודה"
+      "workCards": "כרטיסי עבודה",
+      "wiggleTests": "בדיקות טלטול"
     },
     "filters": {
       "label": "סינון הצי",
@@ -187,7 +188,9 @@
     "WORK_CARD": "כרטיס עבודה ({{performer}}): {{description}}",
     "WORK_CARD_by": "כרטיס עבודה ({{performer}}, {{by}}): {{description}}",
     "MALFUNCTION_PROGRESS": "התקדמות בתקלה: {{progress}}",
-    "TOOL_CHANGED": "החלפת כלי עבודה: {{from}} ← {{to}}"
+    "TOOL_CHANGED": "החלפת כלי עבודה: {{from}} ← {{to}}",
+    "WIGGLE_TEST": "בדיקת טלטול: הכול תקין",
+    "WIGGLE_TEST_failed": "בדיקת טלטול, לא תקין: {{items}}"
   },
   "severity": {
     "LOW": "נמוכה",
@@ -233,10 +236,15 @@
         "movements": "שינוי מיקום",
         "inspections": "בדיקה",
         "notes": "הערה",
-        "workCards": "כרטיס עבודה"
+        "workCards": "כרטיס עבודה",
+        "wiggleTests": "בדיקת טלטול"
       },
       "workCards": "כרטיסי עבודה",
-      "contracted": "עבודות קבלן"
+      "contracted": "עבודות קבלן",
+      "wiggleTests": "בדיקות טלטול",
+      "wiggleLast": "אחרונה {{when}}",
+      "wiggleLastIssues": "אחרונה {{when}} · X: {{count}}",
+      "wiggleNone": "עוד לא בוצעה"
     },
     "copy": "לחיצה להעתקה",
     "copied": "הועתק",
@@ -936,6 +944,17 @@
       "remove": "הסרת השדה",
       "invalid": "לכל שדה נדרש שם באנגלית ובעברית.",
       "note": "הסרת שדה מסתירה אותו; ערכים שכבר נשמרו נשארים."
+    },
+    "wiggle": {
+      "title": "בדיקת טלטול",
+      "hint": "אילו סוגי כלים עוברים בדיקת טלטול, ואילו מצלמות נבדקות בה. היגוי, חיישנים, תקשורת, נוזלים, מכני וכלים הידראוליים נמצאים בכל רשימה.",
+      "none": "ללא בדיקת טלטול",
+      "profile": {
+        "loader": "שופל (מצלמות קדמית, אחורית, שמאלית, ימנית ותא המפעיל)",
+        "excavator": "מחפר זחלי (עם מצלמה קדמית כלפי מטה)",
+        "wheeledExcavator": "מחפר גלגלי (עם מצלמה קדמית כלפי מטה)",
+        "skidSteer": "בובקט"
+      }
     }
   },
   "reset": {
@@ -1275,5 +1294,69 @@
     "failed": "לא ניתן היה לטעון את הדוח. אפשר לנסות שוב.",
     "linkedTo": "מקושר אל",
     "page": "Fleet Hub · {{serial}}"
+  },
+  "wiggle": {
+    "checklist": "רשימת בדיקה",
+    "howTo": "לחיצה על V או X, או במקלדת: V או Y ל-V, X או N ל-X. בבקר: כפתור הלוגו פעם אחת ל-V, פעמיים מהר ל-X.",
+    "markAllOk": "הכול V",
+    "answerAll": "לכל פריט נדרש V או X.",
+    "notForType": "סוג כלי זה אינו עובר בדיקת טלטול.",
+    "otherProblems": "בעיות נוספות",
+    "otherProblemsHint": "לא חובה. כל דבר נוסף שנמצא בבדיקה.",
+    "doneAt": "מועד הבדיקה",
+    "doneBy": "בוצעה על ידי",
+    "result": "תוצאה",
+    "allOk": "הכול תקין",
+    "failedCount": "לא תקין: {{count}}",
+    "failedItems": "פריטים לא תקינים",
+    "withIssues": "רק עם X",
+    "offer": "פריטים שסומנו X: {{count}}. לפתוח דיווח תקלה?",
+    "offerReport": "דיווח תקלה",
+    "offerSkip": "לא עכשיו",
+    "malfunctionText": "בדיקת טלטול, לא תקין: {{items}}",
+    "malfunctionTextNotes": "בדיקת טלטול, לא תקין: {{items}}\n{{notes}}",
+    "answer": {
+      "vx": {
+        "PASS": "V",
+        "FAIL": "X"
+      },
+      "fluid": {
+        "PASS": "מלא",
+        "FAIL": "חסר"
+      },
+      "condition": {
+        "PASS": "תקין",
+        "FAIL": "דורש טיפול"
+      }
+    },
+    "group": {
+      "steering": "היגוי",
+      "cameras": "מצלמות",
+      "sensors": "חיישנים ותקשורת",
+      "machine": "נוזלים, מכני והידראוליקה"
+    },
+    "item": {
+      "steering": "ההיגוי תקין לשני הכיוונים",
+      "cameraFront": "מצלמה קדמית",
+      "cameraBack": "מצלמה אחורית",
+      "cameraLeft": "מצלמה שמאלית",
+      "cameraRight": "מצלמה ימנית",
+      "cameraCab": "מצלמת תא המפעיל",
+      "cameras": "מצלמות",
+      "cameraFrontDown": "מצלמה קדמית כלפי מטה",
+      "lidars": "LiDAR",
+      "imus": "IMU",
+      "signal": "תקשורת: יציבות הקליטה",
+      "instruments": "תקינות המכשירים",
+      "fluids": "נוזלים",
+      "mechanical": "מכני",
+      "hydraulicTools": "כלים הידראוליים"
+    },
+    "controller": {
+      "on": "בקר מחובר: כפתור הלוגו עונה על הפריט המסומן.",
+      "off": "עוד לא זוהה בקר. לחיצה על אחד מכפתוריו מחברת אותו.",
+      "change": "כפתור אחר",
+      "learning": "יש ללחוץ על כפתור הבקר הרצוי…"
+    }
   }
 }

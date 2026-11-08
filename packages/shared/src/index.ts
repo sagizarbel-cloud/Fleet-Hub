@@ -8,3 +8,4 @@ export * from './fleet';
 export * from './money';
 export * from './admin';
 export * from './import';
+export * from './wiggle';

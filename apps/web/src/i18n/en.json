@@ -108,7 +108,8 @@
       "items": "Items",
       "documents": "Receipts and quotes",
       "notes": "Notes",
-      "workCards": "Work cards"
+      "workCards": "Work cards",
+      "wiggleTests": "Wiggle tests"
     },
     "filters": {
       "label": "Filter the fleet",
@@ -187,7 +188,9 @@
     "WORK_CARD": "Work card ({{performer}}): {{description}}",
     "WORK_CARD_by": "Work card ({{performer}}, {{by}}): {{description}}",
     "MALFUNCTION_PROGRESS": "Malfunction progress: {{progress}}",
-    "TOOL_CHANGED": "Tool changed: {{from}} → {{to}}"
+    "TOOL_CHANGED": "Tool changed: {{from}} → {{to}}",
+    "WIGGLE_TEST": "Wiggle test: all OK",
+    "WIGGLE_TEST_failed": "Wiggle test, not OK: {{items}}"
   },
   "severity": {
     "LOW": "low",
@@ -233,10 +236,15 @@
         "movements": "Location change",
         "inspections": "Inspection",
         "notes": "Note",
-        "workCards": "Work card"
+        "workCards": "Work card",
+        "wiggleTests": "Wiggle test"
       },
       "workCards": "Work cards",
-      "contracted": "Contracted work"
+      "contracted": "Contracted work",
+      "wiggleTests": "Wiggle tests",
+      "wiggleLast": "Last {{when}}",
+      "wiggleLastIssues": "Last {{when}} · X: {{count}}",
+      "wiggleNone": "Not done yet"
     },
     "copy": "Click to copy",
     "copied": "Copied",
@@ -936,6 +944,17 @@
       "remove": "Remove the field",
       "invalid": "Each field needs a name in English and in Hebrew.",
       "note": "Removing a field hides it; values already saved are kept."
+    },
+    "wiggle": {
+      "title": "Wiggle test",
+      "hint": "Which vehicle types take a wiggle test, and which cameras it checks. Steering, sensors, communications, fluids, mechanical and hydraulic tools are on every list.",
+      "none": "No wiggle test",
+      "profile": {
+        "loader": "Loader (front, back, left, right and cab cameras)",
+        "excavator": "Tracked excavator (with front-down camera)",
+        "wheeledExcavator": "Wheeled excavator (with front-down camera)",
+        "skidSteer": "Skid-steer"
+      }
     }
   },
   "reset": {
@@ -1275,5 +1294,69 @@
     "failed": "The report couldn't load. Try again.",
     "linkedTo": "Linked to",
     "page": "Fleet Hub · {{serial}}"
+  },
+  "wiggle": {
+    "checklist": "Checklist",
+    "howTo": "Tap V or X, or on the keyboard press V or Y for V, X or N for X. Controller: the logo button once for V, twice fast for X.",
+    "markAllOk": "All V",
+    "answerAll": "Every item needs a V or an X.",
+    "notForType": "This vehicle type takes no wiggle test.",
+    "otherProblems": "Other problems",
+    "otherProblemsHint": "Optional. Anything else found during the test.",
+    "doneAt": "Done at",
+    "doneBy": "Done by",
+    "result": "Result",
+    "allOk": "All OK",
+    "failedCount": "Not OK: {{count}}",
+    "failedItems": "Not OK",
+    "withIssues": "With an X only",
+    "offer": "Items marked X: {{count}}. Report a malfunction?",
+    "offerReport": "Report a malfunction",
+    "offerSkip": "Not now",
+    "malfunctionText": "Wiggle test, not OK: {{items}}",
+    "malfunctionTextNotes": "Wiggle test, not OK: {{items}}\n{{notes}}",
+    "answer": {
+      "vx": {
+        "PASS": "V",
+        "FAIL": "X"
+      },
+      "fluid": {
+        "PASS": "Full",
+        "FAIL": "Missing"
+      },
+      "condition": {
+        "PASS": "Functional",
+        "FAIL": "Requires attention"
+      }
+    },
+    "group": {
+      "steering": "Steering",
+      "cameras": "Cameras",
+      "sensors": "Sensors and communications",
+      "machine": "Fluids, mechanical and hydraulics"
+    },
+    "item": {
+      "steering": "Steers correctly both ways",
+      "cameraFront": "Front camera",
+      "cameraBack": "Back camera",
+      "cameraLeft": "Left camera",
+      "cameraRight": "Right camera",
+      "cameraCab": "Cab camera",
+      "cameras": "Cameras",
+      "cameraFrontDown": "Front-down camera",
+      "lidars": "LiDARs",
+      "imus": "IMUs",
+      "signal": "Communications: signal stability",
+      "instruments": "Instruments working",
+      "fluids": "Fluids",
+      "mechanical": "Mechanical",
+      "hydraulicTools": "Hydraulic tools"
+    },
+    "controller": {
+      "on": "Controller connected: the logo button answers the highlighted item.",
+      "off": "No controller seen yet. Pressing one of its buttons connects it.",
+      "change": "Use another button",
+      "learning": "Press the controller button to use…"
+    }
   }
 }

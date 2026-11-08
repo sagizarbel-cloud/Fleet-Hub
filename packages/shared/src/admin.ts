@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CUSTOM_FIELD_KEYS, CUSTOM_FIELD_TYPES, ROLES, VEHICLE_CATEGORIES } from './enums';
+import { DEFAULT_WIGGLE_TYPES, wiggleTypesSchema } from './wiggle';
 
 // ---------- Settings lists (SPEC 5.9) ----------
 
@@ -247,11 +248,14 @@ export const appSettingsBody = z.object({
   fuelRequired: fuelRequiredSchema,
   /** Extra fields on location changes (Revisions 1, fleet manager). */
   movementFields: customFieldList.default([]),
+  /** Which vehicle types take a wiggle test, and which checklist (Sagi, 2026-11-08). */
+  wiggleTypes: wiggleTypesSchema.default(DEFAULT_WIGGLE_TYPES),
 });
 export type AppSettings = z.output<typeof appSettingsBody>;
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   fuelRequired: { place: false, fueledBy: false, fuelType: false, provider: false },
   movementFields: [],
+  wiggleTypes: DEFAULT_WIGGLE_TYPES,
 };
 
 /** Image types a company logo can be (Revisions 1); SVG is left out so no script can ride in. */

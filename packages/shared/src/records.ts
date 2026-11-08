@@ -1,6 +1,6 @@
 /**
  * The record types a vehicle page edits (SPEC 5.3). Ownership, documents and quotes have
- * their own shapes and routes; these seven share the list / add / edit / delete / Undo API.
+ * their own shapes and routes; these share the list / add / edit / delete / Undo API.
  */
 export const RECORD_KINDS = [
   'service',
@@ -11,6 +11,7 @@ export const RECORD_KINDS = [
   'inspections',
   'notes',
   'workCards',
+  'wiggleTests',
 ] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];
 
@@ -27,12 +28,19 @@ export const RECORD_SORTS = {
   inspections: ['date', 'validUntil', 'kind'],
   notes: ['createdAt'],
   workCards: ['date', 'cost', 'laborHours'],
+  wiggleTests: ['date', 'failCount'],
 } as const satisfies Record<RecordKind, readonly string[]>;
 
 export const SORT_DIRS = ['asc', 'desc'] as const;
 
 /** How long the Undo bar stays after a delete (Sagi, 2026-10-26: 30 seconds). */
 export const UNDO_MS = 30_000;
+
+/**
+ * Kinds everyone signed in may add, and change their own of: notes (Sagi, 2026-10-26) and
+ * wiggle tests, which operators do (2026-11-08). Every other kind needs an editor.
+ */
+export const OWN_RECORD_KINDS: readonly RecordKind[] = ['notes', 'wiggleTests'];
 
 export function isRecordKind(s: unknown): s is RecordKind {
   return typeof s === 'string' && (RECORD_KINDS as readonly string[]).includes(s);

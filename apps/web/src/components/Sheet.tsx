@@ -5,7 +5,8 @@ import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 
 /**
- * Dialog behaviour shared by sheets: focus moves in (first field, else first button) and comes
+ * Dialog behaviour shared by sheets: focus moves in (a control marked `data-autofocus`, else the
+ * first field, else the first button) and comes
  * back on close; Esc closes and is marked handled so the page underneath doesn't also react;
  * Tab stays inside.
  */
@@ -24,7 +25,8 @@ export function useDialogFocus(
     const before = document.activeElement as HTMLElement | null;
     const first = focusPanel
       ? panel.current
-      : (panel.current?.querySelector<HTMLElement>('input, select, textarea') ??
+      : (panel.current?.querySelector<HTMLElement>('[data-autofocus]') ??
+        panel.current?.querySelector<HTMLElement>('input, select, textarea') ??
         panel.current?.querySelector<HTMLElement>('button'));
     first?.focus();
     const onKey = (e: KeyboardEvent) => {

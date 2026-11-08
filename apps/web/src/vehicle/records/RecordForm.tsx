@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import {
   missingFuelFields,
   RECORD_BODIES,
+  wiggleProblems,
   type RecordKind,
   type UsageUnit,
+  type WiggleProfile,
 } from '@fleet-hub/shared';
 import { lookupName } from '@/fleet/data';
 import { Sheet } from '@/components/Sheet';
@@ -26,6 +28,7 @@ import {
 import { AttachmentList, FilePicker } from './Attachments';
 import { useFormatCtx } from './format';
 import { fieldOfPath, KIND_UI, toBody, toForm, type Field, type FormValues } from './kinds';
+import { WiggleChecklist } from './Wiggle';
 
 type Errors = Record<string, string>;
 
@@ -54,6 +57,7 @@ export function RecordForm({
   preset,
   canEdit,
   reduced,
+  profile,
   onClose,
   onSaved,
 }: {
@@ -69,8 +73,11 @@ export function RecordForm({
   preset?: FormValues;
   canEdit: boolean;
   reduced: boolean;
+  /** The wiggle test checklist of this vehicle (wiggle tests only). */
+  profile?: WiggleProfile | null;
   onClose: () => void;
-  onSaved: (message: string) => void;
+  /** `item` is the saved record as the server returned it. */
+  onSaved: (message: string, item?: RecordRow) => void;
 }) {
   const { t, i18n } = useTranslation();
   const ctx = useFormatCtx(unit);
@@ -155,6 +162,13 @@ export function RecordForm({
       setErrors(next);
       return;
     }
+    if (kind === 'wiggleTests' && profile) {
+      const { missing } = wiggleProblems(profile, body.results as Record<string, string>);
+      if (missing.length) {
+        setErrors({ results: 'wiggle.answerAll' });
+        return;
+      }
+    }
     if (kind === 'fuel' && settings) {
       const missing = missingFuelFields(settings.fuelRequired, parsed.data as object);
       if (missing.length) {
@@ -183,7 +197,7 @@ export function RecordForm({
           return;
         }
       }
-      onSaved(t(isNew ? 'records.added' : 'records.saved'));
+      onSaved(t(isNew ? 'records.added' : 'records.saved'), item);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) setFailed('records.error.forbidden');
       else if (err instanceof ApiError && err.issues.length) {
@@ -227,7 +241,25 @@ export function RecordForm({
     >
       <form id="record-form" noValidate onSubmit={submit} className="space-y-4" data-kind={kind}>
         {visible.map((f) =>
-          f.type === 'services' ? (
+          f.type === 'checklist' ? (
+            profile ? (
+              <WiggleChecklist
+                key={f.key}
+                profile={profile}
+                fieldKey={f.key}
+                values={values}
+                error={errors[f.key]}
+                onChange={(k, v) => {
+                  setValues((cur) => ({ ...cur, [k]: v }));
+                  setErrors(({ [f.key]: _gone, ...rest }) => rest);
+                }}
+              />
+            ) : (
+              <p key={f.key} role="alert" className="text-bad text-sm">
+                {t('wiggle.notForType')}
+              </p>
+            )
+          ) : f.type === 'services' ? (
             <ServicePicker
               key={f.key}
               serial={serial}

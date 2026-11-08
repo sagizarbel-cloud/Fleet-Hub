@@ -84,6 +84,21 @@ const SAMPLES: { [K in RecordKind]: Json } = {
     place: 'Their workshop',
     cost: 900,
   },
+  wiggleTests: {
+    results: {
+      steering: 'PASS',
+      cameras: 'PASS',
+      cameraFrontDown: 'FAIL',
+      lidars: 'PASS',
+      imus: 'PASS',
+      signal: 'PASS',
+      instruments: 'PASS',
+      fluids: 'PASS',
+      mechanical: 'PASS',
+      hydraulicTools: 'PASS',
+    },
+    notes: 'Left track loose',
+  },
 };
 const CREATE_TYPE: Record<RecordKind, string> = {
   service: 'SERVICE',
@@ -94,6 +109,7 @@ const CREATE_TYPE: Record<RecordKind, string> = {
   inspections: 'INSPECTION',
   notes: 'NOTE_ADDED',
   workCards: 'WORK_CARD',
+  wiggleTests: 'WIGGLE_TEST',
 };
 
 beforeAll(async () => {
@@ -127,9 +143,14 @@ beforeAll(async () => {
     ],
   });
   await app.db.fluidType.create({ data: { code: 'rt_oil', nameEn: 'Oil', nameHe: 'שמן' } });
+  // The generic record tests run on these types; wiggle tests need them to take one.
+  await app.db.appSetting.create({
+    data: { key: 'wiggleTypes', value: { rt_road: 'excavator', rt_machine: 'excavator' } },
+  });
 });
 
 afterAll(async () => {
+  await app.db.appSetting.deleteMany({ where: { key: 'wiggleTypes' } });
   await app.close();
   await rm(uploadDir, { recursive: true, force: true });
 });

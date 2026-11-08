@@ -9,6 +9,7 @@ import {
   WORK_PERFORMERS,
   WORK_TYPES,
 } from './enums';
+import { wiggleTestBody } from './wiggle';
 import { INSPECTION_KINDS, RECORD_KINDS, SORT_DIRS, type RecordKind } from './records';
 import { DESIGNS, DETAIL_VIEWS, FLEET_GROUPINGS, VITAL_KEYS } from './vitals';
 import { ALL_FLEET_COLUMNS, FLEET_GROUP_BY, FLEET_GROUPS } from './fleet';
@@ -217,6 +218,7 @@ export const RECORD_BODIES = {
   inspections: inspectionBody,
   notes: noteBody,
   workCards: workCardBody,
+  wiggleTests: wiggleTestBody,
 } satisfies Record<RecordKind, z.ZodType>;
 export type RecordBody<K extends RecordKind> = z.input<(typeof RECORD_BODIES)[K]>;
 export type RecordInput<K extends RecordKind> = z.output<(typeof RECORD_BODIES)[K]>;
@@ -253,6 +255,8 @@ export const recordsQuery = z.object({
   inspection: z.enum(INSPECTION_KINDS).optional(),
   drops: flag,
   mine: flag,
+  /** Wiggle tests with at least one X. */
+  failed: flag,
 });
 export type RecordsQuery = z.input<typeof recordsQuery>;
 
@@ -278,6 +282,7 @@ export const ATTACHMENT_OWNERS = [
   'Inspection',
   'Note',
   'WorkCard',
+  'WiggleTest',
   'Vehicle',
   'Document',
   'Quote',

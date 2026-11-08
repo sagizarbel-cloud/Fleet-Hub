@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   HardHat,
+  ListChecks,
   Droplet,
   FileText,
   Fuel,
@@ -24,11 +25,13 @@ import { useDateFormat } from '@/fleet/FleetGrid';
 import { cn } from '@/lib/cn';
 import type { VehicleDetail } from './data';
 import { UndoProvider } from './records/Undo';
+import { useWiggleProfile } from './records/Wiggle';
 import { localeOf, relativeFormat } from '@/lib/intl';
 
 const PanelBody = lazy(() => import('./records/PanelBody'));
 
 export const RECORD_KEYS = [
+  'wiggleTests',
   'service',
   'workCards',
   'contracted',
@@ -47,6 +50,7 @@ export type RecordKey = (typeof RECORD_KEYS)[number];
 const RECORDS: Record<RecordKey, { icon: LucideIcon; types: EventType[] }> = {
   service: { icon: Wrench, types: ['SERVICE'] },
   workCards: { icon: ClipboardList, types: ['WORK_CARD'] },
+  wiggleTests: { icon: ListChecks, types: ['WIGGLE_TEST'] },
   contracted: { icon: HardHat, types: ['WORK_CARD'] },
   malfunctions: {
     icon: TriangleAlert,
@@ -95,6 +99,18 @@ function useSummary(v: VehicleDetail | undefined) {
               }),
             }
           : { text: t('vehicle.records.count', { count: c.inspections }) };
+      case 'wiggleTests': {
+        const last = c.lastWiggle;
+        if (!last) return { text: t('vehicle.records.wiggleNone') };
+        const days = Math.round((Date.parse(last.date) - Date.now()) / DAY_MS);
+        const when = relative.format(days, 'day');
+        return last.failCount > 0
+          ? {
+              text: t('vehicle.records.wiggleLastIssues', { when, count: last.failCount }),
+              warn: true,
+            }
+          : { text: t('vehicle.records.wiggleLast', { when }) };
+      }
       case 'ownership':
         return v.warrantyExpiry
           ? { text: t('vehicle.info.warrantyUntil', { date: formatDate(v.warrantyExpiry) }) }
@@ -111,11 +127,14 @@ function useSummary(v: VehicleDetail | undefined) {
  */
 export function Records({
   serial,
+  type,
   vehicle,
   motionFor,
   reduced,
 }: {
   serial: string;
+  /** The vehicle type's code, known before the details load. */
+  type: string;
   vehicle: VehicleDetail | undefined;
   motionFor: (i: number) => object;
   reduced: boolean;
@@ -125,8 +144,11 @@ export function Records({
   const navigate = useNavigate();
   const location = useLocation();
   const summary = useSummary(vehicle);
+  // Wiggle tests only on the heavy machinery an admin picked (Sagi, 2026-11-08).
+  const wiggle = !!useWiggleProfile(vehicle?.type ?? type);
+  const keys = RECORD_KEYS.filter((k) => k !== 'wiggleTests' || wiggle);
   const raw = params.get('panel');
-  const open = vehicle && isRecordKey(raw) ? raw : null;
+  const open = vehicle && isRecordKey(raw) && keys.includes(raw) ? raw : null;
   const pushed = (location.state as { panelPushed?: boolean } | null)?.panelPushed === true;
   const layout = reduced ? { duration: 0 } : LAYOUT;
 
@@ -210,7 +232,7 @@ export function Records({
           )}
         </AnimatePresence>
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-6" data-testid="record-cards">
-          {RECORD_KEYS.map((key, i) => {
+          {keys.map((key, i) => {
             const Icon = RECORDS[key].icon;
             const s = summary(key);
             return (

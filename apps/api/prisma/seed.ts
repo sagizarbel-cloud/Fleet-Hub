@@ -11,6 +11,9 @@ import {
 } from '@prisma/client';
 import {
   DEFAULT_FLEET_VIEW,
+  DEFAULT_WIGGLE_TYPES,
+  wiggleItems,
+  wiggleProfileOf,
   deriveStatus,
   type FleetViewSettings,
   type VehicleTypeCode,
@@ -798,6 +801,7 @@ async function main() {
   }
 
   await seedRevisions1(vehicleIds, events, editor!.id);
+  await seedWiggleTests(vehicleIds, events, [editor!.id, viewer!.id]);
   await db.event.createMany({ data: events });
 
   // A few fake attachments: an invoice photo on recent services, a certificate on annual tests.
@@ -903,6 +907,55 @@ const workTexts: { workType: 'ROUTINE' | 'MECHANICAL'; text: string }[] = [
 ];
 const contractors = ['מוסך חיצוני א׳', 'קבלן הידראוליקה', 'חשמלאי רכב'];
 const teams = ['יוסי אברהמי, אורי לוי', 'מיכל דוד', 'צוות האחזקה'];
+
+/**
+ * Wiggle tests (Sagi, 2026-11-08): every other day for the last three weeks on each heavy
+ * machine, done by the editor or the viewer; now and then an item gets an X.
+ */
+async function seedWiggleTests(
+  vehicleIds: Record<string, string>,
+  events: Prisma.EventCreateManyInput[],
+  authors: string[],
+) {
+  const notes = ['רעש חריג בסיבוב', 'מצלמה אחורית מלוכלכת, נוקתה', 'הקשר חלש באזור המחצבה'];
+  let n = 0;
+  for (const vehicleId of Object.values(vehicleIds)) {
+    const v = await db.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+      select: { type: { select: { code: true } } },
+    });
+    const profile = wiggleProfileOf(DEFAULT_WIGGLE_TYPES, v.type.code);
+    if (!profile) continue;
+    for (let day = 20; day >= 0; day -= 2, n++) {
+      const items = wiggleItems(profile);
+      const bad = n % 5 === 0 ? items[n % items.length] : null;
+      const results = Object.fromEntries(items.map((i) => [i, i === bad ? 'FAIL' : 'PASS']));
+      const date = new Date(daysAgo(day).getTime() + 6.5 * 3_600_000);
+      if (date > NOW) continue;
+      const createdById = authors[n % authors.length]!;
+      const row = await db.wiggleTest.create({
+        data: {
+          vehicleId,
+          date,
+          profile,
+          results,
+          failCount: bad ? 1 : 0,
+          notes: n % 7 === 0 ? pick(notes, n) : null,
+          createdById,
+        },
+      });
+      events.push({
+        type: 'WIGGLE_TEST',
+        vehicleId,
+        occurredAt: date,
+        params: { failed: bad ? [bad] : [] },
+        userId: createdById,
+        sourceType: 'WiggleTest',
+        sourceId: row.id,
+      });
+    }
+  }
+}
 
 async function seedRevisions1(
   vehicleIds: Record<string, string>,

@@ -2,12 +2,17 @@ import { Prisma } from '@prisma/client';
 import {
   economyPoints,
   hasRole,
+  OWN_RECORD_KINDS,
   RECORD_SORTS,
   type EventType,
   type RecordInput,
   type RecordKind,
   type SessionUser,
   type UsageUnit,
+  type WiggleProfile,
+  wiggleFailed,
+  wiggleProblems,
+  wiggleProfileOf,
 } from '@fleet-hub/shared';
 import { HttpError } from './http';
 import { readAppSettings } from './app-settings';
@@ -34,7 +39,8 @@ type ModelName =
   | 'movement'
   | 'inspection'
   | 'note'
-  | 'workCard';
+  | 'workCard'
+  | 'wiggleTest';
 
 export interface VehicleRef {
   id: string;
@@ -63,6 +69,8 @@ export interface ListFilters {
   location?: string;
   inspection?: string;
   mine: boolean;
+  /** Wiggle tests with at least one X. */
+  failed?: boolean;
 }
 
 interface KindConfig<K extends RecordKind> {
@@ -301,7 +309,52 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
       await linkServices(ctx, id, input.serviceIds);
     },
   },
+  wiggleTests: {
+    model: 'wiggleTest',
+    sourceType: 'WiggleTest',
+    dateField: 'date',
+    createType: 'WIGGLE_TEST',
+    search: ['notes'],
+    data: async (input, ctx) => {
+      const profile = await wiggleProfileFor(ctx);
+      const { missing, extra } = wiggleProblems(profile, input.results);
+      if (missing.length || extra.length)
+        throw Object.assign(new HttpError(400, 'validation_failed'), {
+          issues: [
+            ...missing.map((i) => ({ path: `results.${i}`, code: 'required' })),
+            ...extra.map((i) => ({ path: `results.${i}`, code: 'unknown' })),
+          ],
+        });
+      return {
+        profile,
+        results: input.results,
+        failCount: wiggleFailed(input.results).length,
+        notes: input.notes,
+      };
+    },
+    params: (row) => ({
+      failed: wiggleFailed((row.results ?? {}) as Record<string, string>),
+    }),
+    filters: (f) => (f.failed ? [{ failCount: { gt: 0 } }] : []),
+  },
 };
+
+/**
+ * The wiggle test checklist this vehicle takes (Sagi, 2026-11-08); a vehicle type that takes
+ * none is refused.
+ */
+async function wiggleProfileFor(ctx: Ctx): Promise<WiggleProfile> {
+  const [{ wiggleTypes }, v] = await Promise.all([
+    readAppSettings(ctx.tx),
+    ctx.tx.vehicle.findUnique({
+      where: { id: ctx.vehicle.id },
+      select: { type: { select: { code: true } } },
+    }),
+  ]);
+  const profile = wiggleProfileOf(wiggleTypes, v?.type.code);
+  if (!profile) throw new HttpError(400, 'no_wiggle_test');
+  return profile;
+}
 
 /**
  * Keeps only the extra-field values an admin has defined for location changes (Revisions 1),
@@ -411,12 +464,14 @@ async function receiptsFor(tx: Tx, ids: string[]) {
 
 export const delegate = (tx: Tx, kind: RecordKind) => tx[KINDS[kind].model] as unknown as Delegate;
 
-/** Viewers may add notes and change their own; everything else needs an editor (Sagi, 2026-10-26). */
+/** Viewers may add notes and wiggle tests and change their own; everything else needs an editor. */
 export function canCreate(user: SessionUser, kind: RecordKind) {
-  return kind === 'notes' || hasRole(user.role, 'EDITOR');
+  return OWN_RECORD_KINDS.includes(kind) || hasRole(user.role, 'EDITOR');
 }
 export function canChange(user: SessionUser, kind: RecordKind, row: Row) {
-  return hasRole(user.role, 'EDITOR') || (kind === 'notes' && row.createdById === user.id);
+  return (
+    hasRole(user.role, 'EDITOR') || (OWN_RECORD_KINDS.includes(kind) && row.createdById === user.id)
+  );
 }
 
 const LOOKUP_IDS = new Set(['fluidTypeId', 'fuelTypeId', 'fromLocationId', 'toLocationId']);

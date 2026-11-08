@@ -18,6 +18,7 @@ import {
   TriangleAlert,
   Wrench,
   ClipboardList,
+  ListChecks,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -27,6 +28,7 @@ import {
   VEHICLE_FIELDS,
   type EventType,
   type VehicleField,
+  WIGGLE_ITEMS,
 } from '@fleet-hub/shared';
 import { lookupName, type FleetEvent, type Lookups } from './data';
 import { numberFormat } from '@/lib/intl';
@@ -48,6 +50,7 @@ export const EVENT_GROUPS = {
   },
   service: { icon: Wrench, types: ['SERVICE'] },
   workCards: { icon: ClipboardList, types: ['WORK_CARD'] },
+  wiggleTests: { icon: ListChecks, types: ['WIGGLE_TEST'] },
   malfunctions: {
     icon: TriangleAlert,
     types: [
@@ -168,6 +171,17 @@ export function describeEvent(
         description: isolate(str(p.description)),
         performer: t(`workCard.performer.${performer}`),
         by: isolate(by),
+      });
+    }
+    case 'WIGGLE_TEST': {
+      const failed = (Array.isArray(p.failed) ? p.failed : []).filter(
+        (i): i is (typeof WIGGLE_ITEMS)[number] => (WIGGLE_ITEMS as readonly unknown[]).includes(i),
+      );
+      if (!failed.length) return t('events.WIGGLE_TEST');
+      return t('events.WIGGLE_TEST_failed', {
+        items: new Intl.ListFormat(lang === 'he' ? 'he' : 'en', { type: 'conjunction' }).format(
+          failed.map((i) => t(`wiggle.item.${i}`)),
+        ),
       });
     }
     case 'TOOL_CHANGED': {

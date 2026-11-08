@@ -19,7 +19,7 @@ import {
   Trash2,
   TriangleAlert,
 } from 'lucide-react';
-import { hasRole, type RecordKind } from '@fleet-hub/shared';
+import { hasRole, OWN_RECORD_KINDS, type RecordKind } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
@@ -34,6 +34,8 @@ import { useExport } from './useExport';
 import { useOfferUndo } from './Undo';
 import { useRecordLink } from './recordLink';
 import { useColumnWidths } from './columnWidths';
+import { useWiggleProfile } from './Wiggle';
+import { wiggleFailedText } from './kinds';
 
 const FuelChart = lazy(() => import('./FuelChart'));
 
@@ -101,13 +103,17 @@ export default function RecordPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const report = useRecordLink();
   /** Table columns: everything except the report-only ones (e.g. what was done, who fueled). */
-  const allCols = useKindColumns(kind);
+  const profile = useWiggleProfile(vehicle.type);
+  const allCols = useKindColumns(kind, kind === 'wiggleTests' ? profile : undefined);
+  /** A wiggle test just saved with an X: editors are offered a malfunction report (and its text). */
+  const [offer, setOffer] = useState<RecordRow | null>(null);
+  const [reporting, setReporting] = useState<string | null>(null);
   const tableCols = useMemo(() => allCols.filter((c) => !c.report), [allCols]);
 
   const isEditor = !!user && hasRole(user.role, 'EDITOR');
-  const canAdd = !!user && (isEditor || kind === 'notes');
-  const canChange = (row: RecordRow) =>
-    isEditor || (kind === 'notes' && !!user && row.createdById === user.id);
+  const own = OWN_RECORD_KINDS.includes(kind);
+  const canAdd = !!user && (isEditor || own);
+  const canChange = (row: RecordRow) => isEditor || (own && !!user && row.createdById === user.id);
 
   const rows = useMemo(() => records.data?.pages.flatMap((p) => p.items) ?? [], [records.data]);
   const total = records.data?.pages[0]?.total ?? 0;
@@ -180,7 +186,7 @@ export default function RecordPanel({
       kind,
       vehicle,
       filters: active,
-      columns: [...allCols, ...(kind === 'notes' ? [] : [createdByCol])],
+      columns: [...allCols, ...(allCols.some((c) => c.key === 'createdBy') ? [] : [createdByCol])],
       ctx,
     });
 
@@ -309,6 +315,37 @@ export default function RecordPanel({
           )}
         </div>
       </div>
+      {offer && (
+        <div
+          role="status"
+          className="border-bad/50 bg-bad/10 flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm"
+          data-testid="wiggle-offer"
+        >
+          <TriangleAlert aria-hidden className="text-bad size-4 shrink-0" />
+          <span className="me-auto">
+            {t('wiggle.offer', { count: Number(offer.failCount) || 0 })}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setOffer(null)}>
+            {t('wiggle.offerSkip')}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              const notes = typeof offer.notes === 'string' ? offer.notes : '';
+              setReporting(
+                t(notes ? 'wiggle.malfunctionTextNotes' : 'wiggle.malfunctionText', {
+                  items: wiggleFailedText(offer, ctx),
+                  notes,
+                }),
+              );
+              setOffer(null);
+            }}
+            data-testid="wiggle-report"
+          >
+            {t('wiggle.offerReport')}
+          </Button>
+        </div>
+      )}
       {(notice || exporter.error) && (
         <p role="alert" className="text-bad text-xs">
           {t((notice ?? 'records.error.export') as never)}
@@ -511,8 +548,26 @@ export default function RecordPanel({
           last={filters.sort ? undefined : rows[0]}
           canEdit={editing === 'new' || canChange(editing)}
           reduced={reduced}
+          profile={profile}
           onClose={() => setEditing(null)}
-          onSaved={() => setEditing(null)}
+          onSaved={(_m, item) => {
+            if (kind === 'wiggleTests' && editing === 'new' && isEditor && Number(item?.failCount))
+              setOffer(item!);
+            setEditing(null);
+          }}
+        />
+      )}
+      {reporting !== null && (
+        <RecordForm
+          serial={serial}
+          kind="malfunctions"
+          unit={vehicle.usageUnit}
+          location={vehicle.location}
+          preset={{ description: reporting }}
+          canEdit
+          reduced={reduced}
+          onClose={() => setReporting(null)}
+          onSaved={() => setReporting(null)}
         />
       )}
     </div>
