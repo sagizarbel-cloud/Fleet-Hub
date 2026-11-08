@@ -296,16 +296,6 @@ function upper(z: number, w: number, folded: boolean, kind: ExcavatorTool): THRE
     // Step plates up the front of the toolbox and the tank.
     box('body', [1.3, 1.45], [near - 0.55, near - 0.05], [z + 0.33, z + 0.37]),
     box('body', [0.15, 0.3], [near - 0.55, near - 0.05], [z + 0.95, z + 1.0]),
-    // Handrail beside the steps and a guard rail round the front corner of the house top.
-    ...[1.2, 0.2].map((x) => box('body', [x, x + 0.05], [near - 0.05, near], [z + 0.72, z + 1.55])),
-    box('body', [0.2, 1.25], [near - 0.05, near], [z + 1.5, z + 1.55]),
-    ...[
-      [-0.55, near - 0.05],
-      [-0.55, near - 0.75],
-      [-1.15, near - 0.05],
-    ].map(([x, y]) => box('body', [x!, x! + 0.05], [y!, y! + 0.05], [z + H, z + H + 0.75])),
-    box('body', [-0.55, -0.5], [near - 0.75, near], [z + H + 0.7, z + H + 0.75]),
-    box('body', [-1.15, -0.5], [near - 0.05, near], [z + H + 0.7, z + H + 0.75]),
     // Dark radiator grille panel on the right side of the house.
     box(
       'body',
