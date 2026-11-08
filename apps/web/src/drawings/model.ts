@@ -29,6 +29,8 @@ export interface VehicleDrawingDef {
   side: ViewDrawing;
   /** The same vehicle as 3D solids, projected for the isometric view. */
   iso: readonly Solid[];
+  /** The isometric view rendered from the 3D model; it replaces the projected solids. */
+  isoDrawing?: ViewDrawing;
 }
 
 export const PAINT_ORDER: PartName[] = [

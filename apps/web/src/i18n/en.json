@@ -77,7 +77,7 @@
   "drawings": {
     "title": "Vehicle drawings",
     "replay": "Replay",
-    "model3d": "Rendered from the 3D model"
+    "handDrawn": "The earlier hand-made drawing"
   },
   "dashboard": {
     "recentActivity": "Recent activity",

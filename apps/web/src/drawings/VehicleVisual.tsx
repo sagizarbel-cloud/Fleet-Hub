@@ -2,9 +2,8 @@ import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { VehicleStatus } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
 import type { ViewDrawing } from './model';
-import { drawingFor } from './registry';
+import { DEFAULT_ENGINE, drawingFor, type DrawingEngine } from './registry';
 import { IsoDrawing } from './iso';
-import { GENERATED } from './generated';
 import './drawings.css';
 
 export type VisualView = 'top' | 'side' | 'iso';
@@ -26,7 +25,7 @@ interface Props {
   /** Side profile draws itself (stroke animation) on mount. */
   draw?: boolean;
   /** Which drawings to use: the hand-made 2D ones, or the ones rendered from 3D models. */
-  engine?: '2d' | '3d';
+  engine?: DrawingEngine;
   className?: string;
 }
 
@@ -50,17 +49,10 @@ export function VehicleVisual({
   status,
   size,
   draw = false,
-  engine = '2d',
+  engine = DEFAULT_ENGINE,
   className,
 }: Props) {
-  const def = drawingFor(type, tool);
-  // Excavators with another tool than the bucket have a model of their own (`type.tool`).
-  const modelled =
-    engine === '3d'
-      ? ((tool && tool !== 'bucket' ? GENERATED[`${type}.${tool}`] : undefined) ??
-        GENERATED[type] ??
-        GENERATED.other)
-      : undefined;
+  const def = drawingFor(type, tool, engine);
   const svgRef = useRef<SVGSVGElement>(null);
   const style = { '--vd-color': STATUS_VAR[status] } as CSSProperties;
 
@@ -74,7 +66,7 @@ export function VehicleVisual({
       });
   }, [draw, type, tool, view]);
 
-  if (view === 'iso' && !modelled) {
+  if (view === 'iso' && !def.isoDrawing) {
     return (
       <div
         className={cn('vd relative', status === 'RED' && 'vd-red', className)}
@@ -91,7 +83,7 @@ export function VehicleVisual({
     );
   }
 
-  const drawing = modelled ? modelled[view] : view === 'top' ? def.top : def.side;
+  const drawing = view === 'iso' ? def.isoDrawing! : view === 'top' ? def.top : def.side;
   return (
     <div
       className={cn('vd relative', status === 'RED' && 'vd-red', className)}

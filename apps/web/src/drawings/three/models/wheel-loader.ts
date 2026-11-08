@@ -150,8 +150,8 @@ export const wheelLoader3d = () =>
       ),
     ),
     // Lift rams from the front frame up to the arms, one outside each arm.
-    ram('boom', [0.05, 0.72, 1.1], [1.55, 0.72, 1.62], 0.1),
-    ram('boom', [0.05, 2.08, 1.1], [1.55, 2.08, 1.62], 0.1),
+    ram('boom', [0.05, 0.8, 1.1], [1.55, 0.8, 1.62], 0.1),
+    ram('boom', [0.05, 2.0, 1.1], [1.55, 2.0, 1.62], 0.1),
     // Tilt linkage: a lever across the arms with its ram back to the frame.
     box('boom', [1.75, 1.95], [0.85, 1.95], [1.55, 2.05]),
     ram('boom', [0.5, 1.4, 1.5], [1.8, 1.4, 1.95], 0.09),

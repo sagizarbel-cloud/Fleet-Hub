@@ -77,7 +77,7 @@
   "drawings": {
     "title": "שרטוטי כלים",
     "replay": "הפעלה חוזרת",
-    "model3d": "מצויר מהמודל התלת־ממדי"
+    "handDrawn": "הציור הקודם שצויר ביד"
   },
   "dashboard": {
     "recentActivity": "פעילות אחרונה",
