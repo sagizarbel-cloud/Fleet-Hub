@@ -11,6 +11,8 @@ export const wheelLoader: VehicleDrawingSource = {
   iso: metres([
     wheel('wheels', -1.75, 0.87, 0.87, [0, 0.7]),
     wheel('wheels', 1.7, 0.87, 0.87, [0, 0.7]),
+    fender('body', -1.75, 0.87, 0.95, [-0.05, 0.75], [15, 125]),
+    fender('body', 1.7, 0.87, 0.95, [-0.05, 0.75], [40, 170]),
     {
       part: 'body',
       profile: [
@@ -103,6 +105,7 @@ export const wheelLoader: VehicleDrawingSource = {
     box('cab', [0.3, 0.5], [2.05, 2.25], [3.7, 3.82]),
     {
       part: 'boom',
+      layer: 1,
       profile: [
         [0.2, 1.9],
         [0.7, 2.45],
@@ -113,6 +116,7 @@ export const wheelLoader: VehicleDrawingSource = {
     },
     {
       part: 'bucket',
+      layer: 3,
       profile: [
         [3.0, 1.5],
         [3.6, 1.65],
@@ -125,6 +129,7 @@ export const wheelLoader: VehicleDrawingSource = {
     // Teeth along the cutting edge.
     ...[0.2, 0.7, 1.2, 1.7, 2.2].map((y): Solid => ({
       part: 'bucket',
+      layer: 3,
       profile: [
         [4.15, 0.1],
         [4.6, 0.12],
@@ -133,9 +138,10 @@ export const wheelLoader: VehicleDrawingSource = {
       y: [y, y + 0.22],
     })),
     // Tilt linkage: a lever across the arms, with its ram back to the frame.
-    box('boom', [1.75, 1.95], [0.85, 1.95], [1.55, 2.05]),
+    { ...box('boom', [1.75, 1.95], [0.85, 1.95], [1.55, 2.05]), layer: 1 },
     {
       part: 'boom',
+      layer: 1,
       profile: [
         [0.55, 1.45],
         [1.8, 1.85],
@@ -144,9 +150,12 @@ export const wheelLoader: VehicleDrawingSource = {
       ],
       y: [1.3, 1.5],
     },
-    fender('body', -1.75, 0.87, 0.95, [2.05, 2.85], [15, 125]),
-    fender('body', 1.7, 0.87, 0.95, [2.05, 2.85], [40, 170]),
-    wheel('wheels', -1.75, 0.87, 0.87, [2.1, 2.8]),
-    wheel('wheels', 1.7, 0.87, 0.87, [2.1, 2.8]),
+    // Near-side wheels and mudguards cover the arms; the bucket, out in front, covers them.
+    ...[
+      fender('body', -1.75, 0.87, 0.95, [2.05, 2.85], [15, 125]),
+      fender('body', 1.7, 0.87, 0.95, [2.05, 2.85], [40, 170]),
+      wheel('wheels', -1.75, 0.87, 0.87, [2.1, 2.8]),
+      wheel('wheels', 1.7, 0.87, 0.87, [2.1, 2.8]),
+    ].map((solid) => ({ ...solid, layer: 2 })),
   ]),
 };

@@ -75,6 +75,7 @@ export const tractor: VehicleDrawingSource = {
   represents: 'tractor',
   iso: metres([
     wheel('wheels', -1.0, 0.8, 0.8, [0, 0.5]),
+    fender('body', -1.0, 0.8, 0.88, [-0.1, 0.55], [30, 140]),
     wheel('wheels', 1.3, 0.5, 0.5, [0.3, 0.6]),
     box('body', [-1.4, 2.0], [0.7, 1.5], [0.5, 1.0]),
     box(
