@@ -54,9 +54,29 @@ const SCREEN = 1.3;
 /** The nose: where the plan starts to round off, and the front face. */
 const NOSE_START = 2.09;
 const NOSE = 2.66;
+/** The hood ends just shy of the bumper's front. */
+const HOOD_END = 2.58;
 
-/** Height of the hood's top at x: 1.30 at the windscreen down to 1.06 at the nose. */
-const hood = (x: number) => BELT - (0.24 * (x - SCREEN)) / (2.62 - SCREEN);
+/** The hood's top, traced off the side view: nearly flat back by the windscreen, curving down
+ * towards the nose but ending at 1.08 m. */
+const HOOD: [number, number][] = [
+  [SCREEN, BELT],
+  [2.09, 1.21],
+  [2.25, 1.18],
+  [2.36, 1.155],
+  [2.47, 1.13],
+  [HOOD_END, 1.08],
+];
+/** Height of the hood's top at x. */
+const hood = (x: number) => {
+  const i = Math.max(
+    1,
+    HOOD.findIndex(([hx]) => hx >= x),
+  );
+  const [x0, z0] = HOOD[i - 1]!;
+  const [x1, z1] = HOOD[i]!;
+  return z0 + ((z1 - z0) * (x - x0)) / (x1 - x0);
+};
 /** x of the windscreen at height z. */
 const screen = (z: number) => SCREEN - ((SCREEN - 0.58) * (z - BELT)) / (1.76 - BELT);
 /** Half-width of the cab's side glass at height z (it leans in from the belt to the roof). */
@@ -83,6 +103,8 @@ const TAPER: [number, number][] = [
   [2.58, 0.58],
   [NOSE, 0.5],
 ];
+/** The upper nose stops at the hood's end. */
+const UPPER: [number, number][] = TAPER.map(([x, h]) => [Math.min(x, HOOD_END), h]);
 
 /** A tyre with the rim and hub drawn on both faces. */
 const tyre = (cx: number, [y0, y1]: V2) =>
@@ -159,7 +181,7 @@ export const pickup3d = () =>
           [SCREEN, 0.89, BELT - 0.11],
           [SCREEN, 0.78, BELT],
         ]),
-        ...TAPER.flatMap(([x, h]) =>
+        ...UPPER.flatMap(([x, h]) =>
           both([
             [x, h, 0.86],
             [x, h, hood(x) - 0.11],
@@ -170,13 +192,16 @@ export const pickup3d = () =>
       [
         // Creases along the hood.
         ...[-1, 1].map((s): V3[] => [
-          [1.52, C + s * 0.6, hood(1.52)],
-          [2.4, C + s * 0.43, hood(2.4)],
+          ...[1.52, NOSE_START, 2.25, 2.36, 2.4].map((x): V3 => [
+            x,
+            C + s * (0.6 - (0.17 * (x - 1.52)) / 0.88),
+            hood(x),
+          ]),
         ]),
         // Grille with its bars, and the headlights either side.
-        onX(NOSE, [C - 0.3, C + 0.3], [0.88, 0.98]),
+        onX(HOOD_END, [C - 0.3, C + 0.3], [0.9, 0.97]),
         ...[-1, 1].map((s) =>
-          onX(NOSE, s < 0 ? [C - 0.48, C - 0.32] : [C + 0.32, C + 0.48], [0.9, 0.98]),
+          onX(HOOD_END, s < 0 ? [C - 0.48, C - 0.32] : [C + 0.32, C + 0.48], [0.91, 0.97]),
         ),
       ],
     ),
