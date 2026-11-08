@@ -314,7 +314,11 @@ export function renderView(root: THREE.Object3D, view: ViewName, unit = 44, pad 
       }
     }
     if (run.length) runs.push(run);
-    for (const r of runs) if (r.length > 1) out.lines.push({ part, d: pathOf(simplify(r), false) });
+    // Scraps of a line peeking out from behind something read as stray marks: drop them.
+    const length = (r: [number, number][]) =>
+      r.slice(1).reduce((sum, p, i) => sum + Math.hypot(p[0] - r[i]![0], p[1] - r[i]![1]), 0);
+    for (const r of runs)
+      if (r.length > 1 && length(r) > 3) out.lines.push({ part, d: pathOf(simplify(r), false) });
   }
   return out;
 }

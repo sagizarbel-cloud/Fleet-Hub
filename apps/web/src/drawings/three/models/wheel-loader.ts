@@ -56,7 +56,8 @@ export const wheelLoader3d = () =>
           [-3.25, 2.3, 2.05],
           [-3.3, 2.3, 1.15],
         ],
-        ...[1.3, 1.5, 1.7, 1.9].map((z): V3[] => [
+        // Louvres sit above the rear mudguard, where they show.
+        ...[1.98, 2.1, 2.22].map((z): V3[] => [
           [-2.3, 2.3, z],
           [-1.5, 2.3, z],
         ]),
