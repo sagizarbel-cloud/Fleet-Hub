@@ -9,3 +9,5 @@ docs
 CLAUDE.md
 README.md
 pnpm-workspace.yaml
+# Written by `pnpm --filter @fleet-hub/web drawings`
+apps/web/src/drawings/generated
