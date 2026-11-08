@@ -5,9 +5,10 @@ import type { ViewName } from '../render';
 import type { Solid } from '../../iso';
 import { crawler, wheeled } from '../../types/excavators';
 import { trailer } from '../../types/trailer';
-import { compressor, forklift, other, skidSteer } from '../../types/small-machines';
+import { compressor, other, skidSteer } from '../../types/small-machines';
 import { van } from '../../types/road';
 import { fromSolids } from './from-solids';
+import { forklift3d } from './forklift';
 import { pickup3d } from './pickup';
 import { tractor3d } from './tractor';
 import { truck3d } from './truck';
@@ -42,7 +43,7 @@ export const MODELS: Record<string, ModelSpec> = {
   van: converted(van),
   trailer: converted(trailer),
   tractor: { build: () => tractor3d(), unit: 44 },
-  forklift: converted(forklift),
+  forklift: { build: () => forklift3d(), unit: 44 },
   skid_steer: converted(skidSteer),
   compressor: converted(compressor),
   other: converted(other),
