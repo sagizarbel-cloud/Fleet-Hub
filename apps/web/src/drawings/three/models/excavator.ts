@@ -204,15 +204,16 @@ function arm(dz: number, mid: number, folded: boolean, kind: ExcavatorTool): THR
 }
 
 /**
- * Upper structure on its slewing ring. The cab stands on the deck at the near front corner, its
+ * Upper structure on its slewing ring. The cab stands on the deck at the front corner of the far side
+ * (the operator's left, behind the boom in the side view), its
  * roof only a little above the engine house; the house runs behind it to a flat counterweight
- * with a chamfered top edge, and forward on the far side to the boom foot.
+ * with a chamfered top edge, and forward on the near side to the boom foot.
  */
 function upper(z: number, w: number, folded: boolean, kind: ExcavatorTool): THREE.Object3D[] {
   const near = w - 0.1;
-  const cabY = w - 1.05;
-  // The boom sits just off the cab, a little toward the far side, as on the real machines.
-  const mid = Math.min(w / 2, cabY - 0.65);
+  const cabY = 1.05;
+  // The boom sits just off the cab, a little toward the near side, as on the real machines.
+  const mid = Math.max(w / 2, cabY + 0.65);
   const H = 1.25;
   return [
     cylinder('body', 'z', [z - 0.12, z], [-0.2, w / 2], 1.0, 32),
@@ -260,7 +261,7 @@ function upper(z: number, w: number, folded: boolean, kind: ExcavatorTool): THRE
         ]),
       ],
     ),
-    // House forward of the cab's back on the far side: tank and boom foot housing.
+    // House beside the cab on the near side: tank and boom foot housing.
     box(
       'body',
       [-0.45, 1.3],
@@ -304,40 +305,40 @@ function upper(z: number, w: number, folded: boolean, kind: ExcavatorTool): THRE
         [1.0, z + 1.8],
         [-0.45, z + 1.8],
       ],
-      [cabY, near],
+      [0.1, cabY],
       [
         outline([
-          [-0.3, near, z + 0.25],
-          [0.55, near, z + 0.25],
-          [0.55, near, z + 1.7],
-          [-0.3, near, z + 1.7],
+          [-0.3, cabY, z + 0.25],
+          [0.55, cabY, z + 0.25],
+          [0.55, cabY, z + 1.7],
+          [-0.3, cabY, z + 1.7],
         ]),
         outline([
-          [-0.22, near, z + 0.75],
-          [0.47, near, z + 0.75],
-          [0.47, near, z + 1.62],
-          [-0.22, near, z + 1.62],
+          [-0.22, cabY, z + 0.75],
+          [0.47, cabY, z + 0.75],
+          [0.47, cabY, z + 1.62],
+          [-0.22, cabY, z + 1.62],
         ]),
         outline([
-          [0.63, near, z + 0.75],
-          [1.24, near, z + 0.75],
-          [1.13, near, z + 1.62],
-          [0.63, near, z + 1.62],
+          [0.63, cabY, z + 0.75],
+          [1.24, cabY, z + 0.75],
+          [1.13, cabY, z + 1.62],
+          [0.63, cabY, z + 1.62],
         ]),
         [
-          [0.42, near, z + 1.05],
-          [0.42, near, z + 1.2],
+          [0.42, cabY, z + 1.05],
+          [0.42, cabY, z + 1.2],
         ],
         outline([
-          [1.27, cabY + 0.1, z + 0.6],
-          [1.15, cabY + 0.1, z + 1.65],
-          [1.15, near - 0.1, z + 1.65],
-          [1.27, near - 0.1, z + 0.6],
+          [1.27, 0.2, z + 0.6],
+          [1.15, 0.2, z + 1.65],
+          [1.15, cabY - 0.1, z + 1.65],
+          [1.27, cabY - 0.1, z + 0.6],
         ]),
       ],
     ),
-    box('cab', [-0.5, 1.1], [cabY - 0.03, near + 0.03], [z + 1.8, z + 1.86]),
-    box('cab', [1.15, 1.25], [near, near + 0.12], [z + 1.35, z + 1.6]),
+    box('cab', [-0.5, 1.1], [0.07, cabY + 0.03], [z + 1.8, z + 1.86]),
+    box('cab', [1.15, 1.25], [-0.02, 0.1], [z + 1.35, z + 1.6]),
     ...arm(z - 1.1, mid, folded, kind),
   ];
 }
