@@ -93,6 +93,8 @@ test('table columns resize by dragging the header edge', async ({ page }) => {
   await page.evaluate(() => localStorage.removeItem('fh.colWidths.service'));
   await page.reload();
   const th = page.getByTestId('record-table').locator('thead th').nth(2);
+  // The table can start right at the bottom edge of the window; bring it fully into view.
+  await th.evaluate((el) => el.scrollIntoView({ block: 'center' }));
   const before = (await th.boundingBox())!.width;
   const edge = (await th.getByTestId('col-resize').boundingBox())!;
   await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);

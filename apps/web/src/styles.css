@@ -9,6 +9,11 @@
 @import '@fontsource/ibm-plex-sans-hebrew/600.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
+/* Yard signage (2026-11-05): Secular One for signs and numbers, Rubik for text. Both cover Hebrew. */
+@import '@fontsource/secular-one/400.css';
+@import '@fontsource/rubik/400.css';
+@import '@fontsource/rubik/500.css';
+@import '@fontsource/rubik/700.css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
@@ -168,6 +173,174 @@
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------- Yard signage (2026-11-05, Sagi) ----------
+   Painted on asphalt, read from a cab: flat, square, high contrast. Yellow means "look here".
+   Everything below applies only with data-design="yard"; data-design="classic" keeps the
+   look above. These rules sit outside the layers on purpose, so they win over utilities. */
+
+:root[data-design='yard'],
+:root[data-design='yard'][data-theme='dark'] {
+  --fh-bg: #131416;
+  --fh-bg-grid: transparent;
+  --fh-surface: #1d1f21;
+  --fh-surface-strong: #131416;
+  --fh-border: #33373b;
+  --fh-border-strong: #4b5056;
+  --fh-text: #f2f0eb;
+  --fh-muted: #a7a49c;
+  --fh-accent: #f5c400;
+  --fh-accent-ink: #f5c400;
+  --fh-accent-contrast: #141414;
+  --fh-accent-2: #f0484e;
+  --fh-ok: #5cc070;
+  --fh-warn: #ffa31a;
+  --fh-bad: #f0484e;
+  --fh-focus: #f5c400;
+  --fh-shadow: none;
+}
+:root[data-design='yard'][data-theme='light'] {
+  /* Concrete page, chalk-white panels; the same signage colours, darkened to read on white. */
+  --fh-bg: #c9c7c1;
+  --fh-surface: #f2f0eb;
+  --fh-surface-strong: #e3e1dc;
+  --fh-border: #c2bfb8;
+  --fh-border-strong: #8f8c85;
+  --fh-text: #1d1f21;
+  --fh-muted: #57554f;
+  --fh-accent: #f5c400;
+  --fh-accent-ink: #6f5800;
+  --fh-accent-contrast: #141414;
+  --fh-accent-2: #c42a30;
+  --fh-ok: #1f7a35;
+  --fh-warn: #a85a00;
+  --fh-bad: #c42a30;
+  --fh-focus: #1d1f21;
+}
+:root[data-design='yard'] {
+  --fh-sign: 'Secular One', 'Rubik', system-ui, sans-serif;
+  /* Square corners everywhere; pills become 2 px chips (below). */
+  --radius-panel: 0;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  font-family: 'Rubik', system-ui, sans-serif;
+}
+:root[data-design='yard'] body {
+  background-image: none;
+}
+:root[data-design='yard'] :focus-visible {
+  border-radius: 0;
+}
+/* Flat panels: no blur, no shadow, a hairline edge. */
+:root[data-design='yard'] .glass {
+  background: var(--fh-surface);
+  /* No visible blur, but still a filter: like Classic, a panel stays the containing block for
+     the positioned parts inside it (table resize handles, overlays), so they scroll and clip with it. */
+  backdrop-filter: blur(0);
+  box-shadow: none;
+  border-radius: 0;
+}
+/* A pill (rounded and padded) becomes a square-cornered chip; dots and rings stay round. */
+:root[data-design='yard'] [class*='rounded-full'][class*='px-'] {
+  border-radius: 2px;
+}
+/* Signs: headings, the brand and the big numbers. Secular One has one weight. */
+:root[data-design='yard'] :is(h1, h2, .fh-sign) {
+  font-family: var(--fh-sign);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+:root[data-design='yard'] .fh-big {
+  font-family: var(--fh-sign);
+  font-weight: 400;
+}
+
+/* Header: black on safety yellow, hazard tape as its bottom edge, full width. */
+:root[data-design='yard'] .fh-topbar {
+  top: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: #f5c400;
+  color: #141414;
+}
+:root[data-design='yard'] .fh-topbar-bar {
+  --fh-text: #141414;
+  --fh-muted: rgb(20 20 20 / 0.72);
+  --fh-border: rgb(20 20 20 / 0.14);
+  --fh-border-strong: #141414;
+  /* The nav's scroll fades blend into the yellow bar; the search field sets its own colour. */
+  --fh-surface-strong: #f5c400;
+  --fh-accent: #141414;
+  --fh-accent-ink: #141414;
+  --fh-accent-contrast: #f5c400;
+  --fh-focus: #141414;
+  color: #141414;
+}
+:root[data-design='yard'] .fh-topbar-bar input {
+  background: #fff8d6;
+  border-color: rgb(20 20 20 / 0.55);
+  color: #141414;
+}
+:root[data-design='yard'] .fh-topbar .fh-sign {
+  font-size: 1.25rem;
+}
+:root[data-design='yard'] .fh-tab[aria-current='page'] {
+  background: transparent;
+  color: #141414;
+  font-weight: 500;
+  box-shadow: inset 0 -3px 0 #141414;
+}
+:root[data-design='yard'] .fh-topbar .fh-band {
+  height: 8px;
+  margin: 0;
+  border-radius: 0;
+  transform: none;
+  background: repeating-linear-gradient(-45deg, #141414 0 10px, #f5c400 10px 20px);
+}
+
+/* The lot: no box per vehicle. Each lot is a painted dashed line with its name on a sign. */
+:root[data-design='yard'] .fh-tile {
+  border-color: transparent;
+  background: transparent;
+}
+:root[data-design='yard'] .fh-tile:hover {
+  border-color: transparent;
+  background: rgb(255 255 255 / 0.04);
+}
+:root[data-design='yard'][data-theme='light'] .fh-tile:hover {
+  background: rgb(0 0 0 / 0.05);
+}
+:root[data-design='yard'] .fh-lot {
+  padding-inline: 0.25rem;
+}
+:root[data-design='yard'] .fh-lot-line {
+  border-width: 2px 0 0;
+  border-color: var(--fh-border-strong);
+  border-radius: 0;
+}
+:root[data-design='yard'] .fh-lot-sign {
+  margin-top: 0.25rem;
+  color: var(--fh-text);
+  font-family: var(--fh-sign);
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+/* KPI numbers shrink with their box instead of spilling out of it. */
+:root[data-design='yard'] .fh-kpis > * {
+  container-type: inline-size;
+  min-width: 0;
+}
+:root[data-design='yard'] .fh-kpis .fh-big {
+  font-size: clamp(1.125rem, 14cqi, 1.875rem);
+  overflow-wrap: anywhere;
 }
 
 /* Dashboard: history (about 40%) beside the fleet grid; on phones KPIs, then the grid, then the timeline. */

@@ -120,7 +120,7 @@ describe('dashboard', () => {
     expect(after.status.GREEN - before.status.GREEN).toBe(3);
   });
 
-  it('lists what is due and this month\'s spend by vehicle (Revisions 1)', async () => {
+  it("lists what is due and this month's spend by vehicle (Revisions 1)", async () => {
     const type = await app.db.vehicleType.findUniqueOrThrow({ where: { code: 'dash_test' } });
     const now = Date.now();
     const a = await app.db.vehicle.create({
@@ -158,7 +158,11 @@ describe('dashboard', () => {
     });
     const spend = (await get('/api/dashboard/spend', viewer)).json() as {
       total: number;
-      vehicles: { serial: string | null; total: number; receipts: { id: string; share: number }[] }[];
+      vehicles: {
+        serial: string | null;
+        total: number;
+        receipts: { id: string; share: number }[];
+      }[];
     };
     expect(spend.total).toBeCloseTo(kpis.spendThisMonth + 300);
     const shareA = spend.vehicles.find((v) => v.serial === 'DB-020')!;

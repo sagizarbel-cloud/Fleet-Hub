@@ -685,6 +685,8 @@ model UserPreference {
   fleetGrouping String   @default("location")
   language      String?
   theme         String?
+  /// "classic" or "yard" (Yard signage); null means this device decides.
+  design        String?
   /// Saved view the fleet table opens with; null means the built-in view.
   fleetViewId   String?
 }

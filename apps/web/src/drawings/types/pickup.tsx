@@ -1,4 +1,4 @@
-import { box, wheel } from '../iso';
+import { box, wheel, type P3 } from '../iso';
 import { byPart, type VehicleDrawingSource } from '../model';
 
 export const pickup: VehicleDrawingSource = {
@@ -75,7 +75,69 @@ export const pickup: VehicleDrawingSource = {
   iso: [
     wheel('wheels', 62, 20, 20, [4, 18]),
     wheel('wheels', 208, 20, 20, [4, 18]),
-    box('body', [18, 252], [8, 102], [26, 60]),
+    // The body carries the side view's lines: wheel arches, the bed's side, the gap behind the
+    // cab, door edges, the tail light and the headlights.
+    box(
+      'body',
+      [18, 252],
+      [8, 102],
+      [26, 60],
+      [
+        [
+          [88.0, 102, 26.0],
+          [86.4, 102, 34.9],
+          [81.9, 102, 42.7],
+          [75.0, 102, 48.5],
+          [66.5, 102, 51.6],
+          [57.5, 102, 51.6],
+          [49.0, 102, 48.5],
+          [42.1, 102, 42.7],
+          [37.6, 102, 34.9],
+          [36.0, 102, 26.0],
+        ],
+        [
+          [234.0, 102, 26.0],
+          [232.4, 102, 34.9],
+          [227.9, 102, 42.7],
+          [221.0, 102, 48.5],
+          [212.5, 102, 51.6],
+          [203.5, 102, 51.6],
+          [195.0, 102, 48.5],
+          [188.1, 102, 42.7],
+          [183.6, 102, 34.9],
+          [182.0, 102, 26.0],
+        ],
+        [
+          [22, 102, 52],
+          [114, 102, 52],
+        ],
+        [
+          [118, 102, 30],
+          [118, 102, 60],
+        ],
+        [
+          [126, 102, 32],
+          [126, 102, 60],
+        ],
+        [
+          [190, 102, 48],
+          [190, 102, 60],
+        ],
+        [
+          [19, 102, 44],
+          [22, 102, 44],
+          [22, 102, 56],
+          [19, 102, 56],
+        ],
+        // Headlights on the nose.
+        ...[16, 80].map((y): P3[] => [
+          [252, y, 51],
+          [252, y + 14, 51],
+          [252, y + 14, 58],
+          [252, y, 58],
+        ]),
+      ],
+    ),
     box(
       'bed',
       [22, 114],
@@ -105,6 +167,10 @@ export const pickup: VehicleDrawingSource = {
           [128, 98, 73],
         ],
         [
+          [154, 98, 92],
+          [154, 98, 73],
+        ],
+        [
           [187, 20, 74.5],
           [172, 20, 97],
           [172, 90, 97],
@@ -123,6 +189,9 @@ export const pickup: VehicleDrawingSource = {
       ],
       y: [10, 100],
     },
+    // Mirrors on the doors' front corners.
+    box('cab', [186, 194], [98, 106], [71, 79]),
+    box('cab', [186, 194], [4, 12], [71, 79]),
     wheel('wheels', 62, 20, 20, [92, 106]),
     wheel('wheels', 208, 20, 20, [92, 106]),
   ],

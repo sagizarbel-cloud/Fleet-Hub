@@ -53,7 +53,7 @@ export function ScrollableNav() {
     'from-surface-strong from-45% absolute inset-y-0 z-10 flex w-14 items-center transition-opacity duration-150';
 
   return (
-    <nav aria-label={t('a11y.mainNav')} className="border-border relative border-t">
+    <nav aria-label={t('a11y.mainNav')} className="fh-topbar-bar border-border relative border-t">
       <ul
         ref={listRef}
         onScroll={measure}
@@ -68,7 +68,7 @@ export function ScrollableNav() {
                 end={path === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
+                    'fh-tab flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
                     isActive
                       ? 'bg-accent text-accent-contrast'
                       : 'text-muted hover:text-text hover:bg-border',

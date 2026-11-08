@@ -194,12 +194,13 @@ describe('preferences', () => {
       fleetViewId: null,
       language: null,
       theme: null,
+      design: null,
     });
     const put = await app.inject({
       method: 'PUT',
       url: '/api/me/preferences',
       headers: { cookie: first, origin: ORIGIN },
-      payload: { pinnedVitals: ['fuelEconomy', 'status'], detailView: 'iso' },
+      payload: { pinnedVitals: ['fuelEconomy', 'status'], detailView: 'iso', design: 'yard' },
     });
     expect(put.statusCode).toBe(200);
     const second = await login(app, email);
@@ -210,6 +211,7 @@ describe('preferences', () => {
       fleetViewId: null,
       language: null,
       theme: null,
+      design: 'yard',
     });
   });
 
