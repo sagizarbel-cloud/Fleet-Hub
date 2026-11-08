@@ -40,7 +40,10 @@ services:
     logging: *logging
 
   caddy:
-    build: { context: .., dockerfile: deploy/Dockerfile.web }
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args: { YARD_PLAY: '${YARD_PLAY:-off}' }
     image: fleet-hub-web
     restart: unless-stopped
     depends_on:

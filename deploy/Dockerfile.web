@@ -8,6 +8,9 @@ COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile --filter @fleet-hub/web...
 COPY packages/shared packages/shared
 COPY apps/web apps/web
+# Yard play, the optional fling mini-game: on only when YARD_PLAY=on in deploy/.env.
+ARG YARD_PLAY=off
+ENV YARD_PLAY=$YARD_PLAY
 # Source maps stay out of production.
 RUN pnpm --filter @fleet-hub/web build && find apps/web/dist -name '*.map' -delete
 
