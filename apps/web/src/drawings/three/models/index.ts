@@ -2,13 +2,13 @@ import type * as THREE from 'three';
 import { EXCAVATOR_TOOLS, type ExcavatorTool } from '@fleet-hub/shared';
 import type { VehicleDrawingSource } from '../../model';
 import type { ViewName } from '../render';
-import { pickup } from '../../types/pickup';
 import type { Solid } from '../../iso';
 import { crawler, wheeled } from '../../types/excavators';
 import { trailer } from '../../types/trailer';
 import { compressor, forklift, other, skidSteer, tractor } from '../../types/small-machines';
 import { truck, van } from '../../types/road';
 import { fromSolids } from './from-solids';
+import { pickup3d } from './pickup';
 import { wheelLoader3d } from './wheel-loader';
 
 export interface ModelSpec {
@@ -35,7 +35,7 @@ const digger = (
 /** Every type (and excavator tool, as `type.tool`) drawn from a 3D model. */
 export const MODELS: Record<string, ModelSpec> = {
   wheel_loader: { build: () => wheelLoader3d(), unit: 44 },
-  pickup: converted(pickup),
+  pickup: { build: () => pickup3d(), unit: 1 },
   truck: converted(truck),
   van: converted(van),
   trailer: converted(trailer),
