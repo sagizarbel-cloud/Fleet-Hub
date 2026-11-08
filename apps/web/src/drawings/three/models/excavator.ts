@@ -6,7 +6,8 @@ import { box, cylinder, extrude, model, ram, wheel, type V2, type V3 } from '../
  * Excavators, in metres (+x front, +y the near side, z up): a 30-tonne class crawler and a
  * wheeled excavator sharing one upper structure. The arm digs out in front for the side and
  * isometric views and folds in for the top view. Boom, stick and tool each have their rams and
- * pins; the crawler tracks show their rollers, sprocket and idler.
+ * pins; the crawler tracks show their rollers, sprocket and idler. Proportions follow a 30-tonne
+ * class machine: cab roof a little above the engine house, flat counterweight, bucket curling back.
  */
 
 const arc = (cx: number, cz: number, r: number, from: number, to: number, n = 8): V2[] =>
@@ -59,278 +60,285 @@ function track(y: V2) {
   );
 }
 
-/** The tool on the end of the stick, with its tip at (tx, tz) and its pin at (px, pz). */
-function tool(kind: ExcavatorTool, mid: number, dx: number, teeth: boolean): THREE.Object3D[] {
-  const shift = (pts: V2[]): V2[] => pts.map(([x, z]) => [x + dx, z] as const);
+/** Moves profile points by (dx, dz). */
+const move = (pts: V2[], dx: number, dz: number): V2[] => pts.map(([x, z]) => [x + dx, z + dz]);
+
+/**
+ * The tool on the end of the stick, hung from its pin at (6.3, 1.5) when digging. The bucket
+ * curls toward the machine: rounded back away from it, teeth pointing back at the tracks.
+ */
+function tool(kind: ExcavatorTool, mid: number, dx: number, dz: number): THREE.Object3D[] {
+  const at = (pts: V2[]) => move(pts, dx, dz);
   if (kind === 'hammer') {
     return [
       extrude(
         'bucket',
-        shift([
-          [6.25, 0.95],
-          [6.85, 0.95],
-          [6.8, 0.4],
-          [6.65, 0.3],
-          [6.45, 0.3],
-          [6.3, 0.4],
+        at([
+          [6.05, 1.6],
+          [6.6, 1.6],
+          [6.55, 0.5],
+          [6.42, 0.38],
+          [6.23, 0.38],
+          [6.1, 0.5],
         ]),
-        [mid - 0.32, mid + 0.32],
+        [mid - 0.3, mid + 0.3],
         [
           [
-            [6.3 + dx, mid + 0.32, 0.78],
-            [6.8 + dx, mid + 0.32, 0.78],
+            [6.08 + dx, mid + 0.3, 1.25 + dz],
+            [6.58 + dx, mid + 0.3, 1.25 + dz],
           ],
         ],
       ),
-      cylinder('bucket', 'z', [0.02, 0.32], [6.55 + dx, mid], 0.07, 16),
+      cylinder('bucket', 'z', [0.05 + dz, 0.38 + dz], [6.33 + dx, mid], 0.07, 16),
     ];
   }
-  const width: V2 = [mid - 0.6, mid + 0.6];
+  const width: V2 = [mid - 0.65, mid + 0.65];
+  const shell: V2[] = [
+    [6.0, 1.62],
+    [6.75, 1.65],
+    ...arc(6.55, 0.85, 0.66, 50, -60, 6),
+    [6.55, 0.03],
+    [5.65, 0.02],
+    [5.35, 0.12],
+  ];
   return [
-    extrude(
-      'bucket',
-      teeth
-        ? [
-            [6.2, 1.0],
-            [6.95, 0.9],
-            [7.25, 0.2],
-            [6.95, 0.0],
-            [6.35, 0.25],
-          ]
-        : [
-            [2.9, 0.9],
-            [3.75, 0.95],
-            [3.85, 0.3],
-            [3.4, 0.05],
-            [2.9, 0.35],
-          ],
-      width,
-      teeth
-        ? [
-            // Wear strips across the back of the bucket.
-            ...[0.35, 0.6].map((t): V3[] => [
-              [6.95 + 0.3 * t, mid + 0.6, 0.9 - 0.7 * t],
-              [6.95 + 0.3 * t, mid - 0.6, 0.9 - 0.7 * t],
-            ]),
-          ]
-        : [],
-    ),
-    // Side cutters, a little proud of the bucket's sides.
+    extrude('bucket', at(shell), width, [
+      // Wear strips round the back of the bucket.
+      ...[10, -25].map((deg): V3[] => {
+        const a = (deg * Math.PI) / 180;
+        const [x, z] = [6.55 + dx + 0.66 * Math.cos(a), 0.85 + dz + 0.66 * Math.sin(a)];
+        return [
+          [x, width[0], z],
+          [x, width[1], z],
+        ];
+      }),
+    ]),
+    // Side plates, a little proud of the shell.
     ...[width[0] - 0.04, width[1]].map((y) =>
       extrude(
         'bucket',
-        teeth
-          ? [
-              [6.6, 0.95],
-              [6.95, 0.9],
-              [7.25, 0.2],
-              [7.05, 0.15],
-            ]
-          : [
-              [3.3, 0.93],
-              [3.75, 0.95],
-              [3.85, 0.3],
-              [3.65, 0.25],
-            ],
+        at([
+          [6.0, 1.66],
+          [6.8, 1.68],
+          [6.6, 0.9],
+          [5.4, 0.16],
+          [5.6, 0.55],
+        ]),
         [y, y + 0.04],
       ),
     ),
-    ...(teeth
-      ? [-0.45, -0.22, 0, 0.22, 0.45].map((dy) =>
-          extrude(
-            'bucket',
-            [
-              [7.14, 0.42],
-              [7.27, 0.3],
-              [7.36, 0.04],
-              [7.2, 0.12],
-            ],
-            [mid + dy - 0.06, mid + dy + 0.06],
-          ),
-        )
-      : []),
+    // Teeth along the lip, pointing back toward the machine.
+    ...[-0.5, -0.25, 0, 0.25, 0.5].map((dy) =>
+      extrude(
+        'bucket',
+        at([
+          [5.5, 0.04],
+          [5.5, 0.22],
+          [5.16, 0.1],
+          [5.18, 0.04],
+        ]),
+        [mid + dy - 0.06, mid + dy + 0.06],
+      ),
+    ),
   ];
 }
 
-/** Boom, stick, rams and tool: out digging, or folded in as parked. */
-function arm(z: number, mid: number, folded: boolean, kind: ExcavatorTool): THREE.Object3D[] {
-  const boom: V2[] = folded
-    ? [
-        [0.9, z + 0.5],
-        [1.6, z + 0.4],
-        [3.0, z + 2.2],
-        [3.95, z + 1.5],
-        [4.15, z + 1.85],
-        [2.95, z + 2.8],
-        [0.9, z + 1.2],
-      ]
-    : [
-        [0.9, z + 0.5],
-        [1.6, z + 0.4],
-        [3.8, z + 2.3],
-        [5.9, z + 1.3],
-        [6.0, z + 1.75],
-        [3.7, z + 2.9],
-        [0.9, z + 1.2],
-      ];
+/**
+ * Boom, stick, rams and tool, in the crawler's heights (raised by `dz` on the wheeled one).
+ * Digging: the boom rises steeply from beside the cab and arches out, the stick hangs almost
+ * straight down to the bucket on the ground. Folded (top view only): the stick tucks back in.
+ */
+function arm(dz: number, mid: number, folded: boolean, kind: ExcavatorTool): THREE.Object3D[] {
+  const P = (x: number, z: number): V2 => [x, z + dz];
+  const boom: V2[] = [
+    P(0.75, 1.55),
+    P(1.25, 1.6),
+    P(1.75, 2.9),
+    P(2.5, 3.75),
+    P(3.6, 4.25),
+    P(4.9, 4.3),
+    P(5.45, 4.55),
+    P(5.35, 4.95),
+    P(3.6, 4.85),
+    P(2.25, 4.4),
+    P(1.3, 3.55),
+    P(0.7, 2.2),
+  ];
   const stick: V2[] = folded
-    ? [
-        [3.75, z + 1.95],
-        [4.2, z + 1.85],
-        [3.7, 0.75],
-        [3.3, 0.85],
-      ]
-    : [
-        [5.65, z + 1.9],
-        [6.1, z + 2.0],
-        [6.75, 0.8],
-        [6.35, 0.6],
-      ];
-  const knee = folded ? ([4.0, z + 1.7] as const) : ([5.92, z + 1.55] as const);
-  const wrist = folded ? ([3.55, 0.9] as const) : ([6.55, 0.75] as const);
-  const lift: [V3, V3] = folded
-    ? [
-        [1.3, 0, z + 0.35],
-        [2.3, 0, z + 1.3],
-      ]
-    : [
-        [1.3, 0, z + 0.35],
-        [2.6, 0, z + 1.3],
-      ];
-  const dipper: [V3, V3] = folded
-    ? [
-        [2.5, mid, z + 2.52],
-        [3.95, mid, z + 2.15],
-      ]
-    : [
-        [2.95, mid, z + 2.55],
-        [5.85, mid, z + 2.08],
-      ];
+    ? [P(4.75, 5.25), P(5.1, 5.45), P(3.95, 1.55), P(3.6, 1.7)]
+    : [P(4.75, 5.2), P(5.1, 5.45), P(6.5, 1.65), P(6.15, 1.4)];
+  const wrist = folded ? P(3.75, 1.6) : P(6.3, 1.5);
+  const knee = P(5.15, 4.62);
+  const top = P(4.95, 5.35);
   return [
     extrude(
       'boom',
       boom,
-      [mid - 0.35, mid + 0.35],
+      [mid - 0.38, mid + 0.38],
       [
-        // A stiffening plate along the near side.
-        folded
-          ? [
-              [1.4, mid + 0.35, z + 0.85],
-              [2.6, mid + 0.35, z + 2.2],
-            ]
-          : [
-              [1.5, mid + 0.35, z + 0.9],
-              [3.1, mid + 0.35, z + 2.2],
-            ],
+        // A stiffening plate along the near side of the boom.
+        [
+          [1.3, mid + 0.38, 2.4 + dz],
+          [2.3, mid + 0.38, 3.85 + dz],
+          [3.6, mid + 0.38, 4.5 + dz],
+          [4.8, mid + 0.38, 4.55 + dz],
+        ],
       ],
     ),
-    extrude('boom', stick, [mid - 0.25, mid + 0.25]),
-    // Two lift rams beside the boom, the stick ram on top of it, the tool ram along the stick.
-    ...[mid - 0.47, mid + 0.47].map((y) =>
-      ram('boom', [lift[0][0], y, lift[0][2]], [lift[1][0], y, lift[1][2]], 0.11),
+    extrude('boom', stick, [mid - 0.26, mid + 0.26]),
+    // Lift rams from the front of the house up under the boom, either side of it.
+    ...[mid - 0.5, mid + 0.5].map((y) =>
+      ram('boom', [1.55, y, 1.7 + dz], [2.15, y, 3.55 + dz], 0.12),
     ),
-    ram('boom', dipper[0], dipper[1], 0.1),
+    // Stick ram along the top of the boom to the head of the stick.
+    ram('boom', [2.3, mid, 4.55 + dz], [top[0], mid, top[1]], 0.11),
+    // Tool ram down the outside of the stick.
     folded
-      ? ram('boom', [4.1, mid, z + 1.45], [3.75, mid, 1.15], 0.07)
-      : ram('boom', [6.15, mid, z + 1.7], [6.75, mid, 1.1], 0.07),
-    pin('boom', 1.2, z + 0.8, [mid - 0.42, mid + 0.42]),
-    pin('boom', knee[0], knee[1], [mid - 0.32, mid + 0.32]),
-    pin('boom', wrist[0], wrist[1], [mid - 0.32, mid + 0.32], 0.08),
-    ...tool(kind, mid, folded ? -3.05 : 0, !folded),
+      ? ram('boom', [5.15, mid, 5.15 + dz], [4.1, mid, 2.0 + dz], 0.08)
+      : ram('boom', [5.2, mid, 5.15 + dz], [6.55, mid, 2.05 + dz], 0.08),
+    pin('boom', 1.0, 1.85 + dz, [mid - 0.45, mid + 0.45]),
+    pin('boom', knee[0], knee[1], [mid - 0.34, mid + 0.34]),
+    pin('boom', wrist[0], wrist[1], [mid - 0.34, mid + 0.34], 0.08),
+    ...tool(kind, mid, folded ? -2.55 : 0, dz + (folded ? 0.1 : 0)),
   ];
 }
 
-/** Upper structure on its slewing ring: house, round counterweight, engine cover, cab, arm. */
+/**
+ * Upper structure on its slewing ring. The cab stands on the deck at the near front corner, its
+ * roof only a little above the engine house; the house runs behind it to a flat counterweight
+ * with a chamfered top edge, and forward on the far side to the boom foot.
+ */
 function upper(z: number, w: number, folded: boolean, kind: ExcavatorTool): THREE.Object3D[] {
-  const mid = w / 2;
   const near = w - 0.1;
+  const cabY = w - 1.05;
+  // The boom sits just off the cab, a little toward the far side, as on the real machines.
+  const mid = Math.min(w / 2, cabY - 0.65);
+  const H = 1.25;
   return [
-    cylinder('body', 'z', [z - 0.12, z], [-0.2, mid], 1.0, 32),
-    box(
-      'body',
-      [-1.9, 1.3],
-      [0.1, near],
-      [z, z + 1.1],
-      [
-        // Service doors on the near side.
-        ...[-1.55, -0.75].map((x) =>
-          outline([
-            [x, near, z + 0.2],
-            [x + 0.7, near, z + 0.2],
-            [x + 0.7, near, z + 0.95],
-            [x, near, z + 0.95],
-          ]),
-        ),
-      ],
-    ),
-    // Counterweight with a rounded back.
+    cylinder('body', 'z', [z - 0.12, z], [-0.2, w / 2], 1.0, 32),
+    // Deck under the cab and the house.
+    box('body', [-2.65, 1.3], [0.1, near], [z, z + 0.12]),
+    // Engine house and counterweight, full width behind the cab.
     extrude(
       'body',
-      [[-1.6, z + 0.02], [-1.6, z + 1.22], ...arc(-1.95, z + 0.62, 0.6, 90, 270)],
-      [0.1, near],
-    ),
-    // Engine cover with a grille, the exhaust stack and the handrail along the near edge.
-    box(
-      'body',
-      [-1.8, -0.2],
-      [0.2, w - 1.2],
-      [z + 1.1, z + 1.4],
       [
-        outline([
-          [-1.6, 0.4, z + 1.4],
-          [-0.4, 0.4, z + 1.4],
-          [-0.4, w - 1.4, z + 1.4],
-          [-1.6, w - 1.4, z + 1.4],
+        [-2.65, z + 0.12],
+        [-0.45, z + 0.12],
+        [-0.45, z + H],
+        [-2.45, z + H],
+        [-2.65, z + H - 0.22],
+      ],
+      [0.1, near],
+      [
+        // Louvred side panels and a service door on the near side.
+        ...[0.45, 0.62, 0.79].map((dzz): V3[] => [
+          [-1.95, near, z + dzz],
+          [-0.75, near, z + dzz],
         ]),
-        ...[-1.35, -1.1, -0.85, -0.6].map((x): V3[] => [
-          [x, 0.45, z + 1.4],
-          [x, w - 1.45, z + 1.4],
+        outline([
+          [-2.5, near, z + 0.3],
+          [-2.05, near, z + 0.3],
+          [-2.05, near, z + 1.05],
+          [-2.5, near, z + 1.05],
+        ]),
+        // Counterweight seam and tail lights on the flat back.
+        [
+          [-2.65, 0.1, z + 0.6],
+          [-2.65, near, z + 0.6],
+        ],
+        outline([
+          [-2.65, 0.3, z + 0.32],
+          [-2.65, 0.55, z + 0.32],
+          [-2.65, 0.55, z + 0.42],
+          [-2.65, 0.3, z + 0.42],
+        ]),
+        outline([
+          [-2.65, near - 0.45, z + 0.32],
+          [-2.65, near - 0.2, z + 0.32],
+          [-2.65, near - 0.2, z + 0.42],
+          [-2.65, near - 0.45, z + 0.42],
         ]),
       ],
     ),
-    cylinder('body', 'z', [z + 1.4, z + 1.95], [-0.95, 0.55], 0.07, 16),
-    ...[-1.7, -0.4].map((x) => box('body', [x, x + 0.05], [near - 0.08, near], [z + 1.1, z + 1.5])),
-    box('body', [-1.7, -0.35], [near - 0.08, near], [z + 1.45, z + 1.5]),
-    // Cab: door with its window, windscreen, and a roof with a small overhang.
+    // House forward of the cab's back on the far side: tank and boom foot housing.
+    box(
+      'body',
+      [-0.45, 1.3],
+      [0.1, cabY - 0.05],
+      [z + 0.12, z + 1.0],
+      [
+        outline([
+          [1.3, 0.25, z + 0.3],
+          [1.3, mid - 0.5, z + 0.3],
+          [1.3, mid - 0.5, z + 0.85],
+          [1.3, 0.25, z + 0.85],
+        ]),
+      ],
+    ),
+    // Engine hood grille, exhaust and the handrail along the near edge.
+    box(
+      'body',
+      [-2.2, -0.75],
+      [0.35, w - 1.4],
+      [z + H, z + H + 0.08],
+      [
+        ...[-1.95, -1.7, -1.45, -1.2, -0.95].map((x): V3[] => [
+          [x, 0.45, z + H + 0.08],
+          [x, w - 1.5, z + H + 0.08],
+        ]),
+      ],
+    ),
+    cylinder('body', 'z', [z + H, z + H + 0.4], [-1.0, 0.6], 0.07, 16),
+    ...[-2.3, -1.4, -0.55].map((x) =>
+      box('body', [x, x + 0.05], [near - 0.07, near - 0.02], [z + H, z + H + 0.4]),
+    ),
+    box('body', [-2.3, -0.5], [near - 0.07, near - 0.02], [z + H + 0.36, z + H + 0.41]),
+    // Cab on the deck: big door glass, a raked front screen, roof just above the house.
     extrude(
       'cab',
       [
-        [0.1, z + 1.1],
-        [1.3, z + 1.1],
-        [1.15, z + 2.05],
-        [0.1, z + 2.05],
+        [-0.45, z + 0.12],
+        [1.25, z + 0.12],
+        [1.3, z + 0.85],
+        [1.15, z + 1.72],
+        [1.0, z + 1.8],
+        [-0.45, z + 1.8],
       ],
-      [w - 1.1, near],
+      [cabY, near],
       [
         outline([
-          [0.15, near, z + 1.15],
-          [0.75, near, z + 1.15],
-          [0.75, near, z + 1.95],
-          [0.15, near, z + 1.95],
+          [-0.3, near, z + 0.25],
+          [0.55, near, z + 0.25],
+          [0.55, near, z + 1.7],
+          [-0.3, near, z + 1.7],
         ]),
         outline([
-          [0.22, near, z + 1.4],
-          [0.68, near, z + 1.4],
-          [0.68, near, z + 1.88],
-          [0.22, near, z + 1.88],
+          [-0.22, near, z + 0.75],
+          [0.47, near, z + 0.75],
+          [0.47, near, z + 1.62],
+          [-0.22, near, z + 1.62],
         ]),
         outline([
-          [0.82, near, z + 1.4],
-          [1.2, near, z + 1.4],
-          [1.11, near, z + 1.9],
-          [0.82, near, z + 1.9],
+          [0.63, near, z + 0.75],
+          [1.24, near, z + 0.75],
+          [1.13, near, z + 1.62],
+          [0.63, near, z + 1.62],
         ]),
+        [
+          [0.42, near, z + 1.05],
+          [0.42, near, z + 1.2],
+        ],
         outline([
-          [1.28, w - 1.0, z + 1.25],
-          [1.16, w - 1.0, z + 1.95],
-          [1.16, near - 0.1, z + 1.95],
-          [1.28, near - 0.1, z + 1.25],
+          [1.27, cabY + 0.1, z + 0.6],
+          [1.15, cabY + 0.1, z + 1.65],
+          [1.15, near - 0.1, z + 1.65],
+          [1.27, near - 0.1, z + 0.6],
         ]),
       ],
     ),
-    box('cab', [0.05, 1.22], [w - 1.15, near + 0.05], [z + 2.05, z + 2.11]),
-    box('cab', [1.2, 1.28], [near, near + 0.12], [z + 1.7, z + 1.95]),
-    ...arm(z, mid, folded, kind),
+    box('cab', [-0.5, 1.1], [cabY - 0.03, near + 0.03], [z + 1.8, z + 1.86]),
+    box('cab', [1.15, 1.25], [near, near + 0.12], [z + 1.35, z + 1.6]),
+    ...arm(z - 1.1, mid, folded, kind),
   ];
 }
 
