@@ -250,12 +250,15 @@ export const appSettingsBody = z.object({
   movementFields: customFieldList.default([]),
   /** Which vehicle types take a wiggle test, and which checklist (Sagi, 2026-11-08). */
   wiggleTypes: wiggleTypesSchema.default(DEFAULT_WIGGLE_TYPES),
+  /** Yard play, the optional fling mini-game: an admin turns it on (only when the build has it). */
+  yardPlay: z.boolean().default(false),
 });
 export type AppSettings = z.output<typeof appSettingsBody>;
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   fuelRequired: { place: false, fueledBy: false, fuelType: false, provider: false },
   movementFields: [],
   wiggleTypes: DEFAULT_WIGGLE_TYPES,
+  yardPlay: false,
 };
 
 /** Image types a company logo can be (Revisions 1); SVG is left out so no script can ride in. */

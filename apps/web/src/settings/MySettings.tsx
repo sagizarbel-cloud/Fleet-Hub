@@ -6,6 +6,7 @@ import {
   DESIGNS,
   DEFAULT_PINNED_VITALS,
   FLEET_GROUPINGS,
+  hasRole,
   VITAL_KEYS,
   type VitalKey,
 } from '@fleet-hub/shared';
@@ -18,7 +19,9 @@ import { currentTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme'
 import { errorProps, INPUT, issuesToErrors, Labeled, type Errors } from '@/money/form';
 import { usePreferences, useSavePreferences } from '@/vehicle/data';
 import { useChangePassword } from './api';
+import { useSession } from '@/auth/session';
 import { useSaveLook } from './prefs';
+import { YardPlaySwitch } from './YardPlaySwitch';
 
 const THEMES: Theme[] = ['dark', 'light'];
 
@@ -89,6 +92,7 @@ export function MySettings() {
   const look = useSaveLook();
   const theme = useSyncExternalStore(subscribeTheme, currentTheme);
   const design = useSyncExternalStore(subscribeDesign, currentDesign);
+  const { data: user } = useSession();
 
   return (
     <div className="space-y-3">
@@ -127,6 +131,7 @@ export function MySettings() {
         </div>
       </Panel>
       <FleetGroupingChoice />
+      {__YARD_PLAY__ && user && hasRole(user.role, 'ADMIN') && <YardPlaySwitch />}
       <DefaultVitals />
       <ChangePassword />
     </div>

@@ -343,6 +343,12 @@
   overflow-wrap: anywhere;
 }
 
+/* Yard play: while the game runs, the vehicles live on its canvas instead of the page. */
+[data-playing] [data-tile],
+[data-playing] .fh-toolbar {
+  visibility: hidden;
+}
+
 /* Dashboard: history (about 40%) beside the fleet grid; on phones KPIs, then the grid, then the timeline. */
 .dash-layout {
   grid-template-columns: minmax(0, 1fr);

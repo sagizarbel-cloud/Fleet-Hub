@@ -89,6 +89,8 @@ This writes `deploy/.env` (readable by its owner only) with the domain and fresh
 
 Keep a copy of `deploy/.env` somewhere safe outside the server (a password manager). `FLEET_CODE_KEY` matters most: without it the stored vehicle start codes can't be read. Changing `SESSION_SECRET` only signs everyone out.
 
+Optional: `YARD_PLAY=on` in `deploy/.env` builds in Yard play, a hidden fling mini-game on the dashboard. It stays off for users until an admin ticks it in Settings → My settings. Rebuild after changing it: `docker compose up -d --build caddy`.
+
 ## 4. Start
 
 All `docker compose` commands below run from the `deploy/` folder (`deploy/.env` points Compose at the production file):

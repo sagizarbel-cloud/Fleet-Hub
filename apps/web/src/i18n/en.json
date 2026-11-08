@@ -955,6 +955,11 @@
         "wheeledExcavator": "Wheeled excavator (with front-down camera)",
         "skidSteer": "Skid-steer"
       }
+    },
+    "yardPlay": {
+      "title": "Yard play",
+      "hint": "A hidden mini-game on the dashboard: tap the Fleet heading five times, or type \"yard\". It only moves pictures and never changes data.",
+      "on": "On for everyone"
     }
   },
   "reset": {
@@ -1358,5 +1363,15 @@
       "change": "Use another button",
       "learning": "Press the controller button to use…"
     }
+  },
+  "play": {
+    "hint": "Throw a vehicle, or tap one to drive it",
+    "endOfShift": "End of shift: back to the bays",
+    "exit": "Exit",
+    "canvas": "Yard play: the fleet's vehicles, which can be thrown around the lot",
+    "driveKeys": "Driving {{serial}}: arrow keys or WASD, Space for the handbrake. Tap it again to let go.",
+    "driveTouch": "Driving {{serial}}: use the stick and the handbrake. Tap it again to let go.",
+    "stick": "Steering stick",
+    "handbrake": "Handbrake"
   }
 }
