@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 import type { ViewDrawing } from './model';
 import { drawingFor } from './registry';
 import { IsoDrawing } from './iso';
+import { GENERATED } from './generated';
 import './drawings.css';
 
 export type VisualView = 'top' | 'side' | 'iso';
@@ -24,6 +25,8 @@ interface Props {
   size: number;
   /** Side profile draws itself (stroke animation) on mount. */
   draw?: boolean;
+  /** Which drawings to use: the hand-made 2D ones, or the ones rendered from 3D models. */
+  engine?: '2d' | '3d';
   className?: string;
 }
 
@@ -40,8 +43,19 @@ export function Layers({ drawing }: { drawing: ViewDrawing }) {
 }
 
 /** A vehicle's line drawing in top-down, side or isometric view, tinted by status. */
-export function VehicleVisual({ type, tool, view, status, size, draw = false, className }: Props) {
+export function VehicleVisual({
+  type,
+  tool,
+  view,
+  status,
+  size,
+  draw = false,
+  engine = '2d',
+  className,
+}: Props) {
   const def = drawingFor(type, tool);
+  // A 3D model covers the type with its standard tool; other tools keep the 2D drawing for now.
+  const modelled = engine === '3d' && (!tool || tool === 'bucket') ? GENERATED[type] : undefined;
   const svgRef = useRef<SVGSVGElement>(null);
   const style = { '--vd-color': STATUS_VAR[status] } as CSSProperties;
 
@@ -55,7 +69,7 @@ export function VehicleVisual({ type, tool, view, status, size, draw = false, cl
       });
   }, [draw, type, tool, view]);
 
-  if (view === 'iso') {
+  if (view === 'iso' && !modelled) {
     return (
       <div
         className={cn('vd relative', status === 'RED' && 'vd-red', className)}
@@ -72,7 +86,7 @@ export function VehicleVisual({ type, tool, view, status, size, draw = false, cl
     );
   }
 
-  const drawing = view === 'top' ? def.top : def.side;
+  const drawing = modelled ? modelled[view] : view === 'top' ? def.top : def.side;
   return (
     <div
       className={cn('vd relative', status === 'RED' && 'vd-red', className)}

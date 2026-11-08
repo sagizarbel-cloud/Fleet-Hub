@@ -76,7 +76,8 @@
   },
   "drawings": {
     "title": "Vehicle drawings",
-    "replay": "Replay"
+    "replay": "Replay",
+    "model3d": "Rendered from the 3D model"
   },
   "dashboard": {
     "recentActivity": "Recent activity",

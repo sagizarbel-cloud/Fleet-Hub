@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { VEHICLE_STATUSES, VEHICLE_TYPE_CODES } from '@fleet-hub/shared';
 import { VehicleVisual } from '@/drawings/VehicleVisual';
 import { DRAWINGS } from '@/drawings/registry';
+import { GENERATED } from '@/drawings/generated';
 import { Button } from '@/components/ui/button';
 import { lookupName, useLookups } from '@/fleet/data';
 
@@ -51,6 +52,41 @@ export function DrawingsPage() {
               <VehicleVisual key={round} type={type} view="side" status="AMBER" size={420} draw />
             </div>
           </div>
+          {/* The same type rendered from its 3D model, for comparison while the models are built. */}
+          {GENERATED[type] && (
+            <div data-testid={`drawing-3d-${type}`} className="space-y-3">
+              <p className="text-muted text-xs">{t('drawings.model3d')}</p>
+              <div className="grid gap-6 lg:grid-cols-[auto_auto_1fr]">
+                <div className="flex items-end gap-4">
+                  {VEHICLE_STATUSES.map((s) => (
+                    <VehicleVisual
+                      key={s}
+                      type={type}
+                      view="top"
+                      status={s}
+                      size={72}
+                      engine="3d"
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <VehicleVisual type={type} view="iso" status="GREEN" size={220} engine="3d" />
+                  <VehicleVisual type={type} view="iso" status="RED" size={220} engine="3d" />
+                </div>
+                <div className="flex items-center">
+                  <VehicleVisual
+                    key={round}
+                    type={type}
+                    view="side"
+                    status="AMBER"
+                    size={420}
+                    draw
+                    engine="3d"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </section>
