@@ -281,6 +281,7 @@ const SAME_RECORD: Record<RecordKind, string[]> = {
   inspections: ['kind'],
   notes: ['body'],
   workCards: ['description'],
+  wiggleTests: [],
 };
 
 async function vehicleRefOf(tx: Tx, serial: string): Promise<VehicleRef | null> {

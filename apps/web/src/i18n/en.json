@@ -107,7 +107,8 @@
       "items": "Items",
       "documents": "Receipts and quotes",
       "notes": "Notes",
-      "workCards": "Work cards"
+      "workCards": "Work cards",
+      "wiggleTests": "Wiggle tests"
     },
     "filters": {
       "label": "Filter the fleet",
@@ -186,7 +187,9 @@
     "WORK_CARD": "Work card ({{performer}}): {{description}}",
     "WORK_CARD_by": "Work card ({{performer}}, {{by}}): {{description}}",
     "MALFUNCTION_PROGRESS": "Malfunction progress: {{progress}}",
-    "TOOL_CHANGED": "Tool changed: {{from}} → {{to}}"
+    "TOOL_CHANGED": "Tool changed: {{from}} → {{to}}",
+    "WIGGLE_TEST": "Wiggle test: all OK",
+    "WIGGLE_TEST_failed": "Wiggle test, not OK: {{items}}"
   },
   "severity": {
     "LOW": "low",
@@ -232,10 +235,15 @@
         "movements": "Location change",
         "inspections": "Inspection",
         "notes": "Note",
-        "workCards": "Work card"
+        "workCards": "Work card",
+        "wiggleTests": "Wiggle test"
       },
       "workCards": "Work cards",
-      "contracted": "Contracted work"
+      "contracted": "Contracted work",
+      "wiggleTests": "Wiggle tests",
+      "wiggleLast": "Last {{when}}",
+      "wiggleLastIssues": "Last {{when}} · X: {{count}}",
+      "wiggleNone": "Not done yet"
     },
     "copy": "Click to copy",
     "copied": "Copied",
@@ -935,6 +943,17 @@
       "remove": "Remove the field",
       "invalid": "Each field needs a name in English and in Hebrew.",
       "note": "Removing a field hides it; values already saved are kept."
+    },
+    "wiggle": {
+      "title": "Wiggle test",
+      "hint": "Which vehicle types take a wiggle test, and which steering checks it has. Cameras, LiDARs and communications are on every list.",
+      "none": "No wiggle test",
+      "profile": {
+        "loader": "Loader checks (articulated steering)",
+        "excavator": "Tracked excavator checks",
+        "wheeledExcavator": "Wheeled excavator checks",
+        "skidSteer": "Skid-steer checks"
+      }
     }
   },
   "reset": {
@@ -1274,5 +1293,51 @@
     "failed": "The report couldn't load. Try again.",
     "linkedTo": "Linked to",
     "page": "Fleet Hub · {{serial}}"
+  },
+  "wiggle": {
+    "checklist": "Checklist",
+    "howTo": "V when it's OK, X when it isn't.",
+    "markAllOk": "All V",
+    "pass": "V",
+    "fail": "X",
+    "passHint": "OK",
+    "failHint": "Not OK",
+    "answerAll": "Every item needs a V or an X.",
+    "notForType": "This vehicle type takes no wiggle test.",
+    "otherProblems": "Other problems",
+    "otherProblemsHint": "Optional. Anything else found during the test.",
+    "doneAt": "Done at",
+    "doneBy": "Done by",
+    "result": "Result",
+    "allOk": "All OK",
+    "failedCount": "Not OK: {{count}}",
+    "failedItems": "Not OK",
+    "withIssues": "With an X only",
+    "systems": "Cameras, LiDARs and communications",
+    "offer": "Items marked X: {{count}}. Report a malfunction?",
+    "offerReport": "Report a malfunction",
+    "offerSkip": "Not now",
+    "malfunctionText": "Wiggle test, not OK: {{items}}",
+    "malfunctionTextNotes": "Wiggle test, not OK: {{items}}\n{{notes}}",
+    "steering": {
+      "loader": "Steering (articulated)",
+      "excavator": "Tracks and swing",
+      "wheeledExcavator": "Steering and swing",
+      "skidSteer": "Drive and steering"
+    },
+    "item": {
+      "articulation": "Articulation joint and pins: no play",
+      "steeringCylinders": "Steering cylinders and hoses: no leaks",
+      "steeringResponse": "Steering turns fully both ways",
+      "tracksTravel": "Both tracks travel and steer",
+      "driveSides": "Left and right drives answer the controls",
+      "axles": "Axles and tie rods: no play",
+      "wheels": "Wheels and axle bearings: no play",
+      "undercarriage": "Tracks, rollers and sprockets: no damage",
+      "swing": "Swing smooth, no play in the slew ring",
+      "cameras": "Cameras: clear picture",
+      "lidars": "LiDARs: clean and working",
+      "communications": "Communications (radio, phone): working"
+    }
   }
 }

@@ -10,7 +10,7 @@ import {
   TriangleAlert,
   Wrench,
 } from 'lucide-react';
-import { hasRole, type RecordKind } from '@fleet-hub/shared';
+import { hasRole, isWiggleProfile, OWN_RECORD_KINDS, type RecordKind } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { ResizableSheet } from '@/components/ResizableSheet';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import { cellText, useFormatCtx } from './format';
 import { colTitle, KIND_UI, localDay, type Column, type FormatCtx } from './kinds';
 import { useKindColumns } from './columns';
 import { RecordForm } from './RecordForm';
+import { useWiggleProfile } from './Wiggle';
 import { useRecordLink, type ReportTarget } from './recordLink';
 
 /** Malfunctions read as two parts (Revisions 1): what the issue was, and what happened about it. */
@@ -380,16 +381,21 @@ function OneRecord({
 }) {
   const { t } = useTranslation();
   const ui = KIND_UI[kind];
-  const columns = useKindColumns(kind);
+  const record = useRecord(vehicle.serial, kind, id);
+  const row = record.data?.item;
+  const columns = useKindColumns(
+    kind,
+    kind === 'wiggleTests' && isWiggleProfile(row?.profile) ? row.profile : undefined,
+  );
   const ctx = useFormatCtx(vehicle.usageUnit);
   const { data: user } = useSession();
-  const record = useRecord(vehicle.serial, kind, id);
   const [editing, setEditing] = useState(false);
-  const row = record.data?.item;
+  const profile = useWiggleProfile(vehicle.type);
   const canEdit =
     !!user &&
     !!row &&
-    (hasRole(user.role, 'EDITOR') || (kind === 'notes' && row.createdById === user.id));
+    (hasRole(user.role, 'EDITOR') ||
+      (OWN_RECORD_KINDS.includes(kind) && row.createdById === user.id));
 
   // The edit form takes the report's place, then the report comes back with the new values.
   if (editing && row)
@@ -402,6 +408,7 @@ function OneRecord({
         row={row}
         canEdit={canEdit}
         reduced={reduced}
+        profile={profile}
         onClose={() => setEditing(false)}
         onSaved={() => setEditing(false)}
       />

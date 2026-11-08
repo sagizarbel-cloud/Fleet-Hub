@@ -106,7 +106,7 @@ function addSheet(wb: ExcelJS.Workbook, spec: SheetSpec) {
 
   columns.forEach((col, i) => {
     const c = ws.getColumn(i + 1);
-    if (col.kind === 'date') c.numFmt = 'dd/mm/yyyy';
+    if (col.kind === 'date') c.numFmt = col.numFmt ?? 'dd/mm/yyyy';
     else if (col.numFmt) c.numFmt = col.numFmt;
     else if (col.kind === 'money') c.numFmt = '#,##0.00';
   });

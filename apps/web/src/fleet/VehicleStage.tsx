@@ -470,7 +470,13 @@ export function VehicleStage({
 
           {/* Mounted with the other panels so they arrive together; contents fill in as data loads. */}
           {tile && (
-            <Records serial={serial} vehicle={vehicle} motionFor={recordMotion} reduced={reduced} />
+            <Records
+              serial={serial}
+              type={tile.type}
+              vehicle={vehicle}
+              motionFor={recordMotion}
+              reduced={reduced}
+            />
           )}
           {tile && (
             <motion.div data-panel {...lowerMotion}>

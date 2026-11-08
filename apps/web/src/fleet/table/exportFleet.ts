@@ -67,7 +67,11 @@ export async function exportFleet(opts: { rows: FleetRow[]; ctx: FormatCtx }) {
     ...RECORD_KINDS.map((kind, i) => ({
       title: ctx.t(`vehicle.records.${kind}`),
       lines,
-      columns: [SERIAL_COLUMN, ...KIND_UI[kind].columns, createdByCol],
+      columns: [
+        SERIAL_COLUMN,
+        ...KIND_UI[kind].columns,
+        ...(KIND_UI[kind].columns.some((c) => c.key === 'createdBy') ? [] : [createdByCol]),
+      ],
       rows: records[i]!,
       ctx,
       rowCtx: (r: RecordRow) => ({ ...ctx, unit: unitOf.get(r.serial as string) ?? ctx.unit }),

@@ -56,6 +56,7 @@ enum EventType {
   WORK_CARD
   MALFUNCTION_PROGRESS
   TOOL_CHANGED
+  WIGGLE_TEST
   RECORD_EDITED
   RECORD_DELETED
   RECORD_RESTORED
@@ -256,6 +257,7 @@ model Vehicle {
   inspections     Inspection[]
   notes           Note[]
   workCards       WorkCard[]
+  wiggleTests     WiggleTest[]
   itemAssignments ItemAssignment[]
   currentItems    Item[]            @relation("CurrentVehicle")
   documents       DocumentVehicle[]
@@ -379,6 +381,29 @@ model WorkCard {
 
   @@index([vehicleId, date])
   @@index([performedBy])
+}
+
+/// A wiggle test (Sagi, 2026-11-08): a V / X check of a heavy machine's steering, cameras,
+/// LiDARs and communications by the user who did it, with an optional note.
+model WiggleTest {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /// When the test was done: when it was saved.
+  date        DateTime  @default(now())
+  /// The checklist used (loader, excavator, wheeledExcavator, skidSteer).
+  profile     String
+  /// Item → "PASS" or "FAIL".
+  results     Json
+  /// How many items failed, for sorting and the summary.
+  failCount   Int
+  notes       String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([vehicleId, date])
 }
 
 model FluidAddition {

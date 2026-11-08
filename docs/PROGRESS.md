@@ -9,6 +9,16 @@
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
 
+### Wiggle test — 2026-11-08
+
+- Sagi: a quick check of heavy machinery, tied to the user and the vehicle. A new record kind `wiggleTests` (table `WiggleTest`, migration `wiggle_tests`, additive): a V / X per item, one optional "Other problems" text at the end, saved with who did it and when (date and time of saving). Event `WIGGLE_TEST` names the items marked X.
+- Checklists (`packages/shared/src/wiggle.ts`): steering differs by machine. Loader (articulated): articulation joint and pins, steering cylinders and hoses, full lock both ways. Tracked excavator: both tracks travel and steer, swing / slew ring, undercarriage. Wheeled excavator: full lock, axles and tie rods, swing. Skid-steer: left and right drives, wheels and axle bearings. Every list ends with cameras, LiDARs and communications. "All V" marks everything, then an X is one tap.
+- Which types take it is an admin setting (Settings → Record fields → Wiggle test, `AppSetting.wiggleTypes`); loaders, both excavators and skid steers to start. The card shows only on those vehicles, first in the list, with the last test ("Last today", amber when it had an X). The API refuses other types (`no_wiggle_test`) and any answer missing or not on the machine's list.
+- Anyone signed in can do one (operators may be viewers) and change their own; editors change any. When an editor saves a test with an X, the panel offers "Report a malfunction" with the text filled in.
+- History is the record panel: newest first, dates, search in the notes, "With an X only", row report with each item, Excel export of that vehicle's history (one column per item of its checklist) in the chosen date range; the whole-fleet export has a Wiggle tests sheet.
+- Not done (Later): wiggle tests don't change the vehicle's status; not in the printed vehicle report or the Excel import.
+- Tests: 5 api tests (`test/wiggle.test.ts`) plus the generic record test, 3 e2e (`e2e/wiggle.spec.ts`). Screenshots in `/mnt/project-files/fleet-hub/wiggle/`.
+
 ### Revisions 1 — 2026-11-04 (in progress; plan: https://claude.ai/artifact/2TfufphQqRhAAXcngmJnw8)
 
 Round 1 (items 1-4):

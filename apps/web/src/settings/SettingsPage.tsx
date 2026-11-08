@@ -17,6 +17,7 @@ import { ListsEditor } from './ListsEditor';
 import { MySettings } from './MySettings';
 import { RequiredFields } from './RequiredFields';
 import { MovementFields } from './MovementFields';
+import { WiggleTypes } from './WiggleTypes';
 import { ReportLogo } from './ReportLogo';
 import { UsersAdmin } from './UsersAdmin';
 
@@ -97,6 +98,7 @@ export function SettingsPage({ section }: { section: SettingsSection }) {
           <div className="space-y-4">
             <RequiredFields />
             <MovementFields />
+            <WiggleTypes />
           </div>
         )}
         {section === 'report' && <ReportLogo />}

@@ -55,6 +55,7 @@ export type RecordFilters = Partial<
     | 'mine'
     | 'performedBy'
     | 'workType'
+    | 'failed'
     | 'sort'
     | 'dir',
     string

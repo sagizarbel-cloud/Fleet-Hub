@@ -91,6 +91,8 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
     notes,
     workCards,
     contracted,
+    wiggleTests,
+    lastWiggle,
     workCost,
     serviceCost,
     malfunctionCost,
@@ -117,6 +119,12 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
     app.db.note.count({ where: live }),
     app.db.workCard.count({ where: live }),
     app.db.workCard.count({ where: { ...live, performedBy: 'CONTRACTED' } }),
+    app.db.wiggleTest.count({ where: live }),
+    app.db.wiggleTest.findFirst({
+      where: live,
+      orderBy: { date: 'desc' },
+      select: { date: true, failCount: true },
+    }),
     app.db.workCard.aggregate({
       _sum: { cost: true },
       where: { ...live, date: { gte: yearStart } },
@@ -218,6 +226,8 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
       notes,
       workCards,
       contracted,
+      wiggleTests,
+      lastWiggle,
     },
     items: items.map(({ assignments, ...item }) => ({
       ...item,

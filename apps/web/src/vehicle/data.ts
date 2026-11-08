@@ -81,6 +81,9 @@ export interface VehicleDetail {
     notes: number;
     workCards: number;
     contracted: number;
+    wiggleTests: number;
+    /** The newest wiggle test, for the card's summary. */
+    lastWiggle: { date: string; failCount: number } | null;
   };
   items: AssignedItem[];
 }
