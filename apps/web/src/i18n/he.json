@@ -76,7 +76,8 @@
   },
   "drawings": {
     "title": "שרטוטי כלים",
-    "replay": "הפעלה חוזרת"
+    "replay": "הפעלה חוזרת",
+    "handDrawn": "הציור הקודם שצויר ביד"
   },
   "dashboard": {
     "recentActivity": "פעילות אחרונה",

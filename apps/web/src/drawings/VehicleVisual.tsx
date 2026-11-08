@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { VehicleStatus } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
 import type { ViewDrawing } from './model';
-import { drawingFor } from './registry';
+import { DEFAULT_ENGINE, drawingFor, type DrawingEngine } from './registry';
 import { IsoDrawing } from './iso';
 import './drawings.css';
 
@@ -24,6 +24,8 @@ interface Props {
   size: number;
   /** Side profile draws itself (stroke animation) on mount. */
   draw?: boolean;
+  /** Which drawings to use: the hand-made 2D ones, or the ones rendered from 3D models. */
+  engine?: DrawingEngine;
   className?: string;
 }
 
@@ -40,8 +42,17 @@ export function Layers({ drawing }: { drawing: ViewDrawing }) {
 }
 
 /** A vehicle's line drawing in top-down, side or isometric view, tinted by status. */
-export function VehicleVisual({ type, tool, view, status, size, draw = false, className }: Props) {
-  const def = drawingFor(type, tool);
+export function VehicleVisual({
+  type,
+  tool,
+  view,
+  status,
+  size,
+  draw = false,
+  engine = DEFAULT_ENGINE,
+  className,
+}: Props) {
+  const def = drawingFor(type, tool, engine);
   const svgRef = useRef<SVGSVGElement>(null);
   const style = { '--vd-color': STATUS_VAR[status] } as CSSProperties;
 
@@ -55,7 +66,7 @@ export function VehicleVisual({ type, tool, view, status, size, draw = false, cl
       });
   }, [draw, type, tool, view]);
 
-  if (view === 'iso') {
+  if (view === 'iso' && !def.isoDrawing) {
     return (
       <div
         className={cn('vd relative', status === 'RED' && 'vd-red', className)}
@@ -72,7 +83,7 @@ export function VehicleVisual({ type, tool, view, status, size, draw = false, cl
     );
   }
 
-  const drawing = view === 'top' ? def.top : def.side;
+  const drawing = view === 'iso' ? def.isoDrawing! : view === 'top' ? def.top : def.side;
   return (
     <div
       className={cn('vd relative', status === 'RED' && 'vd-red', className)}

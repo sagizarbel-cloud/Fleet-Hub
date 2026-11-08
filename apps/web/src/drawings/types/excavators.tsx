@@ -200,7 +200,7 @@ function upper(z: number, w: number, folded: boolean, tool: ExcavatorTool): Soli
   ];
 }
 
-const crawler = (folded: boolean, tool: ExcavatorTool) =>
+export const crawler = (folded: boolean, tool: ExcavatorTool) =>
   metres([
     track('tracks', [-2.4, 2.4], 1.0, [0, 0.65]),
     box('body', [-1.2, 1.2], [0.65, 2.55], [0.45, 1.05]),
@@ -215,7 +215,7 @@ export const trackedExcavatorWith = (tool: ExcavatorTool): VehicleDrawingSource 
 });
 export const trackedExcavator = trackedExcavatorWith('bucket');
 
-const wheeled = (folded: boolean, tool: ExcavatorTool) =>
+export const wheeled = (folded: boolean, tool: ExcavatorTool) =>
   metres([
     wheel('wheels', -1.35, 0.55, 0.55, [0, 0.5]),
     wheel('wheels', 1.35, 0.55, 0.55, [0, 0.5]),

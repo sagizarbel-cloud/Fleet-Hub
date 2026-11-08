@@ -119,7 +119,24 @@ export function HeroVisual({
             pose === 'iso' ? { duration: 0.2, delay: 0.22, ease: EASE } : { duration: 0.15 }
           }
         >
-          <IsoDrawing solids={def.iso} size={isoWidth} className="block h-auto overflow-visible" />
+          {def.isoDrawing ? (
+            <svg
+              viewBox={`0 0 ${def.isoDrawing.width} ${def.isoDrawing.height}`}
+              className="block h-auto overflow-visible"
+              style={
+                { width: isoWidth, '--vd-unit': def.isoDrawing.width / isoWidth } as CSSProperties
+              }
+              aria-hidden
+            >
+              <Layers drawing={def.isoDrawing} />
+            </svg>
+          ) : (
+            <IsoDrawing
+              solids={def.iso}
+              size={isoWidth}
+              className="block h-auto overflow-visible"
+            />
+          )}
         </motion.div>
       </div>
       {pictured && (

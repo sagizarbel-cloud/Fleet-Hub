@@ -12,19 +12,22 @@ type Floors = Partial<Record<View, Record<string, number>>>;
 /**
  * How much of each part must show, per type and view (0..1): a few points under what the reviewed
  * drawings show, so a part slipping behind another fails (the forklift's mast drawn behind its
- * body showed 78%, against 100% now).
+ * body showed 78%, against 100% now). Measured on the drawings rendered from the 3D models.
  */
 const FLOORS: Record<string, Floors> = {
   wheel_loader: {
     iso: { cab: 0.82, boom: 0.65, bucket: 0.95 },
     side: { cab: 0.9, boom: 0.42, bucket: 0.95 },
-    top: { boom: 0.8, cab: 0.95 },
+    // From above, the 3D bucket and cab roof cover the ends of the arms.
+    top: { boom: 0.62, cab: 0.95 },
   },
   forklift: { iso: { mast: 0.95, cab: 0.9 }, side: { mast: 0.95 } },
   truck: { iso: { cab: 0.85, bed: 0.68 }, side: { cab: 0.92, bed: 0.92 } },
   tractor: { iso: { cab: 0.66 }, side: { cab: 0.62 } },
-  tracked_excavator: { iso: { cab: 0.93, boom: 0.92, bucket: 0.7 }, side: { cab: 0.93 } },
-  wheeled_excavator: { iso: { cab: 0.93, boom: 0.9, bucket: 0.66 }, side: { cab: 0.93 } },
+  // The cab is on the operator's left, so the boom, tank and steps stand in front of it (Sagi,
+  // 2026-11-08).
+  tracked_excavator: { iso: { cab: 0.35, boom: 0.92, bucket: 0.7 }, side: { cab: 0.35 } },
+  wheeled_excavator: { iso: { cab: 0.35, boom: 0.9, bucket: 0.66 }, side: { cab: 0.35 } },
   pickup: { iso: { cab: 0.87, bed: 0.67 } },
   skid_steer: { iso: { cab: 0.72, bucket: 0.9 } },
 };
@@ -33,8 +36,8 @@ const FLOORS: Record<string, Floors> = {
 async function visibility(page: Page, type: string, view: View) {
   const card = page.getByTestId(`drawing-${type}`);
   const svgs = card.locator('svg');
-  const count = await svgs.count();
-  const svg = svgs.nth(view === 'top' ? 0 : view === 'iso' ? 3 : count - 1);
+  // The card's first row is the app's drawing: three top views, two isometric, one side.
+  const svg = svgs.nth(view === 'top' ? 0 : view === 'iso' ? 3 : 5);
   return svg.evaluate(async (el: SVGSVGElement) => {
     const groups = [...el.querySelectorAll<SVGGElement>('g[data-part]')];
     const parts = [...new Set(groups.map((g) => g.dataset.part!))];

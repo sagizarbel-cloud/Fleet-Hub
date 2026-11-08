@@ -76,7 +76,8 @@
   },
   "drawings": {
     "title": "Vehicle drawings",
-    "replay": "Replay"
+    "replay": "Replay",
+    "handDrawn": "The earlier hand-made drawing"
   },
   "dashboard": {
     "recentActivity": "Recent activity",
