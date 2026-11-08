@@ -2,12 +2,11 @@ import type * as THREE from 'three';
 import { EXCAVATOR_TOOLS, type ExcavatorTool } from '@fleet-hub/shared';
 import type { VehicleDrawingSource } from '../../model';
 import type { ViewName } from '../render';
-import type { Solid } from '../../iso';
-import { crawler, wheeled } from '../../types/excavators';
 import { trailer } from '../../types/trailer';
 import { compressor, other, skidSteer } from '../../types/small-machines';
 import { van } from '../../types/road';
 import { fromSolids } from './from-solids';
+import { crawler3d, wheeled3d } from './excavator';
 import { forklift3d } from './forklift';
 import { pickup3d } from './pickup';
 import { tractor3d } from './tractor';
@@ -28,11 +27,11 @@ const converted = (src: VehicleDrawingSource): ModelSpec => ({
 
 /** Excavators: digging pose for side and isometric, arm folded in for the top view. */
 const digger = (
-  solids: (folded: boolean, tool: ExcavatorTool) => Solid[],
+  build: (folded: boolean, tool: ExcavatorTool) => THREE.Group,
   tool: ExcavatorTool,
 ): ModelSpec => ({
-  build: (view) => fromSolids(solids(view === 'top', tool)),
-  unit: 1,
+  build: (view) => build(view === 'top', tool),
+  unit: 44,
 });
 
 /** Every type (and excavator tool, as `type.tool`) drawn from a 3D model. */
@@ -51,8 +50,8 @@ export const MODELS: Record<string, ModelSpec> = {
     EXCAVATOR_TOOLS.flatMap((tool) => {
       const suffix = tool === 'bucket' ? '' : `.${tool}`;
       return [
-        [`tracked_excavator${suffix}`, digger(crawler, tool)],
-        [`wheeled_excavator${suffix}`, digger(wheeled, tool)],
+        [`tracked_excavator${suffix}`, digger(crawler3d, tool)],
+        [`wheeled_excavator${suffix}`, digger(wheeled3d, tool)],
       ];
     }),
   ),
