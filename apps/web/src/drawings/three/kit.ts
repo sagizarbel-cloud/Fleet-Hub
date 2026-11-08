@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
 import type { PartName } from '../model';
 
 /**
@@ -51,6 +52,12 @@ export function extrude(
   geometry.rotateX(Math.PI / 2);
   geometry.translate(0, y1, 0);
   return tag(new THREE.Mesh(geometry, material), { part, decals, smooth });
+}
+
+/** The convex hull of a set of points: tapered or rounded shapes (a cab, a nose seen from above). */
+export function hull(part: PartName, points: readonly V3[], decals?: PieceData['decals']) {
+  const geometry = new ConvexGeometry(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+  return tag(new THREE.Mesh(geometry, material), { part, decals });
 }
 
 /** A round bar or drum along an axis, from `a0` to `a1` on that axis, centred at (u, v). */

@@ -28,7 +28,8 @@ const FLOORS: Record<string, Floors> = {
   // 2026-11-08).
   tracked_excavator: { iso: { cab: 0.35, boom: 0.92, bucket: 0.7 }, side: { cab: 0.35 } },
   wheeled_excavator: { iso: { cab: 0.35, boom: 0.9, bucket: 0.66 }, side: { cab: 0.35 } },
-  pickup: { iso: { cab: 0.87, bed: 0.67 } },
+  // The traced cab is taller than the bed, so it hides the bed's front wall in the iso view.
+  pickup: { iso: { cab: 0.87, bed: 0.6 } },
   skid_steer: { iso: { cab: 0.72, bucket: 0.9 } },
 };
 

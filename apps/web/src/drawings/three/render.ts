@@ -79,7 +79,8 @@ function facesOf(root: THREE.Object3D): {
         continue;
       }
       const d = n[0] * t[0]![0] + n[1] * t[0]![1] + n[2] * t[0]![2];
-      const k = `${n.map((v) => v.toFixed(3)).join(',')}|${d.toFixed(3)}`;
+      // Rounded to whole thousandths, so -0.000 and 0.000 land in the same face.
+      const k = [...n, d].map((v) => Math.round(v * 1000)).join(',');
       const g = groups.get(k) ?? { normal: n, tris: [] };
       g.tris.push(t);
       groups.set(k, g);
