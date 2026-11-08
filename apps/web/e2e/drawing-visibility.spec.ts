@@ -24,9 +24,10 @@ const FLOORS: Record<string, Floors> = {
   forklift: { iso: { mast: 0.95, cab: 0.9 }, side: { mast: 0.95 } },
   truck: { iso: { cab: 0.85, bed: 0.68 }, side: { cab: 0.92, bed: 0.92 } },
   tractor: { iso: { cab: 0.66 }, side: { cab: 0.62 } },
-  // The cab is on the operator's left, so the boom crosses in front of it (Sagi, 2026-11-08).
-  tracked_excavator: { iso: { cab: 0.35, boom: 0.92, bucket: 0.7 }, side: { cab: 0.75 } },
-  wheeled_excavator: { iso: { cab: 0.35, boom: 0.9, bucket: 0.66 }, side: { cab: 0.75 } },
+  // The cab is on the operator's left, so the boom, tank and steps stand in front of it (Sagi,
+  // 2026-11-08).
+  tracked_excavator: { iso: { cab: 0.35, boom: 0.92, bucket: 0.7 }, side: { cab: 0.35 } },
+  wheeled_excavator: { iso: { cab: 0.35, boom: 0.9, bucket: 0.66 }, side: { cab: 0.35 } },
   pickup: { iso: { cab: 0.87, bed: 0.67 } },
   skid_steer: { iso: { cab: 0.72, bucket: 0.9 } },
 };

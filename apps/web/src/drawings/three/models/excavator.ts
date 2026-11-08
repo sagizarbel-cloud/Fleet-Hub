@@ -24,6 +24,15 @@ const ring = (cx: number, y: number, cz: number, r: number): V3[] =>
 
 const outline = (pts: V3[]): V3[] => [...pts, pts[0]!];
 
+/** A rectangle on a face of constant y. */
+const onY = (y: number, [x0, x1]: V2, [z0, z1]: V2): V3[] =>
+  outline([
+    [x0, y, z0],
+    [x1, y, z0],
+    [x1, y, z1],
+    [x0, y, z1],
+  ]);
+
 /** A pin through a joint, across the arm. */
 const pin = (part: 'boom' | 'bucket', x: number, z: number, [y0, y1]: V2, r = 0.09) =>
   cylinder(part, 'y', [y0, y1], [x, z], r, 16);
@@ -234,7 +243,7 @@ function upper(z: number, w: number, folded: boolean, kind: ExcavatorTool): THRE
         // Louvred side panels and a service door on the near side.
         ...[0.45, 0.62, 0.79].map((dzz): V3[] => [
           [-1.95, near, z + dzz],
-          [-0.75, near, z + dzz],
+          [-1.45, near, z + dzz],
         ]),
         outline([
           [-2.5, near, z + 0.3],
@@ -261,22 +270,56 @@ function upper(z: number, w: number, folded: boolean, kind: ExcavatorTool): THRE
         ]),
       ],
     ),
-    // House beside the cab on the near side: tank and boom foot housing.
+    // Right side, beside the boom: boom foot housing in the middle, then a toolbox at the
+    // front and the hydraulic tank behind it, stepping up to the house like a stair.
+    box('body', [-0.45, 1.3], [cabY + 0.05, mid + 0.45], [z + 0.12, z + 0.6]),
     box(
       'body',
-      [-0.45, 1.3],
-      [0.1, cabY - 0.05],
-      [z + 0.12, z + 1.0],
+      [0.15, 1.3],
+      [mid + 0.45, near],
+      [z + 0.12, z + 0.72],
       [
-        outline([
-          [1.3, 0.25, z + 0.3],
-          [1.3, mid - 0.5, z + 0.3],
-          [1.3, mid - 0.5, z + 0.85],
-          [1.3, 0.25, z + 0.85],
+        onY(near, [0.3, 1.15], [z + 0.22, z + 0.62]),
+        [
+          [1.05, near, z + 0.4],
+          [1.05, near, z + 0.48],
+        ],
+      ],
+    ),
+    box(
+      'body',
+      [-0.45, 0.15],
+      [mid + 0.45, near],
+      [z + 0.12, z + 1.0],
+      [onY(near, [-0.35, 0.05], [z + 0.25, z + 0.9])],
+    ),
+    // Step plates up the front of the toolbox and the tank.
+    box('body', [1.3, 1.45], [near - 0.55, near - 0.05], [z + 0.33, z + 0.37]),
+    box('body', [0.15, 0.3], [near - 0.55, near - 0.05], [z + 0.95, z + 1.0]),
+    // Handrail beside the steps and a guard rail round the front corner of the house top.
+    ...[1.2, 0.2].map((x) => box('body', [x, x + 0.05], [near - 0.05, near], [z + 0.72, z + 1.55])),
+    box('body', [0.2, 1.25], [near - 0.05, near], [z + 1.5, z + 1.55]),
+    ...[
+      [-0.55, near - 0.05],
+      [-0.55, near - 0.75],
+      [-1.15, near - 0.05],
+    ].map(([x, y]) => box('body', [x!, x! + 0.05], [y!, y! + 0.05], [z + H, z + H + 0.75])),
+    box('body', [-0.55, -0.5], [near - 0.75, near], [z + H + 0.7, z + H + 0.75]),
+    box('body', [-1.15, -0.5], [near - 0.05, near], [z + H + 0.7, z + H + 0.75]),
+    // Dark radiator grille panel on the right side of the house.
+    box(
+      'body',
+      [-1.35, -0.6],
+      [near, near + 0.03],
+      [z + 0.25, z + 1.1],
+      [
+        ...[0.38, 0.52, 0.66, 0.8, 0.94].map((dzz): V3[] => [
+          [-1.3, near + 0.03, z + dzz],
+          [-0.65, near + 0.03, z + dzz],
         ]),
       ],
     ),
-    // Engine hood grille, exhaust and the handrail along the near edge.
+    // Engine hood grille and the exhaust.
     box(
       'body',
       [-2.2, -0.75],
@@ -290,10 +333,7 @@ function upper(z: number, w: number, folded: boolean, kind: ExcavatorTool): THRE
       ],
     ),
     cylinder('body', 'z', [z + H, z + H + 0.4], [-1.0, 0.6], 0.07, 16),
-    ...[-2.3, -1.4, -0.55].map((x) =>
-      box('body', [x, x + 0.05], [near - 0.07, near - 0.02], [z + H, z + H + 0.4]),
-    ),
-    box('body', [-2.3, -0.5], [near - 0.07, near - 0.02], [z + H + 0.36, z + H + 0.41]),
+
     // Cab on the deck: big door glass, a raked front screen, roof just above the house.
     extrude(
       'cab',
