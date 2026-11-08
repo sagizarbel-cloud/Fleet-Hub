@@ -6,9 +6,10 @@ import type { Solid } from '../../iso';
 import { crawler, wheeled } from '../../types/excavators';
 import { trailer } from '../../types/trailer';
 import { compressor, forklift, other, skidSteer, tractor } from '../../types/small-machines';
-import { truck, van } from '../../types/road';
+import { van } from '../../types/road';
 import { fromSolids } from './from-solids';
 import { pickup3d } from './pickup';
+import { truck3d } from './truck';
 import { wheelLoader3d } from './wheel-loader';
 
 export interface ModelSpec {
@@ -36,7 +37,7 @@ const digger = (
 export const MODELS: Record<string, ModelSpec> = {
   wheel_loader: { build: () => wheelLoader3d(), unit: 44 },
   pickup: { build: () => pickup3d(), unit: 1 },
-  truck: converted(truck),
+  truck: { build: () => truck3d(), unit: 44 },
   van: converted(van),
   trailer: converted(trailer),
   tractor: converted(tractor),
