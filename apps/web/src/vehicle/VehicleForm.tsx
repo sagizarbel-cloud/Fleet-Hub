@@ -23,6 +23,7 @@ import { cn } from '@/lib/cn';
 import { errorProps, INPUT, issuesToErrors, Labeled, type Errors } from '@/money/form';
 import { attachmentUrl } from './records/api';
 import { useVehicle } from './data';
+import { LocationField } from './LocationField';
 import { useSaveVehicle, useVehicleForm } from './form-api';
 
 const STEPS = [
@@ -286,7 +287,7 @@ export function VehicleForm({
       />
     </Labeled>
   );
-  const select = (k: 'department' | 'location', list: 'departments' | 'locations') => (
+  const select = (k: 'department', list: 'departments') => (
     <Labeled id={`vf-${k}`} label={t(`vehicleForm.field.${k}`)} error={errors[k]}>
       <select
         {...errorProps(`vf-${k}`, errors[k])}
@@ -337,7 +338,13 @@ export function VehicleForm({
     model: text('model', REQUIRED),
     year: text('year', COUNT),
     department: select('department', 'departments'),
-    location: select('location', 'locations'),
+    location: (
+      <LocationField
+        value={values.location}
+        error={errors.location}
+        onChange={(c) => set('location', c)}
+      />
+    ),
     operatorName: text('operatorName'),
     usage: unit === 'HOURS' ? text('engineHours', COUNT) : text('odometerKm', COUNT),
     nextServiceDate: text('nextServiceDate', DATE),
