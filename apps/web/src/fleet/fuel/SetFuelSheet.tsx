@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fuelLevelBody } from '@fleet-hub/shared';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
+import { isolate } from '@/lib/bidi';
 import { cn } from '@/lib/cn';
 import { errorProps, INPUT, Labeled } from '@/money/form';
 import { useSetFuel, type FuelRow } from './data';
@@ -50,7 +51,7 @@ export default function SetFuelSheet({
 
   return (
     <Sheet
-      title={t('fuel.setTitle', { serial: row.serial })}
+      title={t('fuel.setTitle', { serial: isolate(row.serial) })}
       onClose={onClose}
       reduced={reduced}
       footer={
