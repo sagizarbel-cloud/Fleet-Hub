@@ -93,6 +93,10 @@ const money = nullable(z.number().min(0).max(100_000_000));
 const reading = nullable(z.number().int().min(0).max(100_000_000));
 const code = z.string().min(1).max(40);
 
+/** Where a service's cost comes from (Sagi, 2026-11-15): a receipt or a price quote in the app. */
+export const COST_SOURCE_KINDS = ['receipt', 'quote'] as const;
+export type CostSourceKind = (typeof COST_SOURCE_KINDS)[number];
+
 export const serviceBody = z.object({
   date: day,
   odometerKm: reading,
@@ -100,6 +104,15 @@ export const serviceBody = z.object({
   description: text(500),
   vendor: optText(120),
   cost: money,
+  /** Free text about the cost, e.g. "Package: 10 services for 2,000 ILS". */
+  costNote: optText(200),
+  /**
+   * The receipt or quote the cost comes from. A receipt that isn't linked to a record already
+   * counts in costs on its own, so the service then keeps no amount (the server checks).
+   */
+  costSource: nullable(
+    z.object({ kind: z.enum(COST_SOURCE_KINDS), id: z.string().min(1).max(40) }),
+  ),
   // Written to the vehicle's next-service fields when given.
   nextServiceDate: nullable(anyDay),
   nextServiceKm: reading,
@@ -359,6 +372,8 @@ export type ReceiptBody = z.input<typeof receiptBody>;
 
 export const receiptsQuery = z.object({
   ...page,
+  /** One receipt, e.g. opened from a service's cost link (Sagi, 2026-11-15). */
+  id: z.string().min(1).max(40).optional(),
   vehicle: serial.optional(),
   category: code.optional(),
   state: z.enum(RECEIPT_STATES).optional(),

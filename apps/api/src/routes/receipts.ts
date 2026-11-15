@@ -92,6 +92,7 @@ export const receiptRoutes: FastifyPluginAsync = async (app) => {
     const q = parse(receiptsQuery, req.query);
     const user = req.user!;
     const and: Prisma.DocumentWhereInput[] = [{ deletedAt: null }];
+    if (q.id) and.push({ id: q.id });
     if (q.vehicle) and.push({ vehicles: { some: { vehicle: { serial: q.vehicle } } } });
     if (q.category) and.push({ category: { code: q.category } });
     if (q.state) and.push({ approvedAt: q.state === 'approved' ? { not: null } : null });
