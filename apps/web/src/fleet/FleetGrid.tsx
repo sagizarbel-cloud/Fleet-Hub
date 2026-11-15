@@ -46,6 +46,9 @@ const ReceiptForm = lazy(() =>
   import('@/money/ReceiptForm').then((m) => ({ default: m.ReceiptForm })),
 );
 const EquipmentTray = lazy(() => import('./EquipmentTray'));
+const VehicleForm = lazy(() =>
+  import('@/vehicle/VehicleForm').then((m) => ({ default: m.VehicleForm })),
+);
 // Yard play is an optional install: without YARD_PLAY=on the build has none of it.
 const YardPlay = __YARD_PLAY__ ? lazy(() => import('@/play/YardPlay')) : null;
 
@@ -434,6 +437,7 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
     start: () => rootRef.current && setPlay({ root: rootRef.current, tiles: visible }),
   });
   const canAdd = !!user && hasRole(user.role, 'EDITOR');
+  const [adding, setAdding] = useState(false);
   const lang = i18n.language;
 
   const askAssign = (serial: string, item: PickedItem) => {
@@ -706,9 +710,9 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
           <div className="flex flex-wrap items-end gap-2">
             <button
               type="button"
-              disabled
-              title={t('topbar.comingSoon')}
-              className="border-border-strong text-muted flex h-24 w-[5.25rem] flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs disabled:cursor-not-allowed"
+              onClick={() => setAdding(true)}
+              className="border-border-strong text-muted hover:text-text hover:border-accent flex h-24 w-[5.25rem] flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs"
+              data-testid="grid-add-vehicle"
             >
               <Plus aria-hidden className="size-5" />
               {t('dashboard.addVehicle')}
@@ -730,6 +734,11 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
           {trayOpen && (
             <Suspense fallback={null}>
               <EquipmentTray picked={picked} onPick={setPicked} />
+            </Suspense>
+          )}
+          {adding && (
+            <Suspense fallback={null}>
+              <VehicleForm serial={null} reduced={reduced} onClose={() => setAdding(false)} />
             </Suspense>
           )}
         </motion.div>

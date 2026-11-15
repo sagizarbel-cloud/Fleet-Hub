@@ -61,6 +61,29 @@ test.describe('add and edit a vehicle', () => {
     await expect(page.locator('li[data-new]')).toHaveCount(1);
   });
 
+  test("the fleet grid's Add vehicle opens the form, and a new location can be added from it", async ({
+    page,
+  }) => {
+    const name = `E2E yard ${stamp()}`;
+    await page.goto('/');
+    await page.getByTestId('grid-add-vehicle').click();
+    const sheet = page.getByTestId('sheet');
+    await page.getByTestId('type-picker').getByText('Pickup', { exact: true }).click();
+    await page.getByTestId('vehicle-next').click();
+    await sheet.getByLabel('Serial No.').fill(`E2L-${stamp()}`);
+    await sheet.getByLabel('Make').fill('Test');
+    await sheet.getByLabel('Model').fill('Pickup');
+    await page.getByTestId('vehicle-next').click();
+    const location = sheet.getByLabel('Current location');
+    await location.selectOption({ label: 'New location…' });
+    await page.getByTestId('new-location-en').fill(name);
+    // Enter adds the location; it doesn't submit the vehicle form.
+    await page.getByTestId('new-location-en').press('Enter');
+    await expect(page.getByTestId('new-location')).toBeHidden();
+    await expect(location.locator('option:checked')).toHaveText(name);
+    await expect(sheet).toBeVisible();
+  });
+
   test('editing names the changed fields, and photos replace the drawing on the vehicle page', async ({
     page,
   }) => {
