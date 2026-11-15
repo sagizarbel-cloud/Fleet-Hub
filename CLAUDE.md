@@ -6,6 +6,7 @@ Bilingual (English/Hebrew, RTL) fleet-management web app, self-hosted on our own
 - Build order and acceptance criteria: `docs/PHASES.md`
 - What's done and what's next: `docs/PROGRESS.md` (update at the end of every phase)
 - How it fits together (server, auth, performance, deploy): `docs/ARCHITECTURE.md`
+- Live data from connected vehicles (ingest contract for the telematics provider): `docs/LIVE-DATA.md`
 
 ## Stack (confirmed in Phase 0; update here if it changes)
 
@@ -25,6 +26,7 @@ Bilingual (English/Hebrew, RTL) fleet-management web app, self-hosted on our own
 - `pnpm lint` · `pnpm format` · `pnpm typecheck` · `pnpm test` (Vitest; api tests use `DATABASE_URL_TEST`) · `pnpm e2e` (Playwright, against `pnpm dev` and the seeded dev DB)
 - `pnpm db:migrate` · `pnpm db:seed` (wipes and reloads the fake fleet) · `pnpm db:reset`
 - `pnpm samples` (rewrites the fake Excel sheets in `docs/samples/` used to try the import)
+- `pnpm fuel:simulate [serial …]` (dev: posts live fuel readings through a real connection, so the dashboard's fuel panel can be watched updating; see `docs/LIVE-DATA.md`)
 - `pnpm i18n:check` (fails on any key without a Hebrew value; also the hidden `/i18n-check` page)
 - `pnpm check:arm64` (static: arm64 Prisma engine + argon2 and sharp prebuilts) · `pnpm docker:arm64` (full: builds the production api image for linux/arm64, which checks its native modules; needs an ARM host or QEMU)
 - Seed logins: `admin@`, `editor@`, `viewer@fleethub.test`, password `SEED_PASSWORD` from `.env`

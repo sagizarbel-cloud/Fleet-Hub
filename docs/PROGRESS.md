@@ -9,6 +9,18 @@
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
 
+### Current fuel and live data — 2026-11-15
+
+- Sagi: a current fuel panel for all vehicles, and a connection ready for live data; fuel is one of the few values that should update in real time from connected vehicles. The telematics system isn't chosen, so the ingest is provider-agnostic (contract in `docs/LIVE-DATA.md`).
+- Dashboard: a _Current fuel_ panel under the KPIs (phones: between the KPIs and the grid). Every vehicle with a tank (trailers left out), lowest first or by number, a bar per vehicle (red at 20% or less), and whether the level is Live, Stale (a live one older than 15 minutes), Manual (with its age) or missing. Rows open the vehicle. The order is fixed when the list loads or the sort changes, so live readings don't make rows jump; the row that just changed lights up briefly.
+- Real time: server-sent events (`GET /api/fuel/stream`), fanned out in-process. The browser reconnects by itself and reloads the list after a drop; the panel shows whether live updates are on.
+- Manual: editors set a level (percent, optional litres) with the pencil; logged in the timeline as `FUEL_LEVEL` ("Fuel level set to N%"), under the Fuel filter. Live readings stay out of the timeline (a vehicle may report every minute).
+- Live: admins add connections in Settings → Live data. One-vehicle connections (a tracker) or gateways (the provider's server, naming each vehicle by serial or VIN). Token shown once, hash stored, new token / turn off, all in the audit log. `POST /api/telematics/v1/readings` with `Authorization: Bearer`, single reading, array or `{ readings }` up to 500; each reading checked on its own; late readings join the history without replacing a newer level; 120 requests a minute per connection.
+- Data: `FuelLevel` (current, one per vehicle), `FuelLevelReading` (history; live ones pruned after 90 days), `TelematicsDevice`; migration `live_fuel` (additive). Vehicle page: a pinnable _Fuel level_ vital.
+- Dev: `pnpm fuel:simulate [serial …]` posts falling levels every 5 s through a real connection. The seed has manual levels and three live vehicles on a fake gateway.
+- Not checked on the server yet: that Caddy (with `encode`) streams the events without buffering. After deploy, check the panel says "Live updates on" and that a `curl` reading shows up at once (`docs/LIVE-DATA.md`).
+- Tests: 16 api tests (`test/live-fuel.test.ts`), 3 e2e (`e2e/fuel.spec.ts`).
+
 ### Wiggle test — 2026-11-08
 
 - Sagi: a quick check of heavy machinery, tied to the user and the vehicle. A new record kind `wiggleTests` (table `WiggleTest`, migration `wiggle_tests`, additive): a V / X per item, one optional "Other problems" text at the end, saved with who did it and when (date and time of saving). Event `WIGGLE_TEST` names the items marked X.
@@ -202,6 +214,8 @@ Round 3 (Sagi, 2026-11-05):
 ## Later
 
 <!-- Ideas and out-of-scope findings, to revisit after Phase 9. -->
+
+- Current fuel: a tank size per vehicle (litres ↔ percent when only one is sent); a fill-up record setting the level to full; a low-fuel alert or timeline entry when a live level crosses 20%; a fuel level chart from the reading history; more live values (engine hours, location) through the same ingest
 
 - Dashboard KPI cards at 390 px: "Open malfunctions" and "Spent this month" sit tight against their numbers, and the shekel sign touches the digit (seen on the empty fleet)
 - A content security policy for the web app (the api already has a strict one)

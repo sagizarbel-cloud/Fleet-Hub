@@ -27,6 +27,7 @@ fleet-hub/
 Browser → Caddy (HTTPS, compressed static web build, proxies `/api/*`) → Fastify API → Prisma → PostgreSQL.
 Uploads go `multipart` to the API, which checks type and size and writes them to `UPLOAD_DIR` (a Docker volume). Files are streamed back only by authenticated routes, never served by Caddy directly.
 Every vehicle-changing write runs in one DB transaction: record + Event + recomputed status (SPEC A7).
+Live data (2026-11-15): connected vehicles or the telematics provider post readings with a per-connection token to `/api/telematics/v1/readings`; open dashboards get new fuel levels over server-sent events (`/api/fuel/stream`), fanned out inside the single api process. Details and the contract: `docs/LIVE-DATA.md`.
 
 ## Auth and security (sensible basics; data is not highly sensitive)
 
