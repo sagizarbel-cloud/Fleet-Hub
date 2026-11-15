@@ -57,7 +57,7 @@ const RECORDS: Record<RecordKey, { icon: LucideIcon; types: EventType[] }> = {
     types: ['MALFUNCTION_REPORTED', 'MALFUNCTION_UPDATED', 'MALFUNCTION_RESOLVED'],
   },
   fluids: { icon: Droplet, types: ['FLUID_ADDED'] },
-  fuel: { icon: Fuel, types: ['FUEL_ADDED'] },
+  fuel: { icon: Fuel, types: ['FUEL_ADDED', 'FUEL_LEVEL'] },
   movements: { icon: ArrowLeftRight, types: ['MOVEMENT'] },
   inspections: { icon: ClipboardCheck, types: ['INSPECTION'] },
   ownership: { icon: ShieldCheck, types: [] },

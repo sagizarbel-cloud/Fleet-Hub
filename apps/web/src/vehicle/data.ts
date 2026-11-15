@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   DetailView,
   FleetGrouping,
+  FuelLevelSource,
   VehicleCategory,
   VehicleStatus,
   VitalKey,
@@ -62,6 +63,12 @@ export interface VehicleDetail {
     maintenanceCostYtd: number;
     lastActivity: string | null;
     lastFuel: { date: string; liters: number } | null;
+    fuelLevel: {
+      pct: number | null;
+      liters: number | null;
+      at: string;
+      source: FuelLevelSource;
+    } | null;
     lastMovement: { date: string; to: string } | null;
   };
   counts: {

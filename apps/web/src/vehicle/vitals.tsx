@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { VitalKey } from '@fleet-hub/shared';
+import { FUEL_LOW_PCT, fuelState, type VitalKey } from '@fleet-hub/shared';
 import { lookupName, useLookups } from '@/fleet/data';
 import { formatMoney } from '@/fleet/events';
 import { useDateFormat } from '@/fleet/FleetGrid';
 import type { VehicleDetail } from './data';
+import { fuelAmount, useFuelAge } from '@/fleet/fuel/format';
 import { localeOf, numberFormat, relativeFormat } from '@/lib/intl';
 
 /** Every value the page can show about a vehicle: the A6 vitals plus a few callout-only ones. */
@@ -40,6 +41,7 @@ export function useVehicleInfo(v: VehicleDetail | undefined) {
   const num = numberFormat(localeOf(lang), { maximumFractionDigits: 1 });
   const relative = relativeFormat(localeOf(lang), { numeric: 'auto' });
   const [now] = useState(Date.now);
+  const fuelAge = useFuelAge();
 
   const usage = (km: number | null, hours: number | null) => {
     if (v?.usageUnit === 'HOURS')
@@ -131,6 +133,18 @@ export function useVehicleInfo(v: VehicleDetail | undefined) {
             : null,
           mono: true,
         };
+      case 'fuelLevel': {
+        const level = c.fuelLevel;
+        if (!level) return { label, value: null };
+        const state = fuelState(level, now);
+        return {
+          label,
+          value: `${fuelAmount(level, num)} · ${t(`fuel.state.${state}`)}`,
+          hint: fuelAge(level.at, now),
+          tone: level.pct !== null && level.pct <= FUEL_LOW_PCT ? 'bad' : undefined,
+          mono: true,
+        };
+      }
       case 'maintenanceCostYtd':
         return { label, value: formatMoney(c.maintenanceCostYtd, lang), mono: true };
       case 'purchaseWarranty': {
