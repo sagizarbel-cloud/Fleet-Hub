@@ -16,6 +16,7 @@ import {
 } from '@fleet-hub/shared';
 import { HttpError } from './http';
 import { readAppSettings } from './app-settings';
+import { visibleQuotesWhere } from './quote-visibility';
 
 type Tx = Prisma.TransactionClient;
 type Row = Record<string, unknown> & {
@@ -53,6 +54,9 @@ export interface VehicleRef {
 interface Ctx {
   tx: Tx;
   vehicle: VehicleRef;
+  user: SessionUser;
+  /** The record being edited; absent when adding. */
+  id?: string;
 }
 
 export interface ListFilters {
@@ -141,8 +145,11 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
     sourceType: 'ServiceRecord',
     dateField: 'date',
     createType: 'SERVICE',
-    search: ['description', 'vendor'],
-    data: async ({ nextServiceDate: _d, nextServiceKm: _k, nextServiceHours: _h, ...rest }) => rest,
+    search: ['description', 'vendor', 'costNote'],
+    data: async (
+      { nextServiceDate: _d, nextServiceKm: _k, nextServiceHours: _h, costSource, ...rest },
+      ctx,
+    ) => ({ ...rest, ...(await costSourceIds(ctx, costSource, rest.cost)) }),
     params: (row) => ({ description: row.description as string }),
     after: async (ctx, input) => {
       if (!input) return;
@@ -379,6 +386,120 @@ async function keepDefinedCustom(tx: Tx, custom: unknown) {
   return Object.keys(out).length ? out : Prisma.DbNull;
 }
 
+const invalid = (path: string, code: string) =>
+  Object.assign(new HttpError(400, 'validation_failed'), { issues: [{ path, code }] });
+
+/**
+ * The receipt or quote a service's cost comes from (Sagi, 2026-11-15). Either must be live and
+ * tagged with this vehicle; a receipt must be approved, and a quote one the user can see, or the
+ * one the service already points at (so an edit by someone who can't see it keeps it).
+ * A receipt that isn't linked to a record counts in costs by itself, so the service can't also
+ * carry an amount: that would count the money twice.
+ */
+async function costSourceIds(
+  ctx: Ctx,
+  source: { kind: 'receipt' | 'quote'; id: string } | null,
+  cost: number | null,
+) {
+  if (!source) return { costReceiptId: null, costQuoteId: null };
+  const tagged = { vehicles: { some: { vehicleId: ctx.vehicle.id } } };
+  if (source.kind === 'receipt') {
+    const doc = await ctx.tx.document.findFirst({
+      where: { id: source.id, deletedAt: null, approvedAt: { not: null }, ...tagged },
+      select: { linkedRecordId: true },
+    });
+    if (!doc) throw invalid('costSource', 'unknown');
+    if (cost !== null && !doc.linkedRecordId) throw invalid('cost', 'receipt_counts');
+    return { costReceiptId: source.id, costQuoteId: null };
+  }
+  const current = ctx.id
+    ? await ctx.tx.serviceRecord.findUnique({
+        where: { id: ctx.id },
+        select: { costQuoteId: true },
+      })
+    : null;
+  const where = { id: source.id, ...tagged };
+  const quote = await ctx.tx.quote.findFirst({
+    where:
+      current?.costQuoteId === source.id
+        ? { ...where, deletedAt: null }
+        : { AND: [where, visibleQuotesWhere(ctx.user)] },
+    select: { id: true },
+  });
+  if (!quote) throw invalid('costSource', 'unknown');
+  return { costReceiptId: null, costQuoteId: source.id };
+}
+
+/**
+ * What each service's cost links to, as the list shows it: the receipt, or the quote with its
+ * supplier and total. A quote this user can't see shows only that there is one.
+ */
+async function costSourcesFor(tx: Tx, user: SessionUser, rows: Row[]) {
+  const receiptIds = rows.map((r) => r.costReceiptId).filter((v): v is string => !!v);
+  const quoteIds = rows.map((r) => r.costQuoteId).filter((v): v is string => !!v);
+  const [docs, quotes, visible] = await Promise.all([
+    receiptIds.length
+      ? tx.document.findMany({
+          where: { id: { in: receiptIds }, deletedAt: null },
+          select: {
+            id: true,
+            kind: true,
+            date: true,
+            vendor: true,
+            amount: true,
+            linkedRecordId: true,
+          },
+        })
+      : [],
+    quoteIds.length
+      ? tx.quote.findMany({
+          where: { id: { in: quoteIds }, deletedAt: null },
+          select: {
+            id: true,
+            date: true,
+            supplier: { select: { name: true } },
+            lines: { select: { quantity: true, unitPrice: true } },
+          },
+        })
+      : [],
+    quoteIds.length
+      ? tx.quote.findMany({
+          where: { AND: [{ id: { in: quoteIds } }, visibleQuotesWhere(user)] },
+          select: { id: true },
+        })
+      : [],
+  ]);
+  const seen = new Set(visible.map((q) => q.id));
+  const out = new Map<string, unknown>();
+  for (const d of docs)
+    out.set(`receipt:${d.id}`, {
+      kind: 'receipt',
+      id: d.id,
+      documentKind: d.kind,
+      date: d.date,
+      label: d.vendor,
+      amount: num(d.amount),
+      counted: d.linkedRecordId === null,
+    });
+  for (const q of quotes)
+    out.set(
+      `quote:${q.id}`,
+      seen.has(q.id)
+        ? {
+            kind: 'quote',
+            id: q.id,
+            date: q.date,
+            label: q.supplier.name,
+            amount: q.lines.reduce((t, l) => t + l.quantity * l.unitPrice.toNumber(), 0),
+          }
+        : { kind: 'quote', id: q.id, hidden: true },
+    );
+  return (row: Row) =>
+    (row.costReceiptId ? out.get(`receipt:${row.costReceiptId as string}`) : null) ??
+    (row.costQuoteId ? out.get(`quote:${row.costQuoteId as string}`) : null) ??
+    null;
+}
+
 /**
  * Links the given receipts of this vehicle to a work card and unlinks the card's others
  * (Revisions 1). Only approved, live receipts of the same vehicle can be linked.
@@ -474,7 +595,15 @@ export function canChange(user: SessionUser, kind: RecordKind, row: Row) {
   );
 }
 
-const LOOKUP_IDS = new Set(['fluidTypeId', 'fuelTypeId', 'fromLocationId', 'toLocationId']);
+const LOOKUP_IDS = new Set([
+  'fluidTypeId',
+  'fuelTypeId',
+  'fromLocationId',
+  'toLocationId',
+  // A service's cost link goes out as `costSource` instead.
+  'costReceiptId',
+  'costQuoteId',
+]);
 const LOOKUP_KEYS = new Set(['fluidType', 'fuelType', 'fromLocation', 'toLocation']);
 
 /** A row as the API returns it: decimals as numbers, lookups as codes. */
@@ -515,10 +644,16 @@ export async function attachmentsFor(tx: Tx, ownerType: string, ids: string[]) {
 }
 
 /** Adds author names, attachments and (for fuel) per-fill-up economy to serialized rows. */
-async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row[]) {
+async function decorate(
+  tx: Tx,
+  user: SessionUser,
+  kind: RecordKind,
+  vehicle: VehicleRef,
+  rows: Row[],
+) {
   const ids = rows.map((r) => r.id);
   const authorIds = [...new Set(rows.map((r) => r.createdById).filter((v): v is string => !!v))];
-  const [authors, files, economy, receipts, services] = await Promise.all([
+  const [authors, files, economy, receipts, services, costSource] = await Promise.all([
     authorIds.length
       ? tx.user.findMany({ where: { id: { in: authorIds } }, select: { id: true, name: true } })
       : [],
@@ -526,6 +661,7 @@ async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row
     kind === 'fuel' ? fuelEconomy(tx, vehicle) : null,
     kind === 'workCards' ? receiptsFor(tx, ids) : null,
     kind === 'workCards' ? servicesFor(tx, ids) : null,
+    kind === 'service' ? costSourcesFor(tx, user, rows) : null,
   ]);
   const names = new Map(authors.map((a) => [a.id, a.name]));
   const points = new Map(economy?.points.map((p) => [p.id, p]));
@@ -540,6 +676,7 @@ async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row
         : {}),
       ...(receipts ? { receipts: receipts.get(row.id) ?? [] } : {}),
       ...(services ? { services: services.get(row.id) ?? [] } : {}),
+      ...(costSource ? { costSource: costSource(row) } : {}),
     };
   });
 }
@@ -606,7 +743,7 @@ export async function listRecords(
     model.count({ where }),
   ]);
   return {
-    items: await decorate(tx, kind, vehicle, rows),
+    items: await decorate(tx, user, kind, vehicle, rows),
     total,
     nextOffset: !q.all && skip + rows.length < total ? skip + rows.length : null,
   };
@@ -639,7 +776,7 @@ export async function createRecord<K extends RecordKind>(
   importRunId: string | null = null,
 ) {
   const cfg = KINDS[kind] as KindConfig<K>;
-  const ctx = { tx, vehicle };
+  const ctx: Ctx = { tx, vehicle, user };
   const row = await delegate(tx, kind).create({
     data: { ...(await cfg.data(input, ctx)), vehicleId: vehicle.id, createdById: user.id },
     include: cfg.include,
@@ -676,7 +813,7 @@ export async function updateRecord<K extends RecordKind>(
   input: RecordInput<K>,
 ) {
   const cfg = KINDS[kind] as KindConfig<K>;
-  const ctx = { tx, vehicle };
+  const ctx: Ctx = { tx, vehicle, user, id };
   const before = await findRow(tx, kind, vehicle, id);
   if (before.deletedAt) throw new HttpError(404, 'not_found');
   if (!canChange(user, kind, before)) throw new HttpError(403, 'forbidden');
@@ -757,11 +894,17 @@ export async function setDeleted(
       params: { kind, of: cfg.createType, ...cfg.params(row) },
     },
   });
-  await cfg.after?.({ tx, vehicle }, null, id);
+  await cfg.after?.({ tx, vehicle, user, id }, null, id);
 }
 
-export async function serializeOne(tx: Tx, kind: RecordKind, vehicle: VehicleRef, row: Row) {
-  const [item] = await decorate(tx, kind, vehicle, [row]);
+export async function serializeOne(
+  tx: Tx,
+  user: SessionUser,
+  kind: RecordKind,
+  vehicle: VehicleRef,
+  row: Row,
+) {
+  const [item] = await decorate(tx, user, kind, vehicle, [row]);
   return item!;
 }
 
@@ -769,11 +912,17 @@ export async function serializeOne(tx: Tx, kind: RecordKind, vehicle: VehicleRef
  * One record for its report (Revisions 1): the row as the list returns it, plus every timeline
  * entry about it (reported, updated, resolved, edited, restored) with who wrote it, oldest first.
  */
-export async function getRecord(tx: Tx, kind: RecordKind, vehicle: VehicleRef, id: string) {
+export async function getRecord(
+  tx: Tx,
+  user: SessionUser,
+  kind: RecordKind,
+  vehicle: VehicleRef,
+  id: string,
+) {
   const row = await findRow(tx, kind, vehicle, id);
   if (row.deletedAt) throw new HttpError(404, 'not_found');
   const [item, events] = await Promise.all([
-    serializeOne(tx, kind, vehicle, row),
+    serializeOne(tx, user, kind, vehicle, row),
     tx.event.findMany({
       where: { ...source(kind, id), hiddenAt: null },
       orderBy: [{ occurredAt: 'asc' }, { createdAt: 'asc' }],

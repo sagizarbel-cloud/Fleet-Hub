@@ -30,6 +30,36 @@ async function readExport(page: Page) {
 }
 
 test.describe('record panels', () => {
+  test('a service cost as a note linked to its receipt (Sagi, 2026-11-15)', async ({ page }) => {
+    const text = `E2E package service ${Date.now()}`;
+    await openPanel(page, 'PU-902', 'service');
+    await page.getByTestId('add-record').click();
+    const sheet = page.getByTestId('sheet');
+    await sheet.getByLabel('Description').fill(text);
+    await sheet.getByLabel('Cost note').fill('Package: 10 services for 2,000 ILS');
+    const picker = sheet.getByLabel('Receipt or quote');
+    const receipt = picker.locator('optgroup[label=Receipts] option').first();
+    await picker.selectOption((await receipt.getAttribute('value'))!);
+    // An unlinked receipt counts on its own, so the service keeps no amount.
+    await expect(sheet.getByLabel('Cost', { exact: true })).toBeDisabled();
+    await sheet.getByRole('button', { name: 'Save' }).click();
+    await expect(sheet).toBeHidden();
+
+    const row = page.getByTestId('record-table').locator('tr', { hasText: text });
+    await expect(row.getByTestId('cost-note')).toHaveText('Package: 10 services for 2,000 ILS');
+    await row.getByTestId('cost-link').click();
+    await expect(page).toHaveURL(/\/receipts\?id=/);
+    await expect(page.getByTestId('receipt-one')).toBeVisible();
+    await expect(page.getByTestId('receipts-view').getByTestId(/receipt-(card|row)/)).toHaveCount(
+      1,
+    );
+
+    // Clean up: back to the vehicle and delete the service.
+    await openPanel(page, 'PU-902', 'service');
+    await row.getByRole('button', { name: 'Delete' }).click();
+    await expect(row).toBeHidden();
+  });
+
   test('add a service with a photo, edit it, delete it and Undo', async ({ page }) => {
     const text = `E2E brake check ${Date.now()}`;
     await openPanel(page, LOADER, 'service');
@@ -42,7 +72,7 @@ test.describe('record panels', () => {
     await expect(sheet.getByText('Required.')).toBeVisible();
 
     await sheet.getByLabel('Description').fill(text);
-    await sheet.getByLabel('Cost').fill('480');
+    await sheet.getByLabel('Cost', { exact: true }).fill('480');
     await page.getByTestId('file-input').setInputFiles({
       name: 'invoice.png',
       mimeType: 'image/png',
@@ -59,7 +89,7 @@ test.describe('record panels', () => {
 
     // Edit
     await row.getByRole('button', { name: 'Edit' }).click();
-    await sheet.getByLabel('Cost').fill('520');
+    await sheet.getByLabel('Cost', { exact: true }).fill('520');
     await sheet.getByRole('button', { name: 'Save' }).click();
     await expect(sheet).toBeHidden();
     await expect(row).toContainText('520');

@@ -88,7 +88,9 @@ export type FieldType =
   /** The vehicle's services a work card gathers; the value is comma-separated ids. */
   | 'services'
   /** A wiggle test's V / X items; the values are `results.<item>` = PASS or FAIL. */
-  | 'checklist';
+  | 'checklist'
+  /** The receipt or quote a service's cost comes from; the value is `receipt:<id>` or `quote:<id>`. */
+  | 'costSource';
 
 export interface Field {
   key: string;
@@ -285,6 +287,14 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
       { key: 'description', label: 'records.col.description', type: 'textarea', required: true },
       { key: 'vendor', label: 'records.col.vendor', type: 'text' },
       costField,
+      // Sagi, 2026-11-15: e.g. one of 10 services bought as a package, with its receipt or quote.
+      {
+        key: 'costNote',
+        label: 'records.field.costNote',
+        type: 'text',
+        hint: 'records.field.costNoteHint',
+      },
+      { key: 'costSource', label: 'records.field.costSource', type: 'costSource' },
       {
         key: 'nextServiceDate',
         label: 'records.field.nextServiceDate',
@@ -303,7 +313,9 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
       readingCol,
       textCol('description', 'records.col.description', { kind: 'long' }),
       textCol('vendor', 'records.col.vendor', { sort: 'vendor', minor: true }),
+      // On screen the cost cell also shows the note and the receipt or quote link (ServiceCost).
       moneyCol(),
+      textCol('costNote', 'records.col.costNote', { report: true }),
     ],
     filters: [],
     defaults: () => ({ date: today() }),
@@ -837,6 +849,11 @@ export function toBody(kind: RecordKind, values: FormValues, unit: UsageUnit, is
       body[f.key] = str ? str.split(',') : [];
       continue;
     }
+    if (f.type === 'costSource') {
+      const at = str.indexOf(':');
+      body[f.key] = at > 0 ? { kind: str.slice(0, at), id: str.slice(at + 1) } : null;
+      continue;
+    }
     if (f.type === 'reading') {
       const value = str === '' ? null : Number(str);
       const [km, hours] =
@@ -866,6 +883,9 @@ export function toForm(kind: RecordKind, row: RecordRow, unit: UsageUnit): FormV
       const list = f.type === 'receipts' ? row.receipts : row.services;
       const linked = Array.isArray(list) ? (list as { id: string }[]) : [];
       values[f.key] = linked.map((r) => r.id).join(',');
+    } else if (f.type === 'costSource') {
+      const src = raw as { kind?: string; id?: string } | null | undefined;
+      values[f.key] = src?.kind && src.id ? `${src.kind}:${src.id}` : '';
     } else if (f.type === 'bool') values[f.key] = raw === true;
     else if (f.type === 'date')
       values[f.key] = typeof raw === 'string' ? localDay(new Date(raw)) : '';
