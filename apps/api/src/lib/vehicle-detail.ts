@@ -101,6 +101,7 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
     lastMovement,
     lastEvent,
     items,
+    fuelLevel,
   ] = await Promise.all([
     app.db.serviceRecord.count({ where: live }),
     app.db.malfunction.count({ where: live }),
@@ -175,6 +176,10 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
         },
       },
     }),
+    app.db.fuelLevel.findUnique({
+      where: { vehicleId },
+      select: { pct: true, liters: true, at: true, source: true },
+    }),
   ]);
 
   const { id: _id, type, department, location, supplier, purchasePrice, ...fields } = vehicle;
@@ -208,6 +213,8 @@ export async function vehicleDetail(app: FastifyInstance, user: SessionUser, ser
       maintenanceCostYtd: costYtd,
       lastActivity: lastEvent?.occurredAt ?? null,
       lastFuel: lastFuel ? { date: lastFuel.date, liters: lastFuel.liters.toNumber() } : null,
+      /** Current fuel (2026-11-15): the latest level, manual or live. */
+      fuelLevel,
       lastMovement: lastMovement
         ? { date: lastMovement.date, to: lastMovement.toLocation.code }
         : null,

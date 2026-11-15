@@ -15,11 +15,13 @@ import {
   wiggleItems,
   wiggleProfileOf,
   deriveStatus,
+  NO_FUEL_TYPES,
   type FleetViewSettings,
   type VehicleTypeCode,
 } from '@fleet-hub/shared';
 import { encryptStartCode } from '@fleet-hub/shared/crypto';
 import { rm } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
 import sharp from 'sharp';
 import { resolveStored, storeUpload } from '../src/lib/uploads';
 import { addBaseLists, receiptCategories } from '../src/lib/base-lists';
@@ -802,6 +804,7 @@ async function main() {
 
   await seedRevisions1(vehicleIds, events, editor!.id);
   await seedWiggleTests(vehicleIds, events, [editor!.id, viewer!.id]);
+  await seedFuelLevels(vehicleIds, events, editor!.id, admin!.id);
   await db.event.createMany({ data: events });
 
   // A few fake attachments: an invoice photo on recent services, a certificate on annual tests.
@@ -912,6 +915,68 @@ const teams = ['יוסי אברהמי, אורי לוי', 'מיכל דוד', 'צ�
  * Wiggle tests (Sagi, 2026-11-08): every other day for the last three weeks on each heavy
  * machine, done by the editor or the viewer; now and then an item gets an X.
  */
+/**
+ * Current fuel (2026-11-15): most vehicles read by hand at different times; three report live
+ * through a fake gateway connection (its token is random and never printed: `pnpm fuel:simulate`
+ * makes its own). The live ones look live for 15 minutes after seeding, then stale.
+ */
+async function seedFuelLevels(
+  vehicleIds: Record<string, string>,
+  events: Prisma.EventCreateManyInput[],
+  editorId: string,
+  adminId: string,
+) {
+  const live = ['EX-101', 'WL-401', 'PU-901'];
+  const gateway = await db.telematicsDevice.create({
+    data: {
+      name: 'Gateway (fake)',
+      tokenHash: randomBytes(32).toString('hex'),
+      tokenHint: randomBytes(3).toString('base64url').slice(0, 4),
+      createdById: adminId,
+      lastSeenAt: NOW,
+    },
+  });
+  const serials = Object.keys(vehicleIds).sort();
+  for (const [i, serial] of serials.entries()) {
+    const vehicleId = vehicleIds[serial]!;
+    const v = await db.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+      select: { type: { select: { code: true } } },
+    });
+    if ((NO_FUEL_TYPES as readonly string[]).includes(v.type.code)) continue;
+    // A spread from nearly empty to full, the same on every seed.
+    const pct = [82, 14, 57, 33, 96, 61, 8, 45, 72, 27, 66, 51, 90, 38, 19, 77][i % 16]!;
+    if (live.includes(serial)) {
+      const readings = [30, 20, 10, 2].map((minAgo, k) => ({
+        vehicleId,
+        at: new Date(NOW.getTime() - minAgo * 60_000),
+        pct: pct + (3 - k) * 1.5,
+        source: 'LIVE' as const,
+        deviceId: gateway.id,
+      }));
+      await db.fuelLevelReading.createMany({ data: readings });
+      const last = readings.at(-1)!;
+      await db.fuelLevel.create({ data: last });
+      continue;
+    }
+    if (i % 7 === 3) continue; // a few never read yet
+    const at = new Date(NOW.getTime() - ((i * 5) % 30) * 3_600_000 - 45 * 60_000);
+    await db.fuelLevelReading.create({
+      data: { vehicleId, at, pct, source: 'MANUAL', userId: editorId },
+    });
+    await db.fuelLevel.create({
+      data: { vehicleId, at, pct, source: 'MANUAL', userId: editorId },
+    });
+    events.push({
+      type: 'FUEL_LEVEL',
+      vehicleId,
+      userId: editorId,
+      occurredAt: at,
+      params: { pct, liters: null },
+    });
+  }
+}
+
 async function seedWiggleTests(
   vehicleIds: Record<string, string>,
   events: Prisma.EventCreateManyInput[],

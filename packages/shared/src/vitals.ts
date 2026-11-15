@@ -14,6 +14,7 @@ export const VITAL_KEYS = [
   'makeModelYear',
   'openMalfunctions',
   'fuelEconomy',
+  'fuelLevel',
   'maintenanceCostYtd',
   'purchaseWarranty',
   'lastActivity',
