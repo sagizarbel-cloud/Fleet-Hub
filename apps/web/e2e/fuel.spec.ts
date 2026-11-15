@@ -39,6 +39,8 @@ test.describe('current fuel', () => {
     const row = panel.locator('[data-serial="TK-802"]');
     await expect(row).toHaveAttribute('data-state', 'manual');
     await expect(row.getByRole('meter')).toHaveAttribute('aria-valuenow', '37');
+    // The Fuel filter loads the timeline afresh (the unfiltered first page comes with the dashboard).
+    await page.getByRole('button', { name: 'Fuel', exact: true }).click();
     await expect(page.locator('[data-event-id]').first()).toContainText('Fuel level set to 37%');
   });
 
