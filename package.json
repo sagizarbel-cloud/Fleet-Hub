@@ -21,6 +21,7 @@
     "i18n:check": "node scripts/i18n-check.mjs",
     "check:arm64": "node scripts/check-arm64.mjs",
     "samples": "node scripts/sample-sheets.mjs",
+    "fuel:simulate": "pnpm --filter @fleet-hub/api fuel:simulate",
     "docker:arm64": "docker buildx build --platform linux/arm64 -f apps/api/Dockerfile -t fleet-hub-api:arm64 ."
   },
   "devDependencies": {

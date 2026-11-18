@@ -164,6 +164,28 @@
   animation-timing-function: ease-out;
 }
 
+/* Current fuel (2026-11-15): a row lights up as a live reading lands; live dots breathe. */
+@keyframes fh-fuel-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.fh-fuel-flash {
+  opacity: 0;
+  animation: fh-fuel-flash 1.4s ease-out;
+}
+@keyframes fh-live {
+  50% {
+    opacity: 0.45;
+  }
+}
+.fh-live {
+  animation: fh-live 2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -352,13 +374,13 @@
 /* Dashboard: history (about 40%) beside the fleet grid; on phones KPIs, then the grid, then the timeline. */
 .dash-layout {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: 'kpi' 'grid' 'timeline';
+  grid-template-areas: 'kpi' 'fuel' 'grid' 'timeline';
 }
 @media (min-width: 64rem) {
   .dash-layout {
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    grid-template-rows: auto 1fr;
-    grid-template-areas: 'kpi grid' 'timeline grid';
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: 'kpi grid' 'fuel grid' 'timeline grid';
     align-items: start;
   }
 }

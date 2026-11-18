@@ -6,6 +6,7 @@ import {
   FileSpreadsheet,
   ListChecks,
   Printer,
+  Radio,
   UserRound,
   Users,
   type LucideIcon,
@@ -20,6 +21,7 @@ import { MovementFields } from './MovementFields';
 import { WiggleTypes } from './WiggleTypes';
 import { ReportLogo } from './ReportLogo';
 import { UsersAdmin } from './UsersAdmin';
+import { ConnectionsAdmin } from './ConnectionsAdmin';
 
 // ExcelJS is large: it loads only when someone opens the import page.
 const ImportPage = lazy(() => import('./ImportPage'));
@@ -31,6 +33,7 @@ export const SETTINGS_SECTIONS = [
   'report',
   'users',
   'import',
+  'live',
 ] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
@@ -44,6 +47,8 @@ const SECTIONS: Record<SettingsSection, { path: string; icon: LucideIcon; role: 
   report: { path: '/settings/report', icon: Printer, role: 'ADMIN' },
   users: { path: '/settings/users', icon: Users, role: 'ADMIN' },
   import: { path: '/settings/import', icon: FileSpreadsheet, role: 'ADMIN' },
+  // Live data connections (2026-11-15): tokens for connected vehicles.
+  live: { path: '/settings/live', icon: Radio, role: 'ADMIN' },
 };
 
 /** Settings (SPEC 5.9): your own defaults, the bilingual lists, users, and Excel import. */
@@ -103,6 +108,7 @@ export function SettingsPage({ section }: { section: SettingsSection }) {
         )}
         {section === 'report' && <ReportLogo />}
         {section === 'users' && <UsersAdmin />}
+        {section === 'live' && <ConnectionsAdmin />}
         {section === 'import' && (
           <Suspense fallback={<SettingsSkeleton />}>
             <ImportPage />
