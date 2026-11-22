@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { DEFAULT_PINNED_VITALS, preferencesBody } from '@fleet-hub/shared';
+import { Prisma } from '@prisma/client';
+import { DEFAULT_PINNED_VITALS, layoutsSchema, preferencesBody } from '@fleet-hub/shared';
 import { HttpError, parse } from '../lib/http';
 import { requireUser } from '../plugins/auth';
 
@@ -17,6 +18,7 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
       language: pref?.language === 'en' || pref?.language === 'he' ? pref.language : null,
       theme: pref?.theme === 'dark' || pref?.theme === 'light' ? pref.theme : null,
       design: pref?.design === 'classic' || pref?.design === 'yard' ? pref.design : null,
+      layouts: layoutsSchema.safeParse(pref?.layouts).data ?? null,
     };
   };
 
@@ -35,10 +37,12 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
       throw new HttpError(404, 'not_found');
     const current = await read(userId);
     const next = { ...current, ...body };
+    const { layouts, ...rest } = next;
+    const data = { ...rest, layouts: layouts ?? Prisma.DbNull };
     await app.db.userPreference.upsert({
       where: { userId },
-      create: { userId, ...next },
-      update: next,
+      create: { userId, ...data },
+      update: data,
     });
     return next;
   });

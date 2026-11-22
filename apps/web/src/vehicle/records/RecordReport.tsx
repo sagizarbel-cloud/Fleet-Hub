@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
+  CheckCircle2,
   ChevronRight,
+  Clock,
   Loader2,
   Pencil,
   ReceiptText,
@@ -34,6 +36,7 @@ import { colTitle, KIND_UI, localDay, type Column, type FormatCtx } from './kind
 import { useKindColumns } from './columns';
 import { RecordForm } from './RecordForm';
 import { useWiggleProfile } from './Wiggle';
+import { openDays, openForKey } from './openFor';
 import { useRecordLink, type ReportTarget } from './recordLink';
 
 /** Malfunctions read as two parts (Revisions 1): what the issue was, and what happened about it. */
@@ -140,6 +143,54 @@ function History({
   );
 }
 
+/** One tap to solve an open malfunction (editors and admins, 2026-11-22). */
+function ResolveButton({ serial, id, userName }: { serial: string; id: string; userName: string }) {
+  const { t } = useTranslation();
+  const { add } = useProgress(serial, id);
+  return (
+    <>
+      {add.isError && (
+        <span role="alert" className="text-bad text-xs">
+          {t('report.resolveFailed')}
+        </span>
+      )}
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={add.isPending}
+        onClick={() => add.mutate({ at: localDay(), body: null, author: userName, resolve: true })}
+        data-testid="report-resolve"
+      >
+        <CheckCircle2 aria-hidden />
+        {t('report.resolve')}
+      </Button>
+    </>
+  );
+}
+
+/** How long the malfunction was open (2026-11-22): still counting while open. */
+function OpenFor({ reportedAt, resolvedAt }: { reportedAt: string; resolvedAt: string | null }) {
+  const { t } = useTranslation();
+  const days = openDays(reportedAt, resolvedAt);
+  const { key, count } = openForKey(days, !!resolvedAt);
+  return (
+    <p
+      className={cn(
+        'inline-flex items-center gap-1.5 text-sm font-medium',
+        resolvedAt ? 'text-muted' : 'text-warn',
+      )}
+      data-testid="open-for"
+    >
+      {resolvedAt ? (
+        <Clock aria-hidden className="size-4" />
+      ) : (
+        <TriangleAlert aria-hidden className="size-4" />
+      )}
+      {t(key, { count })}
+    </p>
+  );
+}
+
 /**
  * What was done so far about a malfunction (Revisions 1, fleet manager): dated updates, oldest
  * first, each with its author. Editors add and remove them.
@@ -149,25 +200,44 @@ function ProgressLog({
   malfunctionId,
   entries,
   canEdit,
+  open,
+  userName,
 }: {
   vehicle: VehicleDetail;
   malfunctionId: string;
   entries: ProgressEntry[];
   canEdit: boolean;
+  /** Not resolved yet: the form offers to resolve it too. */
+  open: boolean;
+  userName: string;
 }) {
   const { t } = useTranslation();
   const ctx = useFormatCtx(vehicle.usageUnit);
   const { add, remove } = useProgress(vehicle.serial, malfunctionId);
   const [body, setBody] = useState('');
+  const [author, setAuthor] = useState(userName);
+  const [resolve, setResolve] = useState(false);
   const [at, setAt] = useState(() => localDay());
   const [failed, setFailed] = useState(false);
+  const ready = !!body.trim() || (open && resolve);
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!body.trim()) return;
+    if (!ready) return;
     setFailed(false);
     add.mutate(
-      { at: at || null, body: body.trim() },
-      { onSuccess: () => setBody(''), onError: () => setFailed(true) },
+      {
+        at: at || null,
+        body: body.trim() || null,
+        author: author.trim() || null,
+        resolve: open && resolve,
+      },
+      {
+        onSuccess: () => {
+          setBody('');
+          setResolve(false);
+        },
+        onError: () => setFailed(true),
+      },
     );
   };
   return (
@@ -186,7 +256,17 @@ function ProgressLog({
                 <div className="min-w-0 flex-1">
                   <p className="text-muted text-xs">
                     <span className="num">{ctx.date(p.at)}</span>
-                    {p.createdBy && <> · {t('report.by', { name: p.createdBy })}</>}
+                    {(p.author ?? p.createdBy) && (
+                      <>
+                        {' · '}
+                        <span className="text-text font-medium" data-testid="progress-author">
+                          <bdi>{p.author ?? p.createdBy}</bdi>
+                        </span>
+                      </>
+                    )}
+                    {p.author && p.createdBy && p.author !== p.createdBy && (
+                      <> ({t('report.enteredBy', { name: p.createdBy })})</>
+                    )}
                   </p>
                   <p className="mt-0.5 text-sm">
                     <span className="block whitespace-pre-line">
@@ -224,6 +304,29 @@ function ProgressLog({
               className="border-border-strong bg-surface w-full rounded-md border px-2.5 py-2 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)]"
             />
           </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">{t('report.progressAuthor')}</span>
+            <input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              maxLength={80}
+              title={t('report.progressAuthorHint')}
+              className="border-border-strong bg-surface h-8 w-full rounded-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)]"
+              data-testid="progress-author-input"
+            />
+          </label>
+          {open && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={resolve}
+                onChange={(e) => setResolve(e.target.checked)}
+                className="size-4 accent-[var(--fh-accent)]"
+                data-testid="progress-resolve"
+              />
+              {t('report.resolveToo')}
+            </label>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1 text-xs">
               <span className="text-muted">{t('report.progressDate')}</span>
@@ -244,9 +347,10 @@ function ProgressLog({
               type="submit"
               size="sm"
               className="ms-auto"
-              disabled={!body.trim() || add.isPending}
+              disabled={!ready || add.isPending}
+              data-testid="progress-save"
             >
-              {t('report.saveProgress')}
+              {open && resolve && !body.trim() ? t('report.resolve') : t('report.saveProgress')}
             </Button>
           </div>
         </form>
@@ -442,6 +546,9 @@ function OneRecord({
             <span className="text-muted me-auto truncate text-xs">
               {row.createdBy && t('report.addedBy', { name: row.createdBy })}
             </span>
+            {open && user && hasRole(user.role, 'EDITOR') && (
+              <ResolveButton serial={vehicle.serial} id={row.id} userName={user.name} />
+            )}
             {canEdit && (
               <Button size="sm" onClick={() => setEditing(true)} data-testid="report-edit">
                 <Pencil aria-hidden />
@@ -460,11 +567,11 @@ function OneRecord({
         </p>
       ) : (
         <div className="space-y-6" data-kind={kind} data-record-id={row.id}>
-          {open && (
-            <p className="text-warn inline-flex items-center gap-1.5 text-sm font-medium">
-              <TriangleAlert aria-hidden className="size-4" />
-              {t('report.stillOpen')}
-            </p>
+          {kind === 'malfunctions' && typeof row.reportedAt === 'string' && (
+            <OpenFor
+              reportedAt={row.reportedAt}
+              resolvedAt={open ? null : ((row.resolvedAt as string | null) ?? null)}
+            />
           )}
           {kind === 'malfunctions' ? (
             <>
@@ -485,6 +592,8 @@ function OneRecord({
                   malfunctionId={row.id}
                   entries={(row.progress as ProgressEntry[] | undefined) ?? []}
                   canEdit={!!user && hasRole(user.role, 'EDITOR')}
+                  open={!!open}
+                  userName={user?.name ?? ''}
                 />
               </Section>
             </>

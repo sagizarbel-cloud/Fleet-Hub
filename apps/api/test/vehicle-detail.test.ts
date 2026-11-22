@@ -195,6 +195,7 @@ describe('preferences', () => {
       language: null,
       theme: null,
       design: null,
+      layouts: null,
     });
     const put = await app.inject({
       method: 'PUT',
@@ -212,7 +213,42 @@ describe('preferences', () => {
       language: null,
       theme: null,
       design: 'yard',
+      layouts: null,
     });
+  });
+
+  it("keep each screen's panel layout, and reject one that loses or repeats a panel", async () => {
+    const put = (payload: object) =>
+      app.inject({
+        method: 'PUT',
+        url: '/api/me/preferences',
+        headers: { cookie: viewer, origin: ORIGIN },
+        payload,
+      });
+    const vehicle = {
+      start: ['activity', 'records'],
+      end: ['items'],
+      phone: ['records', 'activity', 'items'],
+      split: 0.6,
+      heights: { activity: 500 },
+    };
+    expect((await put({ layouts: { vehicle } })).statusCode).toBe(200);
+    // Other settings leave the layout alone.
+    expect((await put({ language: 'he' })).statusCode).toBe(200);
+    const read = (await get('/api/me/preferences', viewer)).json();
+    expect(read.layouts).toEqual({ vehicle });
+    for (const bad of [
+      { ...vehicle, end: [] },
+      { ...vehicle, end: ['items', 'records'] },
+      { ...vehicle, split: 0.95 },
+      { ...vehicle, heights: { activity: 20 } },
+      { ...vehicle, start: ['activity', 'kpi'] },
+    ]) {
+      expect((await put({ layouts: { vehicle: bad } })).statusCode).toBe(400);
+    }
+    // Reset to default.
+    expect((await put({ layouts: null, language: null })).statusCode).toBe(200);
+    expect((await get('/api/me/preferences', viewer)).json().layouts).toBeNull();
   });
 
   it('reject unknown or repeated vitals', async () => {

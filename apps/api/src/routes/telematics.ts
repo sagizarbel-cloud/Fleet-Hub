@@ -8,7 +8,7 @@ import {
   NO_FUEL_TYPES,
 } from '@fleet-hub/shared';
 import { HttpError, issueCode, parse } from '../lib/http';
-import { isFutureReading, storeReading } from '../lib/live-fuel';
+import { isFutureReading, storeHours, storeReading } from '../lib/live-fuel';
 import { hashToken, newToken } from '../lib/tokens';
 import { requireRole } from '../plugins/auth';
 
@@ -245,7 +245,9 @@ export const telematicsRoutes: FastifyPluginAsync = async (app) => {
           ignored.push({ index, reason: 'vehicle_not_found' });
           continue;
         }
-        if (!vehicle.tank) {
+        const hasFuel = r.fuelLevelPct !== undefined || r.fuelLiters !== undefined;
+        // A trailer has no tank; its fuel is refused, but an hour meter reading still counts.
+        if (hasFuel && !vehicle.tank && r.engineHours === undefined) {
           ignored.push({ index, reason: 'no_fuel_tank' });
           continue;
         }
@@ -254,15 +256,23 @@ export const telematicsRoutes: FastifyPluginAsync = async (app) => {
           ignored.push({ index, reason: 'future_time' });
           continue;
         }
-        await storeReading(app, {
-          vehicleId: vehicle.id,
-          serial: vehicle.serial,
-          at,
-          pct: r.fuelLevelPct ?? null,
-          liters: r.fuelLiters ?? null,
-          source: 'LIVE',
-          deviceId: device.id,
-        });
+        if (hasFuel && vehicle.tank)
+          await storeReading(app, {
+            vehicleId: vehicle.id,
+            serial: vehicle.serial,
+            at,
+            pct: r.fuelLevelPct ?? null,
+            liters: r.fuelLiters ?? null,
+            source: 'LIVE',
+            deviceId: device.id,
+          });
+        if (r.engineHours !== undefined)
+          await storeHours(app, {
+            vehicleId: vehicle.id,
+            serial: vehicle.serial,
+            at,
+            engineHours: r.engineHours,
+          });
         accepted++;
       }
 

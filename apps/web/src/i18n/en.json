@@ -16,7 +16,7 @@
     "settings": "Settings"
   },
   "topbar": {
-    "search": "Search serial, VIN, license or item",
+    "search": "Search serial, VIN, license or any field",
     "add": "Add",
     "comingSoon": "Coming in a later phase"
   },
@@ -1328,7 +1328,27 @@
     "progressFailed": "The update wasn't saved. Try again.",
     "statusHint": "Status: {{status}}. Open malfunctions: {{count}}",
     "services": "Services included",
-    "noServices": "No services included."
+    "noServices": "No services included.",
+    "openFor": {
+      "none": "Opened today",
+      "one": "Open for 1 day",
+      "two": "Open for 2 days",
+      "many": "Open for {{count}} days"
+    },
+    "wasOpen": {
+      "none": "Resolved the same day",
+      "one": "Was open 1 day",
+      "two": "Was open 2 days",
+      "many": "Was open {{count}} days"
+    },
+    "progressAuthor": "Done by",
+    "progressAuthorHint": "Name of who did the work; starts as yours.",
+    "resolveToo": "Also mark the malfunction resolved",
+    "resolve": "Mark resolved",
+    "resolved": "Marked resolved",
+    "resolveFailed": "Couldn't mark it resolved. Try again.",
+    "enteredBy": "entered by {{name}}",
+    "colOpenFor": "Days open"
   },
   "workCard": {
     "type": {
@@ -1449,5 +1469,64 @@
     "driveTouch": "Driving {{serial}}: use the stick and the handbrake. Tap it again to let go.",
     "stick": "Steering stick",
     "handbrake": "Handbrake"
+  },
+  "search": {
+    "results": "Search results",
+    "searching": "Searching…",
+    "none": "Nothing found.",
+    "close": "Close search",
+    "group": {
+      "vehicle": "Vehicles",
+      "record": "Records",
+      "item": "Equipment & tools"
+    },
+    "field": {
+      "serial": "Serial No.",
+      "vin": "VIN / Chassis No.",
+      "licenseNo": "License No.",
+      "make": "Make",
+      "model": "Model",
+      "operatorName": "Operator / driver",
+      "warrantyTerms": "Warranty terms",
+      "type": "Type",
+      "location": "Location",
+      "department": "Department",
+      "description": "Description",
+      "vendor": "Vendor",
+      "notes": "Notes",
+      "place": "Place",
+      "fueledBy": "Fueled by",
+      "provider": "Provider",
+      "contractor": "Contractor",
+      "inspector": "Inspector",
+      "body": "Text",
+      "doneBy": "Done by",
+      "progress": "Progress update",
+      "name": "Name",
+      "spec": "Spec"
+    }
+  },
+  "layout": {
+    "arrange": "Arrange panels",
+    "done": "Done",
+    "reset": "Reset to default",
+    "hintWide": "Drag a panel by its handle, or use the arrows. Drag the divider to change the columns' widths, and a list's bottom edge to change its height.",
+    "hintPhone": "Drag a panel by its handle, or use the arrows. Drag a list's bottom edge to change its height.",
+    "drag": "Move {{panel}}",
+    "up": "Move {{panel}} up",
+    "down": "Move {{panel}} down",
+    "otherColumn": "Move {{panel}} to the other column",
+    "height": "Height of {{panel}}",
+    "width": "Width of the columns",
+    "dropHere": "Drop a panel here",
+    "panel": {
+      "kpi": "Status and totals",
+      "fuel": "Current fuel",
+      "timeline": "Recent activity",
+      "grid": "Fleet",
+      "records": "Records",
+      "items": "Assigned items",
+      "activity": "Activity"
+    }
   }
 }

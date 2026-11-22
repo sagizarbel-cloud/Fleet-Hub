@@ -136,34 +136,54 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: requireUser },
     async (req, reply) => {
       const { serial, id } = parse(progressParams, req.params);
-      const { at, body } = parse(progressBody, req.body);
+      const { at, body, author, resolve } = parse(progressBody, req.body);
       const user = req.user!;
       if (!hasRole(user.role, 'EDITOR')) throw new HttpError(403, 'forbidden');
-      const progress = await app.db.$transaction(async (tx) => {
+      const result = await app.db.$transaction(async (tx) => {
         const vehicle = await vehicleRef(tx, serial);
         const m = await tx.malfunction.findFirst({
           where: { id, vehicleId: vehicle.id, deletedAt: null },
-          select: { id: true, description: true },
+          select: { id: true, description: true, state: true, reportedAt: true },
         });
         if (!m) throw new HttpError(404, 'not_found');
         const when = at ?? new Date();
-        const row = await tx.malfunctionProgress.create({
-          data: { malfunctionId: id, at: when, body, createdById: user.id },
-        });
-        await tx.event.create({
-          data: {
-            vehicleId: vehicle.id,
-            userId: user.id,
-            type: 'MALFUNCTION_PROGRESS',
-            occurredAt: when,
-            sourceType: 'Malfunction',
-            sourceId: id,
-            params: { description: m.description, progress: body, progressId: row.id },
-          },
-        });
-        return progressOf(tx, id);
+        if (body) {
+          const row = await tx.malfunctionProgress.create({
+            data: { malfunctionId: id, at: when, body, author, createdById: user.id },
+          });
+          await tx.event.create({
+            data: {
+              vehicleId: vehicle.id,
+              userId: user.id,
+              type: 'MALFUNCTION_PROGRESS',
+              occurredAt: when,
+              sourceType: 'Malfunction',
+              sourceId: id,
+              params: { description: m.description, progress: body, progressId: row.id },
+            },
+          });
+        }
+        // Solving it from the report (2026-11-22): the same change as editing the state to Resolved.
+        let status = null;
+        if (resolve && m.state !== 'RESOLVED') {
+          const resolvedAt = when < m.reportedAt ? m.reportedAt : when;
+          await tx.malfunction.update({ where: { id }, data: { state: 'RESOLVED', resolvedAt } });
+          await tx.event.create({
+            data: {
+              vehicleId: vehicle.id,
+              userId: user.id,
+              type: 'MALFUNCTION_RESOLVED',
+              occurredAt: resolvedAt,
+              sourceType: 'Malfunction',
+              sourceId: id,
+              params: { description: m.description, state: 'RESOLVED' },
+            },
+          });
+          status = await refreshStatus(tx, vehicle.id, user.id);
+        }
+        return { progress: await progressOf(tx, id), status };
       });
-      return reply.status(201).send({ progress });
+      return reply.status(201).send(result);
     },
   );
 

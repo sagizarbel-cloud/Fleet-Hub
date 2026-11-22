@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router';
-import { Plus, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { hasRole, type SessionUser } from '@fleet-hub/shared';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -9,6 +9,7 @@ import { UserMenu } from '@/components/UserMenu';
 import { Button } from '@/components/ui/button';
 import { prefersReducedMotion } from '@/lib/motion';
 import { usePreferenceSync, useSaveLook } from '@/settings/prefs';
+import { GlobalSearch, SearchPhoneButton } from './GlobalSearch';
 import { ScrollableNav } from './ScrollableNav';
 
 const VehicleForm = lazy(() =>
@@ -20,6 +21,7 @@ export function TopBar({ user }: { user: SessionUser }) {
   const ref = useRef<HTMLElement>(null);
   const look = useSaveLook();
   const [adding, setAdding] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [reduced] = useState(prefersReducedMotion);
   usePreferenceSync();
 
@@ -42,30 +44,18 @@ export function TopBar({ user }: { user: SessionUser }) {
       <div className="fh-topbar-bar flex h-14 items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <NavLink
           to="/"
+          aria-label={t('app.name')}
           className="fh-sign flex shrink-0 items-center gap-2 font-semibold tracking-tight"
         >
           <img src="/favicon.svg" alt="" className="size-7" />
-          <span>{t('app.name')}</span>
+          {/* Phones under 420 px keep only the logo, so the bar's buttons (search included) fit. */}
+          <span className="hidden min-[420px]:inline">{t('app.name')}</span>
         </NavLink>
 
-        <div className="ms-2 hidden max-w-md flex-1 md:block">
-          <label className="relative block">
-            <span className="sr-only">{t('topbar.search')}</span>
-            <Search
-              aria-hidden
-              className="text-muted pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2"
-            />
-            <input
-              type="search"
-              disabled
-              title={t('topbar.comingSoon')}
-              placeholder={t('topbar.search')}
-              className="border-border bg-surface-strong/40 placeholder:text-muted h-9 w-full rounded-lg border ps-9 pe-3 text-sm disabled:cursor-not-allowed"
-            />
-          </label>
-        </div>
+        <GlobalSearch phoneOpen={searching} onPhoneClose={() => setSearching(false)} />
 
         <div className="ms-auto flex items-center gap-1">
+          <SearchPhoneButton onOpen={() => setSearching(true)} />
           {hasRole(user.role, 'EDITOR') && (
             <Button
               size="sm"

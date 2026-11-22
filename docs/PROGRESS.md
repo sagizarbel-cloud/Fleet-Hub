@@ -9,6 +9,14 @@
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
 
+### Search, malfunctions, live hours, panels — 2026-11-22
+
+- Sagi's list of 2026-11-22. Top bar search works (it was a placeholder, like the grid's Add vehicle button): serial, VIN, plate and any text field of vehicles, their records (including malfunction progress notes) and items, grouped, with the vehicle serial on every hit. Arrow keys, Enter (an exact serial goes straight to the vehicle), Esc. Phones open it from an icon. Start codes are never searched. `GET /api/search?q=`.
+- Malfunctions: editors can mark one resolved from its report (a button in the footer, or "Also mark resolved" on a progress update). Progress updates have a "Done by" name (prefilled with the user's name; the person who typed it is shown when different); migration `progress_author` (additive). The report shows how long it is or was open, and the malfunction table has an "Open for" column.
+- Engine hours update live: the telematics ingest takes `engineHours` (`docs/LIVE-DATA.md`); the vehicle page's vitals, callouts and next service follow without a new panel. Hour meters only count up, so lower values are ignored.
+- Panels: "Arrange panels" on the dashboard and the vehicle page. Drag a panel by its handle (mouse or touch) or use the arrows to move it or send it to the other column; drag the divider to change the columns' widths (within limits); drag the bottom edge of the fuel, recent activity and vehicle activity lists to change their height (180 to 1,400 px). Saved to the account (`UserPreference.layouts`, migration `panel_layouts`, additive), with Reset to default. Phones have their own one-column order. On the vehicle page the header and drawing stay on top. A column emptied by the user gives its width to the other.
+- Tests: api (search, resolve, live hours, layouts), unit (open-for days), e2e `e2e/revisions-2026-11-22.spec.ts`.
+
 ### Vehicle page notes — 2026-11-15
 
 - Sagi's notes after trying the site. The fleet grid's dashed "Add vehicle" button was a never-wired placeholder; it now opens the Add vehicle form.
@@ -217,13 +225,14 @@ Round 3 (Sagi, 2026-11-05):
 - Phase 9 (2026-10-29, Sagi): the server isn't available yet; installing it is handed off to the server IT team, so this phase delivers everything in the repo plus a handoff. Domain for now: fleet.tfisolutions.com. The server has at least 2 GB of RAM. The first admin is Sagi.
 - Images are built on the server itself (no registry), so they come out arm64 there; a private repo is cloned with a read-only deploy key.
 - The first admin gets a one-time set-password link from `create-admin`, so no password passes through a terminal or chat.
+- 2026-11-22 (Sagi): live engine hours stay out of the timeline, like live fuel. Panels can be arranged on the dashboard and the vehicle page (Sagi's choice), saved per user, not per device. Search covers every text field except start codes.
 - Revisions 1 (2026-11-04, from the fleet manager via Sagi): "malfunction icons" = the vehicle's status badge and the Activity list; resize = the report window and the table columns; fuel place is a list plus free text, who and provider typed with suggestions; Diesel and Petrol 95 to start; mandatory switches don't apply to Excel imports; malfunctions get a progress log. Round 2 assumptions (in the plan doc): work cards are their own record kind, editors and admins add them; tools are bucket and hammer (Sagi, 2026-11-05); work cards can gather existing services; the vehicle report is printed to PDF by the browser; extra fields are for location changes only, up to three.
 
 ## Later
 
 <!-- Ideas and out-of-scope findings, to revisit after Phase 9. -->
 
-- Current fuel: a tank size per vehicle (litres ↔ percent when only one is sent); a fill-up record setting the level to full; a low-fuel alert or timeline entry when a live level crosses 20%; a fuel level chart from the reading history; more live values (engine hours, location) through the same ingest
+- Current fuel: a tank size per vehicle (litres ↔ percent when only one is sent); a fill-up record setting the level to full; a low-fuel alert or timeline entry when a live level crosses 20%; a fuel level chart from the reading history; more live values (location) through the same ingest (engine hours done 2026-11-22)
 
 - Dashboard KPI cards at 390 px: "Open malfunctions" and "Spent this month" sit tight against their numbers, and the shekel sign touches the digit (seen on the empty fleet)
 - A content security policy for the web app (the api already has a strict one)

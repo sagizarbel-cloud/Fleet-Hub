@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { motion, useAnimate } from 'motion/react';
 import { ArrowLeft, FileText, Loader2, Pencil } from 'lucide-react';
 import type { DetailView } from '@fleet-hub/shared';
-import { DETAIL_VIEWS, hasRole } from '@fleet-hub/shared';
+import { DETAIL_VIEWS, hasRole, VEHICLE_SCREEN, type VehiclePanel } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { HeroVisual, type HeroPose } from '@/drawings/HeroVisual';
+import { PanelBoard } from '@/layout/PanelBoard';
 import { cn } from '@/lib/cn';
 import { prefersReducedMotion } from '@/lib/motion';
 import { Activity } from '@/vehicle/Activity';
@@ -19,6 +20,7 @@ import { attachmentUrl } from '@/vehicle/records/api';
 import { StatusControl } from '@/vehicle/StatusControl';
 import { ToolPicker } from '@/vehicle/ToolPicker';
 import { AddToolButton } from '@/vehicle/AddItem';
+import { useLiveHours } from '@/vehicle/liveHours';
 import { ReportHost } from '@/vehicle/ReportHost';
 import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
 import { VitalsBar } from '@/vehicle/VitalsBar';
@@ -59,6 +61,9 @@ function heroSize() {
 }
 
 /** Tracks an element's width. */
+/** The activity list stays in view while the page scrolls, when it ends a wide column. */
+const STICKY: VehiclePanel[] = ['activity'];
+
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   const [width, setWidth] = useState(0);
@@ -110,6 +115,7 @@ export function VehicleStage({
   const highlightId = params.get('event');
   const { data: lookups } = useLookups();
   const detail = useVehicle(serial);
+  useLiveHours(serial);
   const vehicle = detail.data;
   const prefs = usePreferences();
   const savePrefs = useSavePreferences();
@@ -321,200 +327,221 @@ export function VehicleStage({
       data-testid="vehicle-stage"
       data-serial={serial}
     >
-      <motion.div
-        {...pageMotion}
-        className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] gap-4 px-2 pt-2 sm:px-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
-      >
-        <div className="min-w-0 space-y-4">
-          <motion.header data-panel {...headerMotion} className="glass relative z-10 p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                ref={backRef}
-                type="button"
-                onClick={back}
-                className="border-border hover:bg-border grid size-9 place-items-center rounded-lg border"
-                aria-label={t(home === 'fleet' ? 'vehicle.backToTable' : 'vehicle.back')}
-                title={t(home === 'fleet' ? 'vehicle.backToTable' : 'vehicle.back')}
-              >
-                <ArrowLeft aria-hidden className="size-4 rtl:-scale-x-100" />
-              </button>
-              {tile && (
-                <>
-                  <div className="me-auto min-w-0">
-                    <p className="text-muted text-xs">{typeName}</p>
-                    <h1 className="truncate text-lg font-semibold">
-                      {tile.make} {tile.model}
-                    </h1>
-                  </div>
-                  <StatusControl vehicle={vehicle} fallback={tile.status} />
+      <motion.div {...pageMotion} className="mx-auto max-w-[1600px] px-2 pt-2 sm:px-4">
+        <PanelBoard
+          name="vehicle"
+          screen={VEHICLE_SCREEN}
+          toolbarAt="bottom"
+          sticky={STICKY}
+          controls={!!tile && !notFound}
+          lead={
+            <>
+              <motion.header data-panel {...headerMotion} className="glass relative z-10 p-4">
+                <div className="flex flex-wrap items-center gap-3">
                   <button
+                    ref={backRef}
                     type="button"
-                    onClick={() => setReporting(true)}
+                    onClick={back}
                     className="border-border hover:bg-border grid size-9 place-items-center rounded-lg border"
-                    aria-label={t('vreport.button')}
-                    title={t('vreport.button')}
-                    data-testid="vehicle-report-button"
+                    aria-label={t(home === 'fleet' ? 'vehicle.backToTable' : 'vehicle.back')}
+                    title={t(home === 'fleet' ? 'vehicle.backToTable' : 'vehicle.back')}
                   >
-                    <FileText aria-hidden className="size-4" />
+                    <ArrowLeft aria-hidden className="size-4 rtl:-scale-x-100" />
                   </button>
-                  {canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => setEditing(true)}
-                      className="border-border hover:bg-border grid size-9 place-items-center rounded-lg border"
-                      aria-label={t('vehicleForm.editTitle', { serial })}
-                      title={t('vehicleForm.editTitle', { serial })}
-                      data-testid="edit-vehicle"
-                    >
-                      <Pencil aria-hidden className="size-4" />
-                    </button>
-                  )}
-                  <VehicleNav serial={serial} tiles={tiles} />
-                </>
-              )}
-            </div>
-            {tile && (
-              <>
-                <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:items-end">
-                  <div className="col-span-2 sm:col-span-1">
-                    <CopyId label={t('vehicle.info.serial')} value={tile.serial} large />
-                  </div>
-                  <CopyId label={t('vehicle.info.vin')} value={vehicle ? vehicle.vin : null} />
-                  <CopyId
-                    label={t('vehicle.info.licenseNo')}
-                    value={vehicle ? vehicle.licenseNo : null}
-                  />
-                  {vehicle?.hasStartCode && <StartCodeChip serial={serial} />}
-                </dl>
-                <VitalsBar vehicle={vehicle} />
-              </>
-            )}
-          </motion.header>
-
-          <div ref={heroPanelRef} className="relative">
-            {/* The stage's panel fades in behind the drawing, so the flight is never clipped. */}
-            {tile && (
-              <motion.div
-                data-panel
-                {...toggleMotion}
-                aria-hidden
-                className="glass absolute inset-0"
-              />
-            )}
-            <div className="relative grid place-items-center py-2">
-              {tile ? (
-                <div
-                  ref={heroRef}
-                  style={{ opacity: fromDashboard && !instant ? 0 : undefined }}
-                  data-hero
-                >
-                  <HeroVisual
-                    type={tile.type}
-                    tool={vehicle?.tool ?? tile.tool}
-                    status={vehicle?.status ?? tile.status}
-                    pose={returning ? 'flat' : pose}
-                    size={size}
-                    reduced={reduced}
-                    pictures={pictures}
-                    sideOverlay={
-                      showCallouts && !pictures
-                        ? (box) => (
-                            <CalloutOverlay
-                              vehicle={vehicle}
-                              width={box.width}
-                              height={box.height}
-                              compact={compactCallouts}
-                              reduced={reduced || !!slide}
-                            />
-                          )
-                        : undefined
-                    }
-                  />
-                </div>
-              ) : loading ? (
-                <Loader2 aria-hidden className="text-muted my-24 size-6 animate-spin" />
-              ) : (
-                <p className="text-muted my-24 text-sm">{t('vehicle.notFound', { serial })}</p>
-              )}
-              {tile && (
-                <motion.div
-                  data-panel
-                  {...toggleMotion}
-                  className="absolute start-2 top-2 flex flex-wrap items-center gap-1.5"
-                >
-                  <ToolPicker vehicle={vehicle} type={tile.type} />
-                  {vehicle && <AddToolButton serial={vehicle.serial} reduced={reduced} />}
-                </motion.div>
-              )}
-              {tile && (
-                <motion.div
-                  data-panel
-                  {...toggleMotion}
-                  role="group"
-                  aria-label={t('vehicle.view')}
-                  className="border-border bg-surface absolute end-2 top-2 flex rounded-lg border p-0.5 text-xs"
-                >
-                  {DETAIL_VIEWS.map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      aria-pressed={view === v}
-                      onClick={() => chooseView(v)}
-                      className={cn(
-                        'rounded-md px-2.5 py-1',
-                        view === v ? 'bg-accent text-accent-contrast' : 'text-muted',
+                  {tile && (
+                    <>
+                      <div className="me-auto min-w-0">
+                        <p className="text-muted text-xs">{typeName}</p>
+                        <h1 className="truncate text-lg font-semibold">
+                          {tile.make} {tile.model}
+                        </h1>
+                      </div>
+                      <StatusControl vehicle={vehicle} fallback={tile.status} />
+                      <button
+                        type="button"
+                        onClick={() => setReporting(true)}
+                        className="border-border hover:bg-border grid size-9 place-items-center rounded-lg border"
+                        aria-label={t('vreport.button')}
+                        title={t('vreport.button')}
+                        data-testid="vehicle-report-button"
+                      >
+                        <FileText aria-hidden className="size-4" />
+                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => setEditing(true)}
+                          className="border-border hover:bg-border grid size-9 place-items-center rounded-lg border"
+                          aria-label={t('vehicleForm.editTitle', { serial })}
+                          title={t('vehicleForm.editTitle', { serial })}
+                          data-testid="edit-vehicle"
+                        >
+                          <Pencil aria-hidden className="size-4" />
+                        </button>
                       )}
-                    >
-                      {t(v === 'side' ? 'vehicle.sideView' : 'vehicle.isoView')}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </div>
-            {showCallouts && (compactCallouts || !!pictures) && <CalloutLegend vehicle={vehicle} />}
-          </div>
+                      <VehicleNav serial={serial} tiles={tiles} />
+                    </>
+                  )}
+                </div>
+                {tile && (
+                  <>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:items-end">
+                      <div className="col-span-2 sm:col-span-1">
+                        <CopyId label={t('vehicle.info.serial')} value={tile.serial} large />
+                      </div>
+                      <CopyId label={t('vehicle.info.vin')} value={vehicle ? vehicle.vin : null} />
+                      <CopyId
+                        label={t('vehicle.info.licenseNo')}
+                        value={vehicle ? vehicle.licenseNo : null}
+                      />
+                      {vehicle?.hasStartCode && <StartCodeChip serial={serial} />}
+                    </dl>
+                    <VitalsBar vehicle={vehicle} />
+                  </>
+                )}
+              </motion.header>
 
-          {/* Mounted with the other panels so they arrive together; contents fill in as data loads. */}
-          {tile && (
-            <Records
-              serial={serial}
-              type={tile.type}
-              vehicle={vehicle}
-              motionFor={recordMotion}
-              reduced={reduced}
-            />
-          )}
-          {tile && (
-            <motion.div data-panel {...lowerMotion}>
-              {vehicle ? (
+              <div ref={heroPanelRef} className="relative">
+                {/* The stage's panel fades in behind the drawing, so the flight is never clipped. */}
+                {tile && (
+                  <motion.div
+                    data-panel
+                    {...toggleMotion}
+                    aria-hidden
+                    className="glass absolute inset-0"
+                  />
+                )}
+                <div className="relative grid place-items-center py-2">
+                  {tile ? (
+                    <div
+                      ref={heroRef}
+                      style={{ opacity: fromDashboard && !instant ? 0 : undefined }}
+                      data-hero
+                    >
+                      <HeroVisual
+                        type={tile.type}
+                        tool={vehicle?.tool ?? tile.tool}
+                        status={vehicle?.status ?? tile.status}
+                        pose={returning ? 'flat' : pose}
+                        size={size}
+                        reduced={reduced}
+                        pictures={pictures}
+                        sideOverlay={
+                          showCallouts && !pictures
+                            ? (box) => (
+                                <CalloutOverlay
+                                  vehicle={vehicle}
+                                  width={box.width}
+                                  height={box.height}
+                                  compact={compactCallouts}
+                                  reduced={reduced || !!slide}
+                                />
+                              )
+                            : undefined
+                        }
+                      />
+                    </div>
+                  ) : loading ? (
+                    <Loader2 aria-hidden className="text-muted my-24 size-6 animate-spin" />
+                  ) : (
+                    <p className="text-muted my-24 text-sm">{t('vehicle.notFound', { serial })}</p>
+                  )}
+                  {tile && (
+                    <motion.div
+                      data-panel
+                      {...toggleMotion}
+                      className="absolute start-2 top-2 flex flex-wrap items-center gap-1.5"
+                    >
+                      <ToolPicker vehicle={vehicle} type={tile.type} />
+                      {vehicle && <AddToolButton serial={vehicle.serial} reduced={reduced} />}
+                    </motion.div>
+                  )}
+                  {tile && (
+                    <motion.div
+                      data-panel
+                      {...toggleMotion}
+                      role="group"
+                      aria-label={t('vehicle.view')}
+                      className="border-border bg-surface absolute end-2 top-2 flex rounded-lg border p-0.5 text-xs"
+                    >
+                      {DETAIL_VIEWS.map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          aria-pressed={view === v}
+                          onClick={() => chooseView(v)}
+                          className={cn(
+                            'rounded-md px-2.5 py-1',
+                            view === v ? 'bg-accent text-accent-contrast' : 'text-muted',
+                          )}
+                        >
+                          {t(v === 'side' ? 'vehicle.sideView' : 'vehicle.isoView')}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </div>
+                {showCallouts && (compactCallouts || !!pictures) && (
+                  <CalloutLegend vehicle={vehicle} />
+                )}
+              </div>
+              {tile && detail.isError && (
+                <p role="alert" className="text-bad text-sm">
+                  {t('vehicle.loadFailed')}
+                </p>
+              )}
+            </>
+          }
+          wrap={(id, node, place) =>
+            id === 'records' ? (
+              node
+            ) : id === 'items' ? (
+              <motion.div data-panel {...lowerMotion}>
+                {node}
+              </motion.div>
+            ) : (
+              <motion.aside
+                data-panel
+                {...asideMotion}
+                aria-labelledby="activity-title"
+                className={cn(
+                  'glass flex min-h-0 flex-col p-3',
+                  place.sized ? 'flex-1' : 'max-h-[calc(100dvh-10rem)]',
+                )}
+              >
+                {node}
+              </motion.aside>
+            )
+          }
+          panels={{
+            /* Mounted with the other panels so they arrive together; contents fill in as data loads. */
+            records: tile ? (
+              <Records
+                serial={serial}
+                type={tile.type}
+                vehicle={vehicle}
+                motionFor={recordMotion}
+                reduced={reduced}
+              />
+            ) : null,
+            items: tile ? (
+              vehicle ? (
                 <ItemsTable vehicle={vehicle} />
               ) : (
                 <div aria-hidden className="glass h-24" />
-              )}
-            </motion.div>
-          )}
-          {tile && detail.isError && (
-            <p role="alert" className="text-bad text-sm">
-              {t('vehicle.loadFailed')}
-            </p>
-          )}
-        </div>
-
-        {tile && !notFound && (
-          <motion.aside
-            data-panel
-            {...asideMotion}
-            aria-labelledby="activity-title"
-            className="glass flex max-h-[calc(100dvh-10rem)] min-h-0 flex-col p-3 lg:sticky lg:top-0"
-          >
-            <Activity
-              serial={serial}
-              highlightId={highlightId}
-              reduced={reduced}
-              revealDelayMs={(T.panels + 0.4) * 1000}
-            />
-          </motion.aside>
-        )}
+              )
+            ) : null,
+            activity:
+              tile && !notFound ? (
+                <Activity
+                  serial={serial}
+                  highlightId={highlightId}
+                  reduced={reduced}
+                  revealDelayMs={(T.panels + 0.4) * 1000}
+                />
+              ) : null,
+          }}
+        />
       </motion.div>
       {editing && (
         <Suspense>

@@ -16,7 +16,7 @@ export type FuelLevelBody = z.infer<typeof fuelLevelBody>;
 /**
  * One reading from a connected vehicle (docs/LIVE-DATA.md). A connection tied to one vehicle may
  * leave out `serial` and `vin`; a gateway connection names the vehicle in every reading. At least
- * one of `fuelLevelPct` and `fuelLiters` is needed. Fields the shape doesn't know are ignored, so a
+ * one of `fuelLevelPct`, `fuelLiters` and `engineHours` is needed. Fields the shape doesn't know are ignored, so a
  * provider can pass its own along.
  */
 export const fuelReadingInput = z
@@ -26,8 +26,14 @@ export const fuelReadingInput = z
     at: z.iso.datetime({ offset: true }).optional(),
     fuelLevelPct: pct.optional(),
     fuelLiters: liters.optional(),
+    /** The engine's hour meter (2026-11-22): updates the vehicle's engine hours live. */
+    engineHours: z.number().min(0).max(1_000_000).optional(),
   })
-  .refine((r) => r.fuelLevelPct !== undefined || r.fuelLiters !== undefined, 'noFuel');
+  .refine(
+    (r) =>
+      r.fuelLevelPct !== undefined || r.fuelLiters !== undefined || r.engineHours !== undefined,
+    'noData',
+  );
 export type FuelReadingInput = z.infer<typeof fuelReadingInput>;
 
 /**
