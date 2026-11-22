@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Package, Plus, X } from 'lucide-react';
+import { Package, Plus, X } from 'lucide-react';
 import { hasRole } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { Button } from '@/components/ui/button';
 import { useDateFormat } from '@/fleet/FleetGrid';
-import { useItemAction, useUnassignedItems, type VehicleDetail } from './data';
+import { prefersReducedMotion } from '@/lib/motion';
+import { ItemChooser, NewItemForVehicle } from './AddItem';
+import { useItemAction, type VehicleDetail } from './data';
 
 const DASH = '—';
 
@@ -16,22 +18,9 @@ export function ItemsTable({ vehicle }: { vehicle: VehicleDetail }) {
   const formatDate = useDateFormat();
   const canEdit = !!user && hasRole(user.role, 'EDITOR');
   const [choosing, setChoosing] = useState(false);
-  const [choice, setChoice] = useState('');
-  const free = useUnassignedItems(canEdit && choosing);
+  const [creating, setCreating] = useState(false);
+  const [reduced] = useState(prefersReducedMotion);
   const action = useItemAction(vehicle.serial);
-
-  const assign = () => {
-    if (!choice) return;
-    action.mutate(
-      { id: choice, action: 'assign' },
-      {
-        onSuccess: () => {
-          setChoice('');
-          setChoosing(false);
-        },
-      },
-    );
-  };
 
   return (
     <section aria-labelledby="items-title" className="glass p-3" data-testid="items">
@@ -49,33 +38,23 @@ export function ItemsTable({ vehicle }: { vehicle: VehicleDetail }) {
       </div>
 
       {choosing && (
-        <div className="border-border mb-3 flex flex-wrap items-center gap-2 rounded-lg border p-2">
-          {free.isPending ? (
-            <Loader2 aria-hidden className="text-muted size-4 animate-spin" />
-          ) : free.data?.items.length ? (
-            <select
-              value={choice}
-              onChange={(e) => setChoice(e.target.value)}
-              aria-label={t('vehicle.items.choose')}
-              className="border-border-strong bg-surface-strong h-8 min-w-0 flex-1 rounded-md border px-2 text-sm"
-            >
-              <option value="">{t('vehicle.items.choose')}</option>
-              {free.data.items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  <bdi>{[item.name, item.model, item.serial].filter(Boolean).join(' · ')}</bdi>
-                </option>
-              ))}
-            </select>
-          ) : (
-            <p className="text-muted flex-1 text-sm">{t('vehicle.items.noneFree')}</p>
-          )}
-          <Button size="sm" onClick={assign} disabled={!choice || action.isPending}>
-            {t('vehicle.items.assign')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setChoosing(false)}>
-            {t('vehicle.items.cancel')}
-          </Button>
+        <div className="border-border mb-3 rounded-lg border p-2">
+          <ItemChooser
+            serial={vehicle.serial}
+            onDone={() => setChoosing(false)}
+            onNew={() => {
+              setChoosing(false);
+              setCreating(true);
+            }}
+          />
         </div>
+      )}
+      {creating && (
+        <NewItemForVehicle
+          serial={vehicle.serial}
+          reduced={reduced}
+          onClose={() => setCreating(false)}
+        />
       )}
       {action.isError && (
         <p role="alert" className="text-bad mb-2 text-xs">

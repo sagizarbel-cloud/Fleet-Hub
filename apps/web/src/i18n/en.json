@@ -356,7 +356,11 @@
       "serial": "Serial",
       "since": "Assigned since",
       "actions": "Actions",
-      "remove": "Remove"
+      "remove": "Remove",
+      "new": "New item…",
+      "addTool": "Add tool",
+      "addToolTitle": "Add a tool to {{serial}}",
+      "addToolHint": "Pick a tool or accessory that's free in the yard, or create a new one. It goes straight onto this vehicle."
     },
     "ownership": {
       "purchaseDate": "Purchase date",
@@ -1123,6 +1127,16 @@
       "replace": "Replace",
       "remove": "Remove",
       "undo": "Undo"
+    },
+    "location": {
+      "new": "New location…",
+      "name_en": "Name in English",
+      "name_he": "Name in Hebrew",
+      "hint": "Fill one name or both. The other language can be changed later in Settings → Lists.",
+      "add": "Add location",
+      "cancel": "Cancel",
+      "nameRequired": "Type a name for the location.",
+      "taken": "A location with this name already exists, maybe hidden in Settings."
     }
   },
   "import": {

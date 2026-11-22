@@ -9,6 +9,14 @@
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
 
+### Vehicle page notes — 2026-11-15
+
+- Sagi's notes after trying the site. The fleet grid's dashed "Add vehicle" button was a never-wired placeholder; it now opens the Add vehicle form.
+- Vehicle drawing: "Add tool" (editors and admins; icon only on phones) opens a sheet to put a free tool or accessory from the yard on this vehicle, or create a new one that goes straight onto it. The items table's Assign panel got the same "New item…". The item form moved to `money/ItemForm.tsx` so both pages share it.
+- Add / edit vehicle: Location has "New location…", which adds a site to the Settings list on the spot (one or both names; the code is made from the English name). No schema change.
+- The admin's status override button next to the status badge is now the same square as the report and edit buttons, with its icon centred (it was smaller and off-centre).
+- Tests: unit test for the location code, e2e for the grid button + new location, and for Add tool.
+
 ### Current fuel and live data — 2026-11-15
 
 - Sagi: a current fuel panel for all vehicles, and a connection ready for live data; fuel is one of the few values that should update in real time from connected vehicles. The telematics system isn't chosen, so the ingest is provider-agnostic (contract in `docs/LIVE-DATA.md`).
