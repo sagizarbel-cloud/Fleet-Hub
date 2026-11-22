@@ -17,13 +17,11 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import {
-  dashboardLayoutOf,
-  DEFAULT_DASHBOARD_LAYOUT,
   PANEL_HEIGHT,
-  RESIZABLE_PANELS,
-  SPLIT,
-  type DashboardLayout,
-  type DashboardPanel,
+  type LayoutName,
+  type Layouts,
+  type PanelLayout,
+  type PanelScreen,
 } from '@fleet-hub/shared';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
@@ -49,7 +47,7 @@ function useWide() {
 type Where = { list: 'start' | 'end' | 'phone'; index: number };
 
 /** Moves a panel to a list and position, keeping every panel exactly once in that layout part. */
-export function movePanel(l: DashboardLayout, id: DashboardPanel, to: Where): DashboardLayout {
+export function movePanel<P extends string>(l: PanelLayout<P>, id: P, to: Where): PanelLayout<P> {
   if (to.list === 'phone') {
     const phone = l.phone.filter((p) => p !== id);
     phone.splice(clamp(to.index, 0, phone.length), 0, id);
@@ -62,44 +60,72 @@ export function movePanel(l: DashboardLayout, id: DashboardPanel, to: Where): Da
   return { ...l, start, end };
 }
 
+/** What a page's wrap gets to know about where a panel is. */
+export interface PanelPlace {
+  list: Where['list'];
+  /** Has a height the user set. */
+  sized: boolean;
+  /** Last in its column. */
+  last: boolean;
+}
+
 /**
- * The dashboard's panels, which each user can arrange (Sagi, 2026-11-22): "Arrange panels" shows
- * a handle on each panel to drag it (mouse or touch) to another place or column, arrow buttons
- * that do the same from the keyboard, a divider to change the columns' widths, and a bottom edge
- * to make the fuel and activity lists taller or shorter, within limits. The arrangement is saved
- * to the account (so it follows the user to other devices) and "Reset to default" brings back the
- * original. Phones keep one column with their own order.
+ * Panels each user can arrange (Sagi, 2026-11-22), on the dashboard and the vehicle page:
+ * "Arrange panels" shows a handle on each panel to drag it (mouse or touch) to another place or
+ * column, arrow buttons that do the same from the keyboard, a divider to change the columns'
+ * widths, and a bottom edge to make scrolling lists taller or shorter, within limits. The
+ * arrangement is saved to the account (so it follows the user to other devices) and "Reset to
+ * default" brings back the original. Phones keep one column with their own order.
  */
-export function DashboardPanels({
+export function PanelBoard<P extends string>({
+  name,
+  screen,
   panels,
   wrap,
+  lead,
+  toolbarAt = 'top',
+  sticky = [],
+  controls = true,
 }: {
-  panels: Record<DashboardPanel, ReactNode>;
+  /** Which saved layout this is. */
+  name: LayoutName;
+  screen: PanelScreen<P>;
+  panels: Record<P, ReactNode>;
   /** Wraps each panel (the page's entrance motion). */
-  wrap?: (id: DashboardPanel, node: ReactNode) => ReactNode;
+  wrap?: (id: P, node: ReactNode, place: PanelPlace) => ReactNode;
+  /** Fixed content on top of the start column (one column: on top), which doesn't move. */
+  lead?: ReactNode;
+  /** Where the Arrange button sits; at the bottom it stays in view while arranging. */
+  toolbarAt?: 'top' | 'bottom';
+  /** Panels that stay in view while the page scrolls when they're last in a wide column. */
+  sticky?: readonly P[];
+  /** Shows the Arrange button; off while the page is covered or has nothing to arrange. */
+  controls?: boolean;
 }) {
   const { t } = useTranslation();
   const wide = useWide();
   const prefs = usePreferences();
   const save = useSavePreferences();
-  const saved = dashboardLayoutOf(prefs.data?.layouts?.dashboard);
-  const [draft, setDraft] = useState<DashboardLayout | null>(null);
+  const saved = screen.of(prefs.data?.layouts?.[name]);
+  const [draft, setDraft] = useState<PanelLayout<P> | null>(null);
   const layout = draft ?? saved;
-  const [arranging, setArranging] = useState(false);
-  const [dragging, setDragging] = useState<DashboardPanel | null>(null);
+  const [arrangeOn, setArranging] = useState(false);
+  const arranging = arrangeOn && controls;
+  const [dragging, setDragging] = useState<P | null>(null);
   const [dropAt, setDropAt] = useState<Where | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<number | undefined>(undefined);
+  const SPLIT = screen.split;
 
-  const isDefault = JSON.stringify(layout) === JSON.stringify(DEFAULT_DASHBOARD_LAYOUT);
+  const isDefault = JSON.stringify(layout) === JSON.stringify(screen.defaults);
 
   /** Shows a change at once and saves it shortly after (a drag sends many). */
-  const change = (next: DashboardLayout, now = false) => {
+  const change = (next: PanelLayout<P>, now = false) => {
     setDraft(next);
     window.clearTimeout(saveTimer.current);
     const send = () =>
       save.mutate(
-        { layouts: { ...(prefs.data?.layouts ?? {}), dashboard: next } },
+        { layouts: { ...(prefs.data?.layouts ?? {}), [name]: next } as Layouts },
         { onSettled: () => setDraft(null) },
       );
     if (now) send();
@@ -109,8 +135,9 @@ export function DashboardPanels({
 
   const reset = () => {
     window.clearTimeout(saveTimer.current);
-    setDraft(DEFAULT_DASHBOARD_LAYOUT);
-    const { dashboard: _gone, ...others } = prefs.data?.layouts ?? {};
+    setDraft(screen.defaults);
+    const others: Layouts = { ...(prefs.data?.layouts ?? {}) };
+    delete others[name];
     save.mutate(
       { layouts: Object.keys(others).length ? others : null },
       { onSettled: () => setDraft(null) },
@@ -129,9 +156,10 @@ export function DashboardPanels({
     const index = Number(el.dataset.index) + (y > rect.top + rect.height / 2 ? 1 : 0);
     return { list, index };
   };
-  const startDrag = (id: DashboardPanel) => (e: ReactPointerEvent) => {
+  const startDrag = (id: P) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return;
     e.preventDefault();
+    e.stopPropagation(); // not a swipe of the page
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragging(id);
   };
@@ -158,14 +186,14 @@ export function DashboardPanels({
 
   // ---------- The same from the keyboard (and for anyone who prefers buttons) ----------
 
-  const listOf = (id: DashboardPanel): Where['list'] =>
+  const listOf = (id: P): Where['list'] =>
     !wide ? 'phone' : layout.start.includes(id) ? 'start' : 'end';
-  const nudge = (id: DashboardPanel, by: -1 | 1) => {
+  const nudge = (id: P, by: -1 | 1) => {
     const list = listOf(id);
     const items = layout[list];
     change(movePanel(layout, id, { list, index: items.indexOf(id) + by }), true);
   };
-  const otherColumn = (id: DashboardPanel) => {
+  const otherColumn = (id: P) => {
     const list = listOf(id) === 'start' ? 'end' : 'start';
     change(movePanel(layout, id, { list, index: layout[list].length }), true);
   };
@@ -177,6 +205,7 @@ export function DashboardPanels({
     const box = root.current?.querySelector<HTMLElement>('[data-columns]')?.getBoundingClientRect();
     if (!box) return;
     e.preventDefault();
+    e.stopPropagation(); // not a swipe of the page
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     splitDrag.current = {
       left: box.left,
@@ -201,11 +230,12 @@ export function DashboardPanels({
     });
   };
 
-  const heightDrag = useRef<{ id: DashboardPanel; top: number } | null>(null);
-  const onHeightDown = (id: DashboardPanel) => (e: ReactPointerEvent) => {
+  const heightDrag = useRef<{ id: P; top: number } | null>(null);
+  const onHeightDown = (id: P) => (e: ReactPointerEvent) => {
     const frame = (e.currentTarget as HTMLElement).closest<HTMLElement>('[data-panel-frame]');
     if (!frame) return;
     e.preventDefault();
+    e.stopPropagation(); // not a swipe of the page
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     heightDrag.current = { id, top: frame.getBoundingClientRect().top };
   };
@@ -215,7 +245,7 @@ export function DashboardPanels({
     const h = Math.round(clamp(e.clientY - d.top, PANEL_HEIGHT.min, PANEL_HEIGHT.max));
     change({ ...layout, heights: { ...layout.heights, [d.id]: h } });
   };
-  const onHeightKey = (id: DashboardPanel, current: number) => (e: KeyboardEvent) => {
+  const onHeightKey = (id: P, current: number) => (e: KeyboardEvent) => {
     const step = e.key === 'ArrowDown' ? 40 : e.key === 'ArrowUp' ? -40 : 0;
     if (!step) return;
     e.preventDefault();
@@ -230,9 +260,9 @@ export function DashboardPanels({
 
   // ---------- Rendering ----------
 
-  const frame = (id: DashboardPanel, list: Where['list'], index: number, count: number) => {
+  const frame = (id: P, list: Where['list'], index: number, count: number) => {
     const height = layout.heights[id];
-    const resizable = RESIZABLE_PANELS.includes(id);
+    const resizable = screen.resizable.includes(id);
     const name = t(`layout.panel.${id}`);
     const marker =
       dragging && dropAt?.list === list
@@ -254,6 +284,7 @@ export function DashboardPanels({
           'fh-panel relative flex min-h-0 min-w-0 flex-col',
           arranging && 'ring-border-strong rounded-sm ring-1 ring-dashed',
           dragging === id && 'opacity-50',
+          wide && !arranging && index === count - 1 && sticky.includes(id) && 'sticky top-0',
           marker === 'before' && 'fh-drop-before',
           marker === 'after' && 'fh-drop-after',
         )}
@@ -303,7 +334,9 @@ export function DashboardPanels({
           </div>
         )}
         <div className="fh-panel-body flex min-h-0 flex-1 flex-col">
-          {wrap ? wrap(id, panels[id]) : panels[id]}
+          {wrap
+            ? wrap(id, panels[id], { list, sized: !!height, last: index === count - 1 })
+            : panels[id]}
         </div>
         {arranging && resizable && (
           <div
@@ -327,9 +360,10 @@ export function DashboardPanels({
     );
   };
 
-  const column = (list: Where['list'], items: DashboardPanel[]) => (
-    <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:gap-4" data-list-root={list}>
-      {items.map((id, i) => frame(id, list, i, items.length))}
+  const column = (list: Where['list'], items: P[]) => (
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-3 lg:gap-4" data-list-root={list}>
+      {list !== LIST.end && lead}
+      {items.map((id, i) => panels[id] != null && frame(id, list, i, items.length))}
       {/* A drop place at the column's end, so a column can also take a panel when empty. */}
       {arranging && (
         <div
@@ -350,39 +384,50 @@ export function DashboardPanels({
     </div>
   );
 
-  return (
-    <div ref={root} className="space-y-2" data-testid="dashboard-panels">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {arranging && (
-          <p className="text-muted me-auto text-xs" role="status">
-            {t(wide ? 'layout.hintWide' : 'layout.hintPhone')}
-          </p>
-        )}
-        {arranging && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={reset}
-            disabled={isDefault}
-            data-testid="layout-reset"
-          >
-            <RotateCcw aria-hidden />
-            {t('layout.reset')}
-          </Button>
-        )}
+  const toolbar = (
+    <div
+      className={cn(
+        'flex flex-wrap items-center justify-end gap-2',
+        // Hidden, not removed, so the panels below don't shift (the dashboard behind a vehicle).
+        !controls && 'invisible',
+        toolbarAt === 'bottom' && arranging && 'glass sticky bottom-2 z-20 px-2 py-1.5 shadow-lg',
+      )}
+    >
+      {arranging && (
+        <p className="text-muted me-auto text-xs" role="status">
+          {t(wide ? 'layout.hintWide' : 'layout.hintPhone')}
+        </p>
+      )}
+      {arranging && (
         <Button
-          variant={arranging ? 'primary' : 'outline'}
+          variant="ghost"
           size="sm"
-          aria-pressed={arranging}
-          onClick={() => setArranging((a) => !a)}
-          data-testid="layout-arrange"
+          onClick={reset}
+          disabled={isDefault}
+          data-testid="layout-reset"
         >
-          {arranging ? <Check aria-hidden /> : <LayoutDashboard aria-hidden />}
-          {t(arranging ? 'layout.done' : 'layout.arrange')}
+          <RotateCcw aria-hidden />
+          {t('layout.reset')}
         </Button>
-      </div>
-      {wide ? (
-        <div className="flex items-start" data-columns>
+      )}
+      <Button
+        variant={arranging ? 'primary' : 'outline'}
+        size="sm"
+        aria-pressed={arranging}
+        onClick={() => setArranging((a) => !a)}
+        data-testid="layout-arrange"
+      >
+        {arranging ? <Check aria-hidden /> : <LayoutDashboard aria-hidden />}
+        {t(arranging ? 'layout.done' : 'layout.arrange')}
+      </Button>
+    </div>
+  );
+
+  return (
+    <div ref={root} className="space-y-2" data-testid={`panels-${name}`}>
+      {toolbarAt === 'top' && toolbar}
+      {wide && (arranging || (layout.start.length > 0 && layout.end.length > 0)) ? (
+        <div className="flex" data-columns>
           <div style={{ width: `${layout.split * 100}%` }} className="min-w-0 shrink-0">
             {column(LIST.start, layout.start)}
           </div>
@@ -414,9 +459,13 @@ export function DashboardPanels({
           </div>
           <div className="min-w-0 flex-1">{column(LIST.end, layout.end)}</div>
         </div>
+      ) : wide ? (
+        // One column was emptied: the other takes the whole width (until arranging again).
+        column(LIST.start, [...layout.start, ...layout.end])
       ) : (
         column(LIST.phone, layout.phone)
       )}
+      {toolbarAt === 'bottom' && toolbar}
     </div>
   );
 }

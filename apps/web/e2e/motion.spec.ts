@@ -72,9 +72,13 @@ test('quick Next presses land on the right vehicle and Back still returns', asyn
   const stage = page.getByTestId('vehicle-stage');
   await stage.waitFor();
   const first = (await stage.getAttribute('data-serial'))!;
+  // The grid parks by location, so its first tile isn't always first in serial order.
+  const nav = page.getByTestId('vehicle-nav');
+  await expect(nav).toContainText(/\d+\/\d+/);
+  const at = Number(/(\d+)\/\d+/.exec((await nav.textContent())!)![1]);
   for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
   await expect(stage).not.toHaveAttribute('data-serial', first);
-  await expect(page.getByTestId('vehicle-nav')).toContainText(/(^|\D)4\/\d+/);
+  await expect(nav).toContainText(new RegExp(`(^|\\D)${at + 3}/\\d+`));
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL('/');
 });

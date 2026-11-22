@@ -1523,7 +1523,10 @@
       "kpi": "Status and totals",
       "fuel": "Current fuel",
       "timeline": "Recent activity",
-      "grid": "Fleet"
+      "grid": "Fleet",
+      "records": "Records",
+      "items": "Assigned items",
+      "activity": "Activity"
     }
   }
 }

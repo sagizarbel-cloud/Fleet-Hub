@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DASHBOARD_SCREEN } from '@fleet-hub/shared';
+import { PanelBoard } from '@/layout/PanelBoard';
 import { useDashboard, useLookups } from './data';
-import { DashboardPanels } from './DashboardPanels';
 import { FleetGrid } from './FleetGrid';
 import { HoverProvider } from './hover';
 import { KpiStrip } from './KpiStrip';
@@ -148,7 +149,10 @@ export function FleetStage() {
     behind = (
       <div inert={phase === 'open'} aria-hidden={phase === 'open' || undefined}>
         <h1 className="sr-only">{t('nav.dashboard')}</h1>
-        <DashboardPanels
+        <PanelBoard
+          name="dashboard"
+          controls={phase === 'home'}
+          screen={DASHBOARD_SCREEN}
           wrap={(id, node) =>
             id === 'grid' ? (
               node
