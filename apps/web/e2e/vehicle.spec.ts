@@ -21,6 +21,19 @@ test.describe('vehicle page', () => {
     await expect(page.getByRole('status').filter({ hasText: 'Copied' })).toHaveCount(1);
   });
 
+  test('Add tool on the drawing creates a new item and puts it on the vehicle', async ({
+    page,
+  }) => {
+    const name = `E2E rake ${String(Date.now()).slice(-6)}`;
+    await page.goto('/vehicles/VN-951');
+    await page.getByTestId('add-tool').click();
+    await expect(page.getByTestId('item-chooser')).toBeVisible();
+    await page.getByTestId('item-new').click();
+    await page.getByTestId('item-name').fill(name);
+    await page.getByTestId('item-save').click();
+    await expect(page.getByTestId('items')).toContainText(name);
+  });
+
   test('reveals the start code only on request, for a permitted user', async ({ page }) => {
     await openVehicle(page);
     const code = page.getByTestId('start-code-value');

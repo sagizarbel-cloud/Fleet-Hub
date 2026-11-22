@@ -71,8 +71,9 @@ export function StatusControl({
       {opener}
       <Popover
         label={t('vehicle.override.title')}
-        trigger={<SlidersHorizontal aria-hidden className="size-3.5" />}
-        className="[&>button]:text-muted [&>button]:hover:text-text [&>button]:size-7 [&>button]:p-0"
+        trigger={<SlidersHorizontal aria-hidden className="size-4" />}
+        // Same square as the report and edit buttons beside it, icon centred (Sagi, 2026-11-15).
+        className="[&>button]:text-muted [&>button]:hover:text-text [&>button]:hover:bg-border [&>button]:size-9 [&>button]:justify-center [&>button]:p-0"
         panelClassName="w-72"
       >
         {(close) => <OverrideForm vehicle={vehicle} close={close} />}

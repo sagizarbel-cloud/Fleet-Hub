@@ -18,6 +18,7 @@ import { Records } from '@/vehicle/Records';
 import { attachmentUrl } from '@/vehicle/records/api';
 import { StatusControl } from '@/vehicle/StatusControl';
 import { ToolPicker } from '@/vehicle/ToolPicker';
+import { AddToolButton } from '@/vehicle/AddItem';
 import { ReportHost } from '@/vehicle/ReportHost';
 import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
 import { VitalsBar } from '@/vehicle/VitalsBar';
@@ -436,8 +437,13 @@ export function VehicleStage({
                 <p className="text-muted my-24 text-sm">{t('vehicle.notFound', { serial })}</p>
               )}
               {tile && (
-                <motion.div data-panel {...toggleMotion} className="absolute start-2 top-2">
+                <motion.div
+                  data-panel
+                  {...toggleMotion}
+                  className="absolute start-2 top-2 flex flex-wrap items-center gap-1.5"
+                >
                   <ToolPicker vehicle={vehicle} type={tile.type} />
+                  {vehicle && <AddToolButton serial={vehicle.serial} reduced={reduced} />}
                 </motion.div>
               )}
               {tile && (

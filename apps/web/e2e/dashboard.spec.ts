@@ -24,8 +24,8 @@ test.describe('dashboard', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Fuel', exact: true }).click();
     const rows = page.locator('[data-event-id]');
-    await expect(rows.first()).toContainText('Refueled');
-    for (const text of await rows.allInnerTexts()) expect(text).toContain('Refueled');
+    await expect(rows.first()).toContainText(/Refueled|Fuel level set/);
+    for (const text of await rows.allInnerTexts()) expect(text).toMatch(/Refueled|Fuel level set/);
   });
 
   test('the fleet parks by location; grouping by type is a saved choice (Revisions 1)', async ({

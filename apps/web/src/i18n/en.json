@@ -165,6 +165,8 @@
     "MALFUNCTION_RESOLVED": "Malfunction resolved: {{description}}",
     "FLUID_ADDED": "Added {{liters}} L of {{fluid}}",
     "FUEL_ADDED": "Refueled {{liters}} L",
+    "FUEL_LEVEL": "Fuel level set to {{pct}}%",
+    "FUEL_LEVEL_liters": "Fuel level set to {{pct}}% ({{liters}} L)",
     "MOVEMENT": "Location change: {{from}} → {{to}}",
     "INSPECTION": "{{kind}} updated",
     "ITEM_ASSIGNED": "Item assigned: {{item}}",
@@ -191,6 +193,38 @@
     "TOOL_CHANGED": "Tool changed: {{from}} → {{to}}",
     "WIGGLE_TEST": "Wiggle test: all OK",
     "WIGGLE_TEST_failed": "Wiggle test, not OK: {{items}}"
+  },
+  "fuel": {
+    "title": "Current fuel",
+    "sort": "Sort",
+    "sortBy": {
+      "low": "Lowest first",
+      "serial": "By number"
+    },
+    "liveCount": "Live: {{count}}",
+    "lowCount": "Low: {{count}}",
+    "empty": "No vehicles with a fuel tank yet.",
+    "noReading": "No reading",
+    "levelOf": "Fuel level of {{serial}}",
+    "state": {
+      "live": "Live",
+      "stale": "Stale",
+      "manual": "Manual",
+      "none": "No reading"
+    },
+    "link": {
+      "connecting": "Connecting…",
+      "open": "Live updates on",
+      "down": "Live updates off"
+    },
+    "set": "Set level",
+    "setFor": "Set the fuel level of {{serial}}",
+    "setTitle": "Fuel level · {{serial}}",
+    "pct": "Level (%)",
+    "pctError": "A number from 0 to 100",
+    "liters": "Litres in the tank",
+    "litersHint": "Optional",
+    "manualHint": "Shows as a manual reading until the vehicle sends a live one."
   },
   "severity": {
     "LOW": "low",
@@ -268,6 +302,7 @@
       "makeModelYear": "Make, model, year",
       "openMalfunctions": "Open malfunctions",
       "fuelEconomy": "Fuel economy, last 30 days",
+      "fuelLevel": "Fuel level",
       "maintenanceCostYtd": "Maintenance cost this year",
       "purchaseWarranty": "Purchase / warranty",
       "lastActivity": "Last activity",
@@ -321,7 +356,11 @@
       "serial": "Serial",
       "since": "Assigned since",
       "actions": "Actions",
-      "remove": "Remove"
+      "remove": "Remove",
+      "new": "New item…",
+      "addTool": "Add tool",
+      "addToolTitle": "Add a tool to {{serial}}",
+      "addToolHint": "Pick a tool or accessory that's free in the yard, or create a new one. It goes straight onto this vehicle."
     },
     "ownership": {
       "purchaseDate": "Purchase date",
@@ -822,7 +861,8 @@
       "users": "Users and roles",
       "import": "Excel import",
       "required": "Record fields",
-      "report": "Printed reports"
+      "report": "Printed reports",
+      "live": "Live data"
     },
     "loadFailed": "Couldn't load this. Try again.",
     "mine": {
@@ -980,6 +1020,32 @@
       "title": "Yard play",
       "hint": "A hidden mini-game on the dashboard: tap the Fleet heading five times, or type \"yard\". It only moves pictures and never changes data.",
       "on": "On for everyone"
+    },
+    "live": {
+      "hint": "Connected vehicles send their fuel level here in real time. Each connection has its own token: one per vehicle tracker, or one for the telematics provider's server reporting for many vehicles.",
+      "add": "Add connection",
+      "addTitle": "New connection",
+      "create": "Create and show token",
+      "name": "Name",
+      "nameHint": "For example the tracker's model or the provider's name.",
+      "reportsFor": "Reports for",
+      "gatewayOption": "Many vehicles (each reading names its vehicle)",
+      "reportsForHint": "A tracker in one vehicle: pick the vehicle. The provider's server: leave it on many vehicles, and each reading names the vehicle by its number or VIN.",
+      "endpoint": "Address to send readings to",
+      "docs": "The format and examples are in the integration guide (docs/LIVE-DATA.md in the code).",
+      "none": "No connections yet. Add one when a vehicle or a telematics provider is ready to send data.",
+      "vehicle": "Vehicle",
+      "gateway": "Many vehicles",
+      "tokenEnds": "Token ending",
+      "lastSeen": "Last reading {{when}}",
+      "neverSeen": "No readings yet",
+      "off": "Turned off",
+      "newToken": "New token",
+      "newTokenHint": "Makes a new token; the old one stops working at once.",
+      "turnOff": "Turn off",
+      "tokenTitle": "Token for {{name}}",
+      "tokenOnce": "Copy the token now: it is shown only once. Put it in the tracker or the provider's settings, sent as \"Authorization: Bearer <token>\".",
+      "token": "Token"
     }
   },
   "reset": {
@@ -1081,6 +1147,16 @@
       "replace": "Replace",
       "remove": "Remove",
       "undo": "Undo"
+    },
+    "location": {
+      "new": "New location…",
+      "name_en": "Name in English",
+      "name_he": "Name in Hebrew",
+      "hint": "Fill one name or both. The other language can be changed later in Settings → Lists.",
+      "add": "Add location",
+      "cancel": "Cancel",
+      "nameRequired": "Type a name for the location.",
+      "taken": "A location with this name already exists, maybe hidden in Settings."
     }
   },
   "import": {
