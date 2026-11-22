@@ -1,6 +1,6 @@
 // Dev only: pretends to be a telematics gateway so the fuel panel can be watched updating live.
 // It makes (or re-keys) a connection named "Simulator (dev)" in the dev database, then posts
-// readings for a few vehicles to the running api the same way a real provider would
+// readings (fuel and engine hours) for a few vehicles to the running api the same way a real provider would
 // (docs/LIVE-DATA.md). Usage: pnpm fuel:simulate [serial ...]   (Ctrl+C to stop)
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
@@ -27,7 +27,7 @@ const vehicles = await db.vehicle.findMany({
     type: { code: { notIn: [...NO_FUEL_TYPES] } },
     ...(asked.length ? { serial: { in: asked } } : {}),
   },
-  select: { serial: true, fuelLevel: { select: { pct: true } } },
+  select: { serial: true, engineHours: true, fuelLevel: { select: { pct: true } } },
   orderBy: { serial: 'asc' },
   take: asked.length || 4,
 });
@@ -35,6 +35,8 @@ await db.$disconnect();
 if (!vehicles.length) throw new Error('No vehicles to simulate. Run pnpm db:seed first.');
 
 const levels = new Map(vehicles.map((v) => [v.serial, v.fuelLevel?.pct ?? 60]));
+// Hour meters tick up one hour per reading (sped up, so the vehicle page can be watched changing).
+const hours = new Map(vehicles.map((v) => [v.serial, v.engineHours ?? 0]));
 console.log(`Simulating ${[...levels.keys()].join(', ')} every ${EVERY_MS / 1000} s to ${API}`);
 
 async function tick() {
@@ -43,7 +45,14 @@ async function tick() {
     let next = pct - (0.3 + Math.random() * 1.2);
     if (next < 6) next = 92 + Math.random() * 8;
     levels.set(serial, next);
-    return { serial, at: new Date().toISOString(), fuelLevelPct: Math.round(next * 10) / 10 };
+    const h = (hours.get(serial) ?? 0) + 1;
+    hours.set(serial, h);
+    return {
+      serial,
+      at: new Date().toISOString(),
+      fuelLevelPct: Math.round(next * 10) / 10,
+      engineHours: h,
+    };
   });
   try {
     const res = await fetch(`${API}/api/telematics/v1/readings`, {

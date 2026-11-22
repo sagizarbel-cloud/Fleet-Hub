@@ -19,6 +19,7 @@ import { attachmentUrl } from '@/vehicle/records/api';
 import { StatusControl } from '@/vehicle/StatusControl';
 import { ToolPicker } from '@/vehicle/ToolPicker';
 import { AddToolButton } from '@/vehicle/AddItem';
+import { useLiveHours } from '@/vehicle/liveHours';
 import { ReportHost } from '@/vehicle/ReportHost';
 import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
 import { VitalsBar } from '@/vehicle/VitalsBar';
@@ -110,6 +111,7 @@ export function VehicleStage({
   const highlightId = params.get('event');
   const { data: lookups } = useLookups();
   const detail = useVehicle(serial);
+  useLiveHours(serial);
   const vehicle = detail.data;
   const prefs = usePreferences();
   const savePrefs = useSavePreferences();

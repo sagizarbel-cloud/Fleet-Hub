@@ -5,7 +5,7 @@ Fleet Hub shows every vehicle's **current fuel level** on the dashboard. A level
 - **Manual**: an editor reads the gauge and sets it (pencil on the dashboard's _Current fuel_ panel). It is logged in the vehicle's timeline.
 - **Live**: a connected vehicle, or the telematics provider's server, posts readings to Fleet Hub. Open dashboards update within a second, without reloading.
 
-The telematics system isn't chosen yet, so Fleet Hub takes one small, provider-agnostic format. Whatever system is picked, a short adapter on its side (or its "webhook" / "data forwarding" feature) maps its data to the format below. Fuel is the first live value; the format leaves room for more later.
+The telematics system isn't chosen yet, so Fleet Hub takes one small, provider-agnostic format. Whatever system is picked, a short adapter on its side (or its "webhook" / "data forwarding" feature) maps its data to the format below. Fuel and engine hours are the live values so far; the format leaves room for more later.
 
 ## 1. Create a connection (admin)
 
@@ -54,6 +54,7 @@ A tracker on a one-vehicle connection can send just:
 | `at`           | ISO 8601 date-time with zone | no (default: when it arrives)          | When the vehicle measured it. Up to 5 minutes ahead of the server clock is accepted.  |
 | `fuelLevelPct` | number 0–100                 | this or `fuelLiters`, or both          | Percent of the tank. Rounded to one decimal.                                          |
 | `fuelLiters`   | number ≥ 0                   | this or `fuelLevelPct`, or both        | Litres in the tank.                                                                   |
+| `engineHours`  | number ≥ 0                   | no (but a reading needs at least one of the three values) | The engine's hour meter. Updates the vehicle's engine hours live (vehicle page vitals, callouts, next service). Rounded to whole hours; a value lower than the current one is ignored, since hour meters only count up. Added 2026-11-22. |
 
 Any other field is ignored, so a provider can pass its own data along.
 
@@ -63,7 +64,7 @@ Any other field is ignored, so a provider can pass its own data along.
   ```json
   { "accepted": 1, "ignored": [{ "index": 1, "reason": "vehicle_not_found" }] }
   ```
-  Reasons: `vehicle_not_found`, `vehicle_missing` (a gateway reading without `serial` or `vin`), `vehicle_mismatch` (a one-vehicle connection naming another vehicle), `no_fuel_tank` (e.g. a trailer), `future_time`, `noFuel` (neither fuel field), or `<field>:<problem>` such as `fuelLevelPct:too_big`.
+  Reasons: `vehicle_not_found`, `vehicle_missing` (a gateway reading without `serial` or `vin`), `vehicle_mismatch` (a one-vehicle connection naming another vehicle), `no_fuel_tank` (fuel for a vehicle without a tank, e.g. a trailer, with no `engineHours` either), `future_time`, `noData` (no fuel field and no `engineHours`), or `<field>:<problem>` such as `fuelLevelPct:too_big`.
 - `422`: every reading was ignored (same body as above).
 - `400`: the body isn't one of the three shapes, or has more than 500 readings.
 - `401` `{ "error": "bad_token" }`: missing, wrong or turned-off token.

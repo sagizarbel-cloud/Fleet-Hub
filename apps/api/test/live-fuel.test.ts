@@ -180,7 +180,7 @@ describe('ingest', () => {
       ignored: [
         { index: 2, reason: 'vehicle_not_found' },
         { index: 3, reason: 'vehicle_missing' },
-        { index: 4, reason: 'noFuel' },
+        { index: 4, reason: 'noData' },
         { index: 5, reason: 'no_fuel_tank' },
         { index: 6, reason: 'future_time' },
         { index: 7, reason: 'fuelLevelPct:too_big' },
@@ -188,6 +188,34 @@ describe('ingest', () => {
     });
     expect(await levelOf(a)).toMatchObject({ pct: 40, source: 'LIVE' });
     expect(await levelOf(b)).toMatchObject({ pct: null, liters: 120, source: 'LIVE' });
+  });
+
+  it('engine hours update the vehicle live, only ever upward, and go out on the stream bus', async () => {
+    const serial = await vehicle('wheel_loader');
+    const trailer = await vehicle('trailer');
+    const { token } = await connection(null, 'Hours gateway');
+    const seen: { serial: string; engineHours: number }[] = [];
+    const off = app.fuelBus.subscribeHours((h) => seen.push(h));
+    const hoursOf = async (s: string) =>
+      (await app.db.vehicle.findUnique({ where: { serial: s }, select: { engineHours: true } }))!
+        .engineHours;
+    await app.db.vehicle.update({ where: { serial }, data: { engineHours: 1000 } });
+
+    const res = await ingest(token, [
+      { serial, engineHours: 1012.6 },
+      { serial: trailer, engineHours: 5, fuelLevelPct: 10 },
+    ]);
+    expect(res.json()).toEqual({ accepted: 2, ignored: [] });
+    expect(await hoursOf(serial)).toBe(1013);
+    // A late, lower reading changes nothing and isn't broadcast.
+    await ingest(token, { serial, engineHours: 900 });
+    expect(await hoursOf(serial)).toBe(1013);
+    off();
+    expect(seen.filter((h) => h.serial === serial)).toEqual([
+      expect.objectContaining({ serial, engineHours: 1013 }),
+    ]);
+    // No timeline entries for live hours, and the trailer's fuel was left out.
+    expect(await levelOf(trailer)).toBeFalsy();
   });
 
   it('all readings bad: 422; a bad envelope: 400', async () => {

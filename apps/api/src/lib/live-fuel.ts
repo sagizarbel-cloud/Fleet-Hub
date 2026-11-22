@@ -17,9 +17,18 @@ export interface FuelLevelView {
   source: FuelLevelSource;
 }
 
+/** A vehicle's engine hours changed from a live reading (2026-11-22). */
+export interface HoursView {
+  serial: string;
+  engineHours: number;
+  at: string;
+}
+
 export interface FuelBus {
   publish(level: FuelLevelView): void;
   subscribe(fn: (level: FuelLevelView) => void): () => void;
+  publishHours(hours: HoursView): void;
+  subscribeHours(fn: (hours: HoursView) => void): () => void;
 }
 
 declare module 'fastify' {
@@ -44,6 +53,11 @@ export const fuelBusPlugin = fp(async (app) => {
     subscribe: (fn) => {
       emitter.on('level', fn);
       return () => emitter.off('level', fn);
+    },
+    publishHours: (hours) => emitter.emit('hours', hours),
+    subscribeHours: (fn) => {
+      emitter.on('hours', fn);
+      return () => emitter.off('hours', fn);
     },
   } satisfies FuelBus);
 
@@ -151,4 +165,23 @@ export async function fuelPanel(app: FastifyInstance) {
     connected: _count.connections > 0,
     level: fuelLevel ? { ...fuelLevel, at: fuelLevel.at.toISOString() } : null,
   }));
+}
+
+/**
+ * A live hour-meter reading (2026-11-22). Hour meters only count up, so a lower or equal value
+ * (a late or repeated delivery) changes nothing. Like live fuel, a reading is not a timeline
+ * event (one a minute per vehicle would bury the timeline); hand edits still are.
+ */
+export async function storeHours(
+  app: FastifyInstance,
+  r: { vehicleId: string; serial: string; at: Date; engineHours: number },
+): Promise<boolean> {
+  const hours = Math.round(r.engineHours);
+  const updated = await app.db.vehicle.updateMany({
+    where: { id: r.vehicleId, OR: [{ engineHours: null }, { engineHours: { lt: hours } }] },
+    data: { engineHours: hours },
+  });
+  if (!updated.count) return false;
+  app.fuelBus.publishHours({ serial: r.serial, engineHours: hours, at: r.at.toISOString() });
+  return true;
 }
