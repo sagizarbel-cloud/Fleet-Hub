@@ -38,7 +38,11 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
     const current = await read(userId);
     const next = { ...current, ...body };
     const { layouts, ...rest } = next;
-    const data = { ...rest, layouts: layouts ?? Prisma.DbNull };
+    // A layout is plain JSON; its interface just lacks the index signature Prisma asks for.
+    const data = {
+      ...rest,
+      layouts: (layouts as Prisma.InputJsonValue | undefined) ?? Prisma.DbNull,
+    };
     await app.db.userPreference.upsert({
       where: { userId },
       create: { userId, ...data },
