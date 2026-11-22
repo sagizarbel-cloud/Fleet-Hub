@@ -8,6 +8,7 @@ import { useDashboard, useLookups } from './data';
 import { FleetGrid } from './FleetGrid';
 import { HoverProvider } from './hover';
 import { KpiStrip } from './KpiStrip';
+import { FuelPanel } from './fuel/FuelPanel';
 import { LinkLine } from './LinkLine';
 import { Timeline } from './Timeline';
 import { VehicleStage } from './VehicleStage';
@@ -152,6 +153,9 @@ export function FleetStage() {
         <motion.div {...slide} className="[grid-area:kpi]">
           <h1 className="sr-only">{t('nav.dashboard')}</h1>
           <KpiStrip kpis={data.kpis} />
+        </motion.div>
+        <motion.div {...slide} className="min-w-0 [grid-area:fuel]">
+          <FuelPanel />
         </motion.div>
         <motion.div {...slide} className="flex min-h-0 flex-col [grid-area:timeline]">
           <Timeline first={data.recent} />

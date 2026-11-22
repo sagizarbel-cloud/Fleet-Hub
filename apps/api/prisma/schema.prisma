@@ -45,6 +45,7 @@ enum EventType {
   MALFUNCTION_RESOLVED
   FLUID_ADDED
   FUEL_ADDED
+  FUEL_LEVEL
   MOVEMENT
   INSPECTION
   ITEM_ASSIGNED
@@ -259,9 +260,12 @@ model Vehicle {
   workCards       WorkCard[]
   wiggleTests     WiggleTest[]
   itemAssignments ItemAssignment[]
-  currentItems    Item[]            @relation("CurrentVehicle")
+  currentItems    Item[]             @relation("CurrentVehicle")
   documents       DocumentVehicle[]
   quotes          QuoteVehicle[]
+  fuelLevel       FuelLevel?
+  fuelReadings    FuelLevelReading[]
+  connections     TelematicsDevice[]
 
   @@index([typeId])
   @@index([departmentId])
@@ -446,6 +450,69 @@ model FuelEntry {
   deletedAt   DateTime?
 
   @@index([vehicleId, date])
+}
+
+// ---------- Current fuel and live data (2026-11-15) ----------
+
+enum FuelLevelSource {
+  MANUAL
+  LIVE
+}
+
+/// The latest fuel level of each vehicle: what the fuel panel shows. Kept apart from Vehicle so
+/// a stream of live readings doesn't touch the vehicle row.
+model FuelLevel {
+  vehicleId String            @id
+  vehicle   Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  pct       Float?
+  liters    Float?
+  at        DateTime
+  source    FuelLevelSource
+  deviceId  String?
+  device    TelematicsDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  userId    String?
+  updatedAt DateTime          @updatedAt
+}
+
+/// Every fuel level reading, manual or live. Live ones are pruned after FUEL_HISTORY_DAYS; they
+/// stay out of the timeline (a vehicle may report every minute), manual ones also write an Event.
+model FuelLevelReading {
+  id        String            @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  at        DateTime
+  pct       Float?
+  liters    Float?
+  source    FuelLevelSource
+  deviceId  String?
+  device    TelematicsDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  userId    String?
+  createdAt DateTime          @default(now())
+
+  @@index([vehicleId, at])
+  @@index([source, at])
+}
+
+/// A live data connection: a vehicle's tracker, or a gateway (the telematics provider's server)
+/// reporting for many. Only the token's SHA-256 hash is stored; the token is shown once.
+model TelematicsDevice {
+  id          String             @id @default(cuid())
+  name        String
+  tokenHash   String             @unique
+  /// The token's last four characters, to tell connections apart.
+  tokenHint   String
+  /// Set: the connection reports for this vehicle only. Null: a gateway, readings name the vehicle.
+  vehicleId   String?
+  vehicle     Vehicle?           @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  active      Boolean            @default(true)
+  lastSeenAt  DateTime?
+  createdById String?
+  createdAt   DateTime           @default(now())
+  revokedAt   DateTime?
+  levels      FuelLevel[]
+  readings    FuelLevelReading[]
+
+  @@index([vehicleId])
 }
 
 model Movement {

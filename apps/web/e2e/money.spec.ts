@@ -192,8 +192,9 @@ test.describe('quotes as a viewer', () => {
 });
 
 test.describe('equipment', () => {
-  // Tall enough that the tray and the tiles share the screen: a drag can't scroll the page.
-  test.use({ viewport: { width: 1440, height: 1000 } });
+  // Tall enough that the tray and the tiles share the screen: a drag can't scroll the page. The
+  // fuel panel (2026-11-15) made the dashboard's first column, and so the page, taller.
+  test.use({ viewport: { width: 1440, height: 1200 } });
 
   test('drag an item from the dashboard tray onto a vehicle', async ({ page }) => {
     await page.goto('/');

@@ -61,7 +61,7 @@ export const EVENT_GROUPS = {
     ],
   },
   fluids: { icon: Droplet, types: ['FLUID_ADDED'] },
-  fuel: { icon: Fuel, types: ['FUEL_ADDED'] },
+  fuel: { icon: Fuel, types: ['FUEL_ADDED', 'FUEL_LEVEL'] },
   movements: { icon: ArrowLeftRight, types: ['MOVEMENT'] },
   inspections: { icon: ClipboardCheck, types: ['INSPECTION'] },
   items: { icon: Package, types: ['ITEM_ASSIGNED', 'ITEM_REMOVED'] },
@@ -209,6 +209,10 @@ export function describeEvent(
       });
     case 'FUEL_ADDED':
       return t('events.FUEL_ADDED', { liters: num(p.liters) });
+    case 'FUEL_LEVEL':
+      return p.liters === null || p.liters === undefined
+        ? t('events.FUEL_LEVEL', { pct: num(p.pct) })
+        : t('events.FUEL_LEVEL_liters', { pct: num(p.pct), liters: num(p.liters) });
     case 'MOVEMENT':
       return t('events.MOVEMENT', {
         from: lookup('locations', p.from),

@@ -21,6 +21,9 @@ import { vehicleRoutes } from './routes/vehicles';
 import { settingsRoutes } from './routes/settings';
 import { userRoutes } from './routes/users';
 import { importRoutes } from './routes/import';
+import { fuelRoutes } from './routes/fuel';
+import { telematicsRoutes } from './routes/telematics';
+import { fuelBusPlugin } from './lib/live-fuel';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -45,6 +48,7 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
   });
   await app.register(rateLimit, { global: false });
   await app.register(authPlugin);
+  await app.register(fuelBusPlugin);
 
   // CSRF defense on top of SameSite cookies: writes must come from our own origin.
   app.addHook('onRequest', async (req) => {
@@ -98,6 +102,8 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
   await app.register(settingsRoutes, { prefix: '/api/settings' });
   await app.register(userRoutes, { prefix: '/api/users' });
   await app.register(importRoutes, { prefix: '/api/import', codeKey: env.FLEET_CODE_KEY });
+  await app.register(fuelRoutes, { prefix: '/api/fuel' });
+  await app.register(telematicsRoutes, { prefix: '/api/telematics' });
 
   return app;
 }
