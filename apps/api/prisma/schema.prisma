@@ -350,6 +350,8 @@ model MalfunctionProgress {
   malfunction   Malfunction @relation(fields: [malfunctionId], references: [id], onDelete: Cascade)
   at            DateTime
   body          String
+  /// Who did the work, as typed (2026-11-22); the signed-in author is createdById.
+  author        String?
   createdById   String?
   createdAt     DateTime    @default(now())
   deletedAt     DateTime?

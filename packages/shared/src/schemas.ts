@@ -199,7 +199,19 @@ export const workCardBody = z.object({
 });
 
 /** A progress update on a malfunction (Revisions 1): what was found or done so far. */
-export const progressBody = z.object({ at: nullable(day), body: text(2000) });
+/**
+ * A progress update on a malfunction. `author` is the name of who did the work (typed, it may be
+ * a mechanic without an account); `resolve` also closes the malfunction (2026-11-22, Sagi), and
+ * then the note is optional.
+ */
+export const progressBody = z
+  .object({
+    at: nullable(day),
+    body: optText(2000),
+    author: optText(80),
+    resolve: z.boolean().optional(),
+  })
+  .refine((v) => v.resolve || !!v.body, { path: ['body'], message: 'required' });
 export const progressParams = z.object({
   serial: z.string().min(1).max(40),
   id: z.string().min(1).max(40),

@@ -1328,7 +1328,27 @@
     "progressFailed": "The update wasn't saved. Try again.",
     "statusHint": "Status: {{status}}. Open malfunctions: {{count}}",
     "services": "Services included",
-    "noServices": "No services included."
+    "noServices": "No services included.",
+    "openFor": {
+      "none": "Opened today",
+      "one": "Open for 1 day",
+      "two": "Open for 2 days",
+      "many": "Open for {{count}} days"
+    },
+    "wasOpen": {
+      "none": "Resolved the same day",
+      "one": "Was open 1 day",
+      "two": "Was open 2 days",
+      "many": "Was open {{count}} days"
+    },
+    "progressAuthor": "Done by",
+    "progressAuthorHint": "Name of who did the work; starts as yours.",
+    "resolveToo": "Also mark the malfunction resolved",
+    "resolve": "Mark resolved",
+    "resolved": "Marked resolved",
+    "resolveFailed": "Couldn't mark it resolved. Try again.",
+    "enteredBy": "entered by {{name}}",
+    "colOpenFor": "Days open"
   },
   "workCard": {
     "type": {

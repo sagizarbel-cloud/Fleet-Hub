@@ -44,10 +44,12 @@ export function TopBar({ user }: { user: SessionUser }) {
       <div className="fh-topbar-bar flex h-14 items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <NavLink
           to="/"
+          aria-label={t('app.name')}
           className="fh-sign flex shrink-0 items-center gap-2 font-semibold tracking-tight"
         >
           <img src="/favicon.svg" alt="" className="size-7" />
-          <span>{t('app.name')}</span>
+          {/* Phones under 420 px keep only the logo, so the bar's buttons (search included) fit. */}
+          <span className="hidden min-[420px]:inline">{t('app.name')}</span>
         </NavLink>
 
         <GlobalSearch phoneOpen={searching} onPhoneClose={() => setSearching(false)} />
