@@ -8,6 +8,7 @@ export * from './fleet';
 export * from './due';
 export * from './money';
 export * from './admin';
+export * from './permissions';
 export * from './import';
 export * from './wiggle';
 export * from './live-fuel';

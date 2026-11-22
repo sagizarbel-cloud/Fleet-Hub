@@ -312,6 +312,10 @@ model ServiceRecord {
   workCardId  String?
   workCard    WorkCard? @relation(fields: [workCardId], references: [id], onDelete: SetNull)
   createdById String?
+  /// Values of the admin-defined extra fields (c1..c8), by key (2026-11-22: every card).
+  custom      Json?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -335,6 +339,10 @@ model Malfunction {
   /// Progress updates: what was done so far (Revisions 1).
   progress      MalfunctionProgress[]
   createdById   String?
+  /// Values of the admin-defined extra fields (c1..c8), by key (2026-11-22: every card).
+  custom        Json?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById   String?
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
   deletedAt     DateTime?
@@ -379,6 +387,10 @@ model WorkCard {
   cost        Decimal?      @db.Decimal(12, 2)
   notes       String?
   createdById String?
+  /// Values of the admin-defined extra fields (c1..c8), by key (2026-11-22: every card).
+  custom      Json?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   deletedAt   DateTime?
@@ -405,6 +417,10 @@ model WiggleTest {
   failCount   Int
   notes       String?
   createdById String?
+  /// Values of the admin-defined extra fields (c1..c8), by key (2026-11-22: every card).
+  custom      Json?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -422,6 +438,10 @@ model FluidAddition {
   liters      Decimal   @db.Decimal(8, 2)
   notes       String?
   createdById String?
+  /// Values of the admin-defined extra fields (c1..c8), by key (2026-11-22: every card).
+  custom      Json?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -447,6 +467,10 @@ model FuelEntry {
   /// Who provided the fuel (station, company, tanker).
   provider    String?
   createdById String?
+  /// Values of the admin-defined extra fields (c1..c8), by key (2026-11-22: every card).
+  custom      Json?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -535,6 +559,8 @@ model Movement {
   custom         Json?
   notes          String?
   createdById    String?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById    String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
@@ -554,6 +580,10 @@ model Inspection {
   cost        Decimal?       @db.Decimal(12, 2)
   notes       String?
   createdById String?
+  /// Values of the admin-defined extra fields (c1..c8), by key (2026-11-22: every card).
+  custom      Json?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   deletedAt   DateTime?
@@ -567,6 +597,10 @@ model Note {
   vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   body        String
   createdById String?
+  /// Values of the admin-defined extra fields (c1..c8), by key (2026-11-22: every card).
+  custom      Json?
+  /// Who last changed it (Sagi, 2026-11-22: every entry shows who made it).
+  updatedById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?

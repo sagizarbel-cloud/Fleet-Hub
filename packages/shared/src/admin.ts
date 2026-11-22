@@ -7,6 +7,8 @@ import {
   type VehicleCategory,
 } from './enums';
 import { DEFAULT_WIGGLE_TYPES, wiggleTypesSchema } from './wiggle';
+import { DEFAULT_PERMISSIONS, permissionsSchema } from './permissions';
+import { RECORD_KINDS } from './records';
 
 // ---------- Settings lists (SPEC 5.9) ----------
 
@@ -249,33 +251,91 @@ export const fuelRequiredSchema = z.object({
 });
 export type FuelRequired = z.output<typeof fuelRequiredSchema>;
 
-/** An extra field an admin adds to a record kind (Revisions 1), named in both languages. */
-export const customFieldDef = z.object({
-  key: z.enum(CUSTOM_FIELD_KEYS),
-  labelEn: z.string().trim().min(1).max(40),
-  labelHe: z.string().trim().min(1).max(40),
-  type: z.enum(CUSTOM_FIELD_TYPES),
+/** One choice of a list field, named in both languages. */
+export const customFieldOption = z.object({
+  code: z.string().trim().min(1).max(40),
+  labelEn: z.string().trim().min(1).max(60),
+  labelHe: z.string().trim().min(1).max(60),
 });
+export type CustomFieldOption = z.output<typeof customFieldOption>;
+
+/**
+ * An extra field an admin adds to a card (Revisions 1; every card since 2026-11-22), named in
+ * both languages. A list field offers fixed choices. A header field (at most one per card) leads
+ * the card's table and names each record in its report, like a service's type.
+ */
+export const customFieldDef = z
+  .object({
+    key: z.enum(CUSTOM_FIELD_KEYS),
+    labelEn: z.string().trim().min(1).max(40),
+    labelHe: z.string().trim().min(1).max(40),
+    type: z.enum(CUSTOM_FIELD_TYPES),
+    options: z.array(customFieldOption).max(40).optional(),
+    header: z.boolean().optional(),
+    /** Who may fill it in; unset = whoever may edit the card. */
+    editLevel: z.enum(ROLES).optional(),
+  })
+  .refine((f) => f.type !== 'list' || (f.options?.length ?? 0) > 0, {
+    path: ['options'],
+    message: 'required',
+  })
+  .refine((f) => new Set((f.options ?? []).map((o) => o.code)).size === (f.options ?? []).length, {
+    path: ['options'],
+    message: 'duplicate',
+  });
 export type CustomFieldDef = z.output<typeof customFieldDef>;
-const customFieldList = z
+export const customFieldList = z
   .array(customFieldDef)
   .max(CUSTOM_FIELD_KEYS.length)
-  .refine((l) => new Set(l.map((f) => f.key)).size === l.length, { message: 'duplicate' });
+  .refine((l) => new Set(l.map((f) => f.key)).size === l.length, { message: 'duplicate' })
+  .refine((l) => l.filter((f) => f.header).length <= 1, { message: 'header' });
+
+/** The service type, which leads a service (Sagi, 2026-11-22); admins can change the list. */
+export const DEFAULT_RECORD_FIELDS: RecordFields = {
+  service: [
+    {
+      key: 'c1',
+      labelEn: 'Service type',
+      labelHe: 'סוג טיפול',
+      type: 'list',
+      header: true,
+      options: [
+        { code: 'general', labelEn: 'General service', labelHe: 'טיפול כללי' },
+        { code: 'electrical', labelEn: 'Electrical service', labelHe: 'טיפול חשמל' },
+        { code: 'h1000', labelEn: '1000 h service', labelHe: 'טיפול 1000 שעות' },
+        { code: 'system', labelEn: 'System addition', labelHe: 'התקנת מערכת' },
+      ],
+    },
+  ],
+};
+export const recordFieldsSchema = z.partialRecord(z.enum(RECORD_KINDS), customFieldList);
+export type RecordFields = z.output<typeof recordFieldsSchema>;
 
 /** Every app setting with its value; each key is stored as one AppSetting row. */
 export const appSettingsBody = z.object({
   fuelRequired: fuelRequiredSchema,
-  /** Extra fields on location changes (Revisions 1, fleet manager). */
-  movementFields: customFieldList.default([]),
+  /** Extra fields on each card, by record kind (location changes since Revisions 1). */
+  recordFields: recordFieldsSchema.default(DEFAULT_RECORD_FIELDS),
+  /** Who may edit each card and vehicle field (Sagi, 2026-11-22). */
+  permissions: permissionsSchema.default(DEFAULT_PERMISSIONS),
   /** Which vehicle types take a wiggle test, and which checklist (Sagi, 2026-11-08). */
   wiggleTypes: wiggleTypesSchema.default(DEFAULT_WIGGLE_TYPES),
   /** Yard play, the optional fling mini-game: an admin turns it on (only when the build has it). */
   yardPlay: z.boolean().default(false),
 });
 export type AppSettings = z.output<typeof appSettingsBody>;
+export const settingHistoryQuery = z.object({ key: z.enum(['permissions', 'recordFields']) });
+export interface SettingChange {
+  id: string;
+  at: string;
+  by: string | null;
+  before: unknown;
+  after: unknown;
+}
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   fuelRequired: { place: false, fueledBy: false, fuelType: false, provider: false },
-  movementFields: [],
+  recordFields: DEFAULT_RECORD_FIELDS,
+  permissions: DEFAULT_PERMISSIONS,
   wiggleTypes: DEFAULT_WIGGLE_TYPES,
   yardPlay: false,
 };

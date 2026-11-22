@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import multipart from '@fastify/multipart';
 import { listQuery, serialParam, vehiclePictureParams } from '@fleet-hub/shared';
@@ -7,7 +7,9 @@ import { HttpError, parse } from '../lib/http';
 import { cleanFileName, storePicture } from '../lib/uploads';
 import { vehicleDetail } from '../lib/vehicle-detail';
 import { noteVehicleUpdate, parseVehicle, saveVehicle, vehicleForm } from '../lib/vehicle-write';
-import { requireRole, requireStartCodeView, requireUser } from '../plugins/auth';
+import { readAppSettings } from '../lib/app-settings';
+import { canOpenVehicleForm, checkVehicleFields, requireCard } from '../lib/permissions';
+import { requireStartCodeView, requireUser } from '../plugins/auth';
 
 /**
  * Fields a vehicle list may return. Never add startCodeEnc here: start codes are
@@ -48,7 +50,19 @@ export const vehicleRoutes: FastifyPluginAsync<{
   await app.register(multipart, {
     limits: { fileSize: opts.maxMb * 1024 * 1024, files: 1, fields: 0, parts: 1 },
   });
-  const editor = { preHandler: requireRole('EDITOR') };
+  // Who may add and edit vehicles, and which fields, is an admin's setting (2026-11-22).
+  const vehicleCard = { preHandler: [requireUser, requireCard('vehicle')] };
+  const formUser = {
+    preHandler: [
+      requireUser,
+      async (req: FastifyRequest) => {
+        const { permissions } = await readAppSettings(
+          app.db as unknown as Prisma.TransactionClient,
+        );
+        if (!canOpenVehicleForm(req.user!, permissions)) throw new HttpError(403, 'forbidden');
+      },
+    ],
+  };
 
   app.get('/', { preHandler: requireUser }, async (req) => {
     const { cursor, limit } = parse(listQuery, req.query);
@@ -70,10 +84,12 @@ export const vehicleRoutes: FastifyPluginAsync<{
 
   // ---------- Add / edit (SPEC 5.8): editors and admins ----------
 
-  app.post('/', editor, async (req, reply) => {
+  app.post('/', vehicleCard, async (req, reply) => {
     const user = req.user!;
     const saved = await app.db.$transaction(async (tx) => {
       const { input, typeId } = await parseVehicle(tx, req.body);
+      const { permissions } = await readAppSettings(tx);
+      await checkVehicleFields(tx, user, permissions, null, input);
       return saveVehicle(tx, user, null, input, typeId, { codeKey: opts.codeKey, ip: req.ip });
     });
     void reply.status(201);
@@ -81,25 +97,27 @@ export const vehicleRoutes: FastifyPluginAsync<{
   });
 
   /** The stepper's values for an existing vehicle: never the start code, only whether one is set. */
-  app.get('/:serial/form', editor, async (req) => {
+  app.get('/:serial/form', formUser, async (req) => {
     const { serial } = parse(serialParam, req.params);
     const form = await vehicleForm(app.db as unknown as Prisma.TransactionClient, serial);
     if (!form) throw new HttpError(404, 'vehicle_not_found');
     return { values: form.values, hasStartCode: form.hasStartCode };
   });
 
-  app.put('/:serial', editor, async (req) => {
+  app.put('/:serial', formUser, async (req) => {
     const { serial } = parse(serialParam, req.params);
     const user = req.user!;
     return app.db.$transaction(async (tx) => {
       const { input, typeId } = await parseVehicle(tx, req.body);
+      const { permissions } = await readAppSettings(tx);
+      await checkVehicleFields(tx, user, permissions, serial, input);
       return saveVehicle(tx, user, serial, input, typeId, { codeKey: opts.codeKey, ip: req.ip });
     });
   });
 
   // ---------- Photos and custom drawing (SPEC A4, 5.8) ----------
 
-  app.put('/:serial/pictures/:slot', editor, async (req) => {
+  app.put('/:serial/pictures/:slot', vehicleCard, async (req) => {
     const { serial, slot } = parse(vehiclePictureParams, req.params);
     const user = req.user!;
     if (!req.isMultipart()) throw new HttpError(415, 'not_multipart');
@@ -129,7 +147,7 @@ export const vehicleRoutes: FastifyPluginAsync<{
     });
   });
 
-  app.delete('/:serial/pictures/:slot', editor, async (req) => {
+  app.delete('/:serial/pictures/:slot', vehicleCard, async (req) => {
     const { serial, slot } = parse(vehiclePictureParams, req.params);
     const user = req.user!;
     return app.db.$transaction(async (tx) => {

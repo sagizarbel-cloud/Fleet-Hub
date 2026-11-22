@@ -2,7 +2,9 @@ import { Prisma } from '@prisma/client';
 import {
   economyPoints,
   hasRole,
-  OWN_RECORD_KINDS,
+  canChangeRow,
+  canEditCard,
+  type Permissions,
   RECORD_SORTS,
   type EventType,
   type RecordInput,
@@ -217,9 +219,8 @@ export const KINDS: { [K in RecordKind]: KindConfig<K> } = {
       fromLocation: { select: { code: true } },
       toLocation: { select: { code: true } },
     },
-    data: async ({ fromLocation, toLocation, custom, ...rest }, ctx) => ({
+    data: async ({ fromLocation, toLocation, custom: _custom, ...rest }, ctx) => ({
       ...rest,
-      custom: await keepDefinedCustom(ctx.tx, custom),
       fromLocationId: fromLocation
         ? await lookupId(ctx.tx, 'location', fromLocation, 'fromLocation')
         : null,
@@ -357,24 +358,44 @@ async function wiggleProfileFor(ctx: Ctx): Promise<WiggleProfile> {
 }
 
 /**
- * Keeps only the extra-field values an admin has defined for location changes (Revisions 1),
- * each as its defined type; nothing left is stored as no value.
+ * Keeps only the extra-field values an admin has defined for this card (every card since
+ * 2026-11-22), each as its defined type; a list value must be one of its choices. A field the
+ * user may not fill in keeps its stored value. Nothing left is stored as no value.
  */
-async function keepDefinedCustom(tx: Tx, custom: unknown) {
-  if (!custom || typeof custom !== 'object') return Prisma.DbNull;
-  const { movementFields } = await readAppSettings(tx);
+export async function keepDefinedCustom(
+  tx: Tx,
+  kind: RecordKind,
+  user: SessionUser,
+  custom: unknown,
+  before: unknown = null,
+) {
+  const { recordFields } = await readAppSettings(tx);
+  const defs = recordFields[kind] ?? [];
+  const given = (custom && typeof custom === 'object' ? custom : {}) as Record<string, unknown>;
+  const stored = (before && typeof before === 'object' ? before : {}) as Record<string, unknown>;
   const out: Record<string, string | number> = {};
-  for (const f of movementFields) {
-    const v = (custom as Record<string, unknown>)[f.key];
+  const bad = (key: string, code = 'invalid') =>
+    Object.assign(new HttpError(400, 'validation_failed'), {
+      issues: [{ path: `custom.${key}`, code }],
+    });
+  for (const f of defs) {
+    const allowed = !f.editLevel || hasRole(user.role, f.editLevel);
+    const v = allowed ? given[f.key] : stored[f.key];
+    if (
+      !allowed &&
+      given[f.key] !== undefined &&
+      given[f.key] !== stored[f.key] &&
+      given[f.key] !== null
+    )
+      throw bad(f.key, 'forbidden');
     if (v === null || v === undefined || v === '') continue;
     if (f.type === 'number' && typeof v === 'number') out[f.key] = v;
     else if (f.type === 'date' && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))
       out[f.key] = v;
     else if (f.type === 'text' && typeof v === 'string') out[f.key] = v;
-    else
-      throw Object.assign(new HttpError(400, 'validation_failed'), {
-        issues: [{ path: `custom.${f.key}`, code: 'invalid' }],
-      });
+    else if (f.type === 'list' && typeof v === 'string' && f.options?.some((o) => o.code === v))
+      out[f.key] = v;
+    else throw bad(f.key);
   }
   return Object.keys(out).length ? out : Prisma.DbNull;
 }
@@ -464,14 +485,15 @@ async function receiptsFor(tx: Tx, ids: string[]) {
 
 export const delegate = (tx: Tx, kind: RecordKind) => tx[KINDS[kind].model] as unknown as Delegate;
 
-/** Viewers may add notes and wiggle tests and change their own; everything else needs an editor. */
-export function canCreate(user: SessionUser, kind: RecordKind) {
-  return OWN_RECORD_KINDS.includes(kind) || hasRole(user.role, 'EDITOR');
+/**
+ * Who may add to a card and change its rows is an admin's setting (Sagi, 2026-11-22); by
+ * default viewers add notes and wiggle tests and change their own, editors everything else.
+ */
+export function canCreate(user: SessionUser, kind: RecordKind, perms: Permissions) {
+  return canEditCard(user.role, perms, kind);
 }
-export function canChange(user: SessionUser, kind: RecordKind, row: Row) {
-  return (
-    hasRole(user.role, 'EDITOR') || (OWN_RECORD_KINDS.includes(kind) && row.createdById === user.id)
-  );
+export function canChange(user: SessionUser, kind: RecordKind, row: Row, perms: Permissions) {
+  return canChangeRow(user, perms, kind, row.createdById);
 }
 
 const LOOKUP_IDS = new Set(['fluidTypeId', 'fuelTypeId', 'fromLocationId', 'toLocationId']);
@@ -517,7 +539,9 @@ export async function attachmentsFor(tx: Tx, ownerType: string, ids: string[]) {
 /** Adds author names, attachments and (for fuel) per-fill-up economy to serialized rows. */
 async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row[]) {
   const ids = rows.map((r) => r.id);
-  const authorIds = [...new Set(rows.map((r) => r.createdById).filter((v): v is string => !!v))];
+  const authorIds = [
+    ...new Set(rows.flatMap((r) => [r.createdById, r.updatedById]).filter((v): v is string => !!v)),
+  ];
   const [authors, files, economy, receipts, services] = await Promise.all([
     authorIds.length
       ? tx.user.findMany({ where: { id: { in: authorIds } }, select: { id: true, name: true } })
@@ -534,6 +558,7 @@ async function decorate(tx: Tx, kind: RecordKind, vehicle: VehicleRef, rows: Row
     return {
       ...serialize(row),
       createdBy: row.createdById ? (names.get(row.createdById) ?? null) : null,
+      updatedBy: row.updatedById ? (names.get(row.updatedById as string) ?? null) : null,
       attachments: files.get(row.id) ?? [],
       ...(kind === 'fuel'
         ? { economy: point?.value ?? null, baseline: point?.baseline ?? null, drop: !!point?.drop }
@@ -637,11 +662,20 @@ export async function createRecord<K extends RecordKind>(
   input: RecordInput<K>,
   /** Set when the record comes from an Excel import: its events are marked "imported". */
   importRunId: string | null = null,
+  /** Values of the card's extra fields, as sent; left out = none. */
+  custom?: unknown,
 ) {
   const cfg = KINDS[kind] as KindConfig<K>;
   const ctx = { tx, vehicle };
+  const extra =
+    custom === undefined ? {} : { custom: await keepDefinedCustom(tx, kind, user, custom) };
   const row = await delegate(tx, kind).create({
-    data: { ...(await cfg.data(input, ctx)), vehicleId: vehicle.id, createdById: user.id },
+    data: {
+      ...(await cfg.data(input, ctx)),
+      ...extra,
+      vehicleId: vehicle.id,
+      createdById: user.id,
+    },
     include: cfg.include,
   });
   const base = { vehicleId: vehicle.id, userId: user.id, importRunId, ...source(kind, row.id) };
@@ -674,16 +708,23 @@ export async function updateRecord<K extends RecordKind>(
   vehicle: VehicleRef,
   id: string,
   input: RecordInput<K>,
+  /** Values of the card's extra fields, as sent; left out = unchanged. */
+  custom?: unknown,
 ) {
   const cfg = KINDS[kind] as KindConfig<K>;
   const ctx = { tx, vehicle };
   const before = await findRow(tx, kind, vehicle, id);
   if (before.deletedAt) throw new HttpError(404, 'not_found');
-  if (!canChange(user, kind, before)) throw new HttpError(403, 'forbidden');
+  const { permissions } = await readAppSettings(tx);
+  if (!canChange(user, kind, before, permissions)) throw new HttpError(403, 'forbidden');
+  const extra =
+    custom === undefined
+      ? {}
+      : { custom: await keepDefinedCustom(tx, kind, user, custom, before.custom) };
 
   const row = await delegate(tx, kind).update({
     where: { id },
-    data: await cfg.data(input, ctx),
+    data: { ...(await cfg.data(input, ctx)), ...extra, updatedById: user.id },
     include: cfg.include,
   });
   // The record's own timeline entry follows the edit, so it never shows stale values.
@@ -732,7 +773,8 @@ export async function setDeleted(
 ) {
   const cfg = KINDS[kind];
   const row = await findRow(tx, kind, vehicle, id);
-  if (!canChange(user, kind, row)) throw new HttpError(403, 'forbidden');
+  const { permissions } = await readAppSettings(tx);
+  if (!canChange(user, kind, row, permissions)) throw new HttpError(403, 'forbidden');
   if (!!row.deletedAt === deleted)
     throw new HttpError(409, deleted ? 'already_deleted' : 'not_deleted');
 
