@@ -22,6 +22,7 @@ import { settingsRoutes } from './routes/settings';
 import { userRoutes } from './routes/users';
 import { importRoutes } from './routes/import';
 import { fuelRoutes } from './routes/fuel';
+import { searchRoutes } from './routes/search';
 import { telematicsRoutes } from './routes/telematics';
 import { fuelBusPlugin } from './lib/live-fuel';
 
@@ -103,6 +104,7 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
   await app.register(userRoutes, { prefix: '/api/users' });
   await app.register(importRoutes, { prefix: '/api/import', codeKey: env.FLEET_CODE_KEY });
   await app.register(fuelRoutes, { prefix: '/api/fuel' });
+  await app.register(searchRoutes, { prefix: '/api/search' });
   await app.register(telematicsRoutes, { prefix: '/api/telematics' });
 
   return app;

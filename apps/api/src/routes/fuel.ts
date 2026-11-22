@@ -72,6 +72,10 @@ export const fuelRoutes: FastifyPluginAsync = async (app) => {
     const send = (level: FuelLevelView) =>
       res.write(`event: level\ndata: ${JSON.stringify(level)}\n\n`);
     const unsubscribe = app.fuelBus.subscribe(send);
+    // Engine hours ride the same stream (2026-11-22), so a page needs one connection.
+    const unsubscribeHours = app.fuelBus.subscribeHours((h) =>
+      res.write(`event: hours\ndata: ${JSON.stringify(h)}\n\n`),
+    );
     const heartbeat = setInterval(() => res.write(': ping\n\n'), HEARTBEAT_MS);
     const recheck = setInterval(() => {
       void app.db.session
@@ -90,6 +94,7 @@ export const fuelRoutes: FastifyPluginAsync = async (app) => {
       closed = true;
       streams.delete(end);
       unsubscribe();
+      unsubscribeHours();
       clearInterval(heartbeat);
       clearInterval(recheck);
     };

@@ -213,6 +213,7 @@ export const Timeline = memo(function Timeline({ first }: { first: EventPage }) 
           events.isPlaceholderData && 'opacity-60',
         )}
         aria-busy={events.isPlaceholderData || undefined}
+        data-scroll-list
         data-scroll="timeline"
       >
         {events.isPending ? (

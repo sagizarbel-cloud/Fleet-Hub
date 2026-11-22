@@ -359,6 +359,8 @@ model MalfunctionProgress {
   malfunction   Malfunction @relation(fields: [malfunctionId], references: [id], onDelete: Cascade)
   at            DateTime
   body          String
+  /// Who did the work, as typed (2026-11-22); the signed-in author is createdById.
+  author        String?
   createdById   String?
   createdAt     DateTime    @default(now())
   deletedAt     DateTime?
@@ -794,6 +796,8 @@ model UserPreference {
   design        String?
   /// Saved view the fleet table opens with; null means the built-in view.
   fleetViewId   String?
+  /// Panel arrangements per page (2026-11-22), e.g. { dashboard: {...} }; null = defaults.
+  layouts       Json?
 }
 
 /// A fleet table view (SPEC 5.4). Every user can pick any view; its creator or an admin changes it.

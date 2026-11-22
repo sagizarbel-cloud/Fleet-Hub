@@ -955,7 +955,7 @@ export async function progressOf(tx: Tx, malfunctionId: string) {
   const rows = await tx.malfunctionProgress.findMany({
     where: { malfunctionId, deletedAt: null },
     orderBy: [{ at: 'asc' }, { createdAt: 'asc' }],
-    select: { id: true, at: true, body: true, createdById: true },
+    select: { id: true, at: true, body: true, author: true, createdById: true },
   });
   const ids = [...new Set(rows.map((r) => r.createdById).filter((v): v is string => !!v))];
   const users = ids.length

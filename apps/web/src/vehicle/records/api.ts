@@ -95,6 +95,8 @@ export interface ProgressEntry {
   id: string;
   at: string;
   body: string;
+  /** Who did the work, as typed; null on older updates. */
+  author: string | null;
   createdById: string | null;
   createdBy: string | null;
 }
@@ -104,8 +106,12 @@ export function useProgress(serial: string, malfunctionId: string) {
   const qc = useQueryClient();
   const base = `/vehicles/${enc(serial)}/records/malfunctions/${enc(malfunctionId)}/progress`;
   const add = useMutation({
-    mutationFn: (body: { at: string | null; body: string }) =>
-      api<{ progress: ProgressEntry[] }>(base, { method: 'POST', json: body }),
+    mutationFn: (body: {
+      at: string | null;
+      body: string | null;
+      author?: string | null;
+      resolve?: boolean;
+    }) => api<{ progress: ProgressEntry[] }>(base, { method: 'POST', json: body }),
     onSuccess: () => refreshAfterWrite(qc, serial),
   });
   const remove = useMutation({

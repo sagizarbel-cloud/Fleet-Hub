@@ -17,6 +17,7 @@ import {
 import { dateFormat, localeOf } from '@/lib/intl';
 import { lookupName, type Lookups } from '@/fleet/data';
 import type { RecordFilters, RecordRow } from './api';
+import { openDays } from './openFor';
 
 /** Everything a cell or an export value needs to format itself in the active language. */
 export interface FormatCtx {
@@ -392,6 +393,16 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
       },
       moneyCol(),
       { ...dateCol('resolvedAt', 'records.col.resolvedAt'), sort: undefined, minor: true },
+      {
+        // How long it was open, still counting while open (2026-11-22).
+        key: 'openFor',
+        header: 'report.colOpenFor',
+        kind: 'number',
+        value: (r) =>
+          typeof r.reportedAt === 'string'
+            ? openDays(r.reportedAt, r.state === 'RESOLVED' ? (s(r.resolvedAt) ?? null) : null)
+            : null,
+      },
     ],
     filters: [
       {

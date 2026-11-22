@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { layoutsSchema } from './layout';
 import {
   CUSTOM_FIELD_KEYS,
   EXCAVATOR_TOOLS,
@@ -65,6 +66,8 @@ export const preferencesBody = z.object({
   language: z.enum(['en', 'he']).nullable().optional(),
   theme: z.enum(['dark', 'light']).nullable().optional(),
   design: z.enum(DESIGNS).nullable().optional(),
+  /** Panel arrangements (2026-11-22); null resets every page to its default. */
+  layouts: layoutsSchema.nullable().optional(),
 });
 export type PreferencesBody = z.infer<typeof preferencesBody>;
 
@@ -212,7 +215,19 @@ export const workCardBody = z.object({
 });
 
 /** A progress update on a malfunction (Revisions 1): what was found or done so far. */
-export const progressBody = z.object({ at: nullable(day), body: text(2000) });
+/**
+ * A progress update on a malfunction. `author` is the name of who did the work (typed, it may be
+ * a mechanic without an account); `resolve` also closes the malfunction (2026-11-22, Sagi), and
+ * then the note is optional.
+ */
+export const progressBody = z
+  .object({
+    at: nullable(day),
+    body: optText(2000),
+    author: optText(80),
+    resolve: z.boolean().optional(),
+  })
+  .refine((v) => v.resolve || !!v.body, { path: ['body'], message: 'required' });
 export const progressParams = z.object({
   serial: z.string().min(1).max(40),
   id: z.string().min(1).max(40),
@@ -454,3 +469,20 @@ export const itemsQuery = z.object({
   where: z.enum(['yard', 'assigned']).optional(),
   retired: flag,
 });
+
+/** The top bar's search (2026-11-22): any text field of vehicles, their records and items. */
+export const searchQuery = z.object({ q: z.string().trim().min(2).max(100) });
+export type SearchHit = {
+  /** What matched: a vehicle itself, one of its records, or an item. */
+  group: 'vehicle' | 'record' | 'item';
+  serial: string | null;
+  type: string | null;
+  /** The record kind (records) or item kind (items). */
+  kind: string | null;
+  id: string;
+  /** The field that matched, as a key the web app translates. */
+  field: string;
+  /** The matching text, cut around the match. */
+  text: string;
+  date: string | null;
+};

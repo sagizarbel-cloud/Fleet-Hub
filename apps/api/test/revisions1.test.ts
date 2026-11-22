@@ -183,6 +183,48 @@ describe('record report', () => {
     );
   });
 
+  it('an editor resolves a malfunction from a progress update, with the worker named', async () => {
+    const serial = await vehicle();
+    const url = `/api/vehicles/${serial}/records/malfunctions`;
+    const id = (
+      await req('POST', url, editor, {
+        reportedAt: isoDay(-3),
+        severity: 'CRITICAL',
+        state: 'OPEN',
+        description: 'Engine will not start',
+      })
+    ).json().item.id;
+    const progressUrl = `${url}/${id}/progress`;
+    // A note or "resolve" is needed; viewers can do neither.
+    expect((await req('POST', progressUrl, editor, {})).statusCode).toBe(400);
+    expect((await req('POST', progressUrl, viewer, { resolve: true })).statusCode).toBe(403);
+
+    const done = await req('POST', progressUrl, editor, {
+      body: 'Starter replaced',
+      author: 'Yossi (fake mechanic)',
+      resolve: true,
+    });
+    expect(done.statusCode).toBe(201);
+    expect(done.json().progress).toMatchObject([
+      { body: 'Starter replaced', author: 'Yossi (fake mechanic)' },
+    ]);
+    expect(done.json().status).toBeTruthy();
+
+    const res = await req('GET', `${url}/${id}`, viewer);
+    expect(res.json().item.state).toBe('RESOLVED');
+    expect(res.json().item.resolvedAt).toBeTruthy();
+    expect(res.json().history.map((h: { type: string }) => h.type)).toEqual([
+      'MALFUNCTION_REPORTED',
+      'MALFUNCTION_PROGRESS',
+      'MALFUNCTION_RESOLVED',
+    ]);
+
+    // Resolving again changes nothing; resolving without a note is fine.
+    const again = await req('POST', progressUrl, editor, { resolve: true });
+    expect(again.statusCode).toBe(201);
+    expect(again.json().progress).toHaveLength(1);
+  });
+
   it('is 404 for a deleted record or one on another vehicle', async () => {
     const serial = await vehicle();
     const other = await vehicle();

@@ -42,6 +42,7 @@ export function LanguageToggle({ onChange }: { onChange?: (lang: Language) => vo
       aria-label={t('language.toggle')}
       title={t(`language.${next}`)}
       data-testid="language-toggle"
+      className="px-2 sm:px-3"
     >
       <Languages aria-hidden />
       <span lang={next}>{t(`language.${next}`)}</span>
