@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDashboard, useLookups } from './data';
+import { DashboardPanels } from './DashboardPanels';
 import { FleetGrid } from './FleetGrid';
 import { HoverProvider } from './hover';
 import { KpiStrip } from './KpiStrip';
@@ -145,24 +146,25 @@ export function FleetStage() {
   } else {
     const data = dashboard.data;
     behind = (
-      <div
-        className="dash-layout grid gap-3 lg:gap-4"
-        inert={phase === 'open'}
-        aria-hidden={phase === 'open' || undefined}
-      >
-        <motion.div {...slide} className="[grid-area:kpi]">
-          <h1 className="sr-only">{t('nav.dashboard')}</h1>
-          <KpiStrip kpis={data.kpis} />
-        </motion.div>
-        <motion.div {...slide} className="min-w-0 [grid-area:fuel]">
-          <FuelPanel />
-        </motion.div>
-        <motion.div {...slide} className="flex min-h-0 flex-col [grid-area:timeline]">
-          <Timeline first={data.recent} />
-        </motion.div>
-        <div className="min-w-0 [grid-area:grid]">
-          <FleetGrid tiles={data.tiles} activeSerial={active} away={away} />
-        </div>
+      <div inert={phase === 'open'} aria-hidden={phase === 'open' || undefined}>
+        <h1 className="sr-only">{t('nav.dashboard')}</h1>
+        <DashboardPanels
+          wrap={(id, node) =>
+            id === 'grid' ? (
+              node
+            ) : (
+              <motion.div {...slide} className="flex min-h-0 min-w-0 flex-1 flex-col">
+                {node}
+              </motion.div>
+            )
+          }
+          panels={{
+            kpi: <KpiStrip kpis={data.kpis} />,
+            fuel: <FuelPanel />,
+            timeline: <Timeline first={data.recent} />,
+            grid: <FleetGrid tiles={data.tiles} activeSerial={active} away={away} />,
+          }}
+        />
       </div>
     );
   }

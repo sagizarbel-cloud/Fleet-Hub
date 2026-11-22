@@ -783,6 +783,8 @@ model UserPreference {
   design        String?
   /// Saved view the fleet table opens with; null means the built-in view.
   fleetViewId   String?
+  /// Panel arrangements per page (2026-11-22), e.g. { dashboard: {...} }; null = defaults.
+  layouts       Json?
 }
 
 /// A fleet table view (SPEC 5.4). Every user can pick any view; its creator or an admin changes it.

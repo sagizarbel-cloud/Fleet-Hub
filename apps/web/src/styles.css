@@ -377,17 +377,36 @@
 }
 
 /* Dashboard: history (about 40%) beside the fleet grid; on phones KPIs, then the grid, then the timeline. */
-.dash-layout {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: 'kpi' 'fuel' 'grid' 'timeline';
+/* Dashboard panels (2026-11-22): each user can move them and set the lists' heights. */
+.fh-panel-body > * {
+  flex: 1 1 auto;
+  min-height: 0;
 }
-@media (min-width: 64rem) {
-  .dash-layout {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas: 'kpi grid' 'fuel grid' 'timeline grid';
-    align-items: start;
-  }
+.fh-panel[data-sized] .fh-panel-body > * > [data-testid] {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.fh-panel[data-sized] [data-testid='fuel-list'],
+.fh-panel[data-sized] [data-scroll-list] {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+}
+.fh-drop-before::before,
+.fh-drop-after::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--fh-accent);
+  z-index: 5;
+}
+.fh-drop-before::before {
+  top: -0.5rem;
+}
+.fh-drop-after::after {
+  bottom: -0.5rem;
 }
 
 /* Printed vehicle report (Revisions 1): white paper, black ink, whatever the theme. */

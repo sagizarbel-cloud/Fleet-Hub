@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { layoutsSchema } from './layout';
 import {
   CUSTOM_FIELD_KEYS,
   EXCAVATOR_TOOLS,
@@ -65,6 +66,8 @@ export const preferencesBody = z.object({
   language: z.enum(['en', 'he']).nullable().optional(),
   theme: z.enum(['dark', 'light']).nullable().optional(),
   design: z.enum(DESIGNS).nullable().optional(),
+  /** Panel arrangements (2026-11-22); null resets every page to its default. */
+  layouts: layoutsSchema.nullable().optional(),
 });
 export type PreferencesBody = z.infer<typeof preferencesBody>;
 

@@ -1505,5 +1505,25 @@
       "name": "Name",
       "spec": "Spec"
     }
+  },
+  "layout": {
+    "arrange": "Arrange panels",
+    "done": "Done",
+    "reset": "Reset to default",
+    "hintWide": "Drag a panel by its handle, or use the arrows. Drag the divider to change the columns' widths, and a list's bottom edge to change its height.",
+    "hintPhone": "Drag a panel by its handle, or use the arrows. Drag a list's bottom edge to change its height.",
+    "drag": "Move {{panel}}",
+    "up": "Move {{panel}} up",
+    "down": "Move {{panel}} down",
+    "otherColumn": "Move {{panel}} to the other column",
+    "height": "Height of {{panel}}",
+    "width": "Width of the columns",
+    "dropHere": "Drop a panel here",
+    "panel": {
+      "kpi": "Status and totals",
+      "fuel": "Current fuel",
+      "timeline": "Recent activity",
+      "grid": "Fleet"
+    }
   }
 }

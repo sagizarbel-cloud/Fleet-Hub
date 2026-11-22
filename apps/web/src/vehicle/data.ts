@@ -3,6 +3,7 @@ import type {
   DetailView,
   FleetGrouping,
   FuelLevelSource,
+  Layouts,
   VehicleCategory,
   VehicleStatus,
   VitalKey,
@@ -105,6 +106,8 @@ export interface Preferences {
   language: 'en' | 'he' | null;
   theme: 'dark' | 'light' | null;
   design: 'classic' | 'yard' | null;
+  /** Panel arrangements (2026-11-22); null = every page at its default. */
+  layouts: Layouts | null;
 }
 
 const vehicleKey = (serial: string) => ['vehicle', serial] as const;
