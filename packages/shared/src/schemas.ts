@@ -439,3 +439,20 @@ export const itemsQuery = z.object({
   where: z.enum(['yard', 'assigned']).optional(),
   retired: flag,
 });
+
+/** The top bar's search (2026-11-22): any text field of vehicles, their records and items. */
+export const searchQuery = z.object({ q: z.string().trim().min(2).max(100) });
+export type SearchHit = {
+  /** What matched: a vehicle itself, one of its records, or an item. */
+  group: 'vehicle' | 'record' | 'item';
+  serial: string | null;
+  type: string | null;
+  /** The record kind (records) or item kind (items). */
+  kind: string | null;
+  id: string;
+  /** The field that matched, as a key the web app translates. */
+  field: string;
+  /** The matching text, cut around the match. */
+  text: string;
+  date: string | null;
+};

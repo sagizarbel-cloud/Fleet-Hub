@@ -310,6 +310,11 @@
   border-color: rgb(20 20 20 / 0.55);
   color: #141414;
 }
+:root[data-design='yard'] .fh-topbar-bar .fh-search-results {
+  /* The search results drop down from the field in the same light paper colour. */
+  background: #fff8d6;
+  border-color: rgb(20 20 20 / 0.55);
+}
 :root[data-design='yard'] .fh-topbar .fh-sign {
   font-size: 1.25rem;
 }
