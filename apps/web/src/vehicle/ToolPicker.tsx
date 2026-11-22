@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Hammer } from 'lucide-react';
-import { EXCAVATOR_TOOLS, hasRole, TOOL_TYPES } from '@fleet-hub/shared';
-import { useSession } from '@/auth/session';
+import { EXCAVATOR_TOOLS, TOOL_TYPES } from '@fleet-hub/shared';
 import type { VehicleDetail } from './data';
 import { useSetTool } from './records/api';
+import { useCan } from '@/auth/can';
 
 /**
  * The tool on an excavator's arm (Revisions 1): bucket or hydraulic hammer (Sagi, 2026-11-05). The drawing
@@ -18,12 +18,11 @@ export function ToolPicker({
   type: string;
 }) {
   const { t } = useTranslation();
-  const { data: user } = useSession();
+  const canEdit = useCan().card('tool');
   const save = useSetTool(vehicle?.serial ?? '');
   const [failed, setFailed] = useState(false);
   if (!vehicle || !(TOOL_TYPES as readonly string[]).includes(type)) return null;
   const tool = vehicle.tool ?? 'bucket';
-  const canEdit = !!user && hasRole(user.role, 'EDITOR');
   const label = t('vehicle.tool.label');
   return (
     <div className="border-border bg-surface flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs">

@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  hasRole,
   missingFuelFields,
   RECORD_BODIES,
   wiggleProblems,
+  type CustomFieldDef,
   type RecordKind,
   type UsageUnit,
   type WiggleProfile,
 } from '@fleet-hub/shared';
+import { useSession } from '@/auth/session';
 import { lookupName } from '@/fleet/data';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
@@ -107,8 +110,10 @@ export function RecordForm({
   const isRequired = (f: Field) =>
     !!f.required || (!!f.adminRequired && !!settings?.fuelRequired[f.adminRequired]);
   const [errors, setErrors] = useState<Errors>({});
-  // Extra fields an admin defined for this kind (Revisions 1), as typed text by key.
-  const customDefs = kind === 'movements' ? (settings?.movementFields ?? []) : [];
+  // Extra fields an admin defined for this card (every card since 2026-11-22), as text by key.
+  const customDefs = settings?.recordFields[kind] ?? [];
+  const { data: me } = useSession();
+  const mayFill = (f: CustomFieldDef) => !f.editLevel || (!!me && hasRole(me.role, f.editLevel));
   const [custom, setCustom] = useState<Record<string, string>>(() => {
     const stored = (row?.custom ?? {}) as Record<string, unknown>;
     return Object.fromEntries(
@@ -128,6 +133,39 @@ export function RecordForm({
     setErrors(({ [key]: _gone, ...rest }) => rest);
   };
   const visible = ui.fields.filter((f) => (!f.createOnly || isNew) && (!f.when || f.when(values)));
+
+  /** One extra field: a list is a choice of its options; one only admins fill is read-only for others. */
+  const customInput = (f: CustomFieldDef) => (
+    <FieldInput
+      key={f.key}
+      field={{
+        key: `custom.${f.key}`,
+        label: 'records.col.extra',
+        title: i18n.language === 'he' ? f.labelHe : f.labelEn,
+        type:
+          f.type === 'number'
+            ? 'number'
+            : f.type === 'date'
+              ? 'date'
+              : f.type === 'list'
+                ? 'select'
+                : 'text',
+        step: f.type === 'number' ? 1 : undefined,
+      }}
+      options={f.options?.map((o) => ({
+        value: o.code,
+        label: i18n.language === 'he' ? o.labelHe : o.labelEn,
+      }))}
+      disabled={!mayFill(f)}
+      value={custom[f.key] ?? ''}
+      error={errors[`custom.${f.key}`]}
+      unit={unit}
+      onChange={(v) => {
+        setCustom((c) => ({ ...c, [f.key]: String(v) }));
+        setErrors(({ [`custom.${f.key}`]: _gone, ...rest }) => rest);
+      }}
+    />
+  );
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -240,6 +278,7 @@ export function RecordForm({
       }
     >
       <form id="record-form" noValidate onSubmit={submit} className="space-y-4" data-kind={kind}>
+        {customDefs.filter((f) => f.header).map(customInput)}
         {visible.map((f) =>
           f.type === 'checklist' ? (
             profile ? (
@@ -302,25 +341,7 @@ export function RecordForm({
             />
           ),
         )}
-        {customDefs.map((f) => (
-          <FieldInput
-            key={f.key}
-            field={{
-              key: `custom.${f.key}`,
-              label: 'records.col.extra',
-              title: i18n.language === 'he' ? f.labelHe : f.labelEn,
-              type: f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text',
-              step: f.type === 'number' ? 1 : undefined,
-            }}
-            value={custom[f.key] ?? ''}
-            error={errors[`custom.${f.key}`]}
-            unit={unit}
-            onChange={(v) => {
-              setCustom((c) => ({ ...c, [f.key]: String(v) }));
-              setErrors(({ [`custom.${f.key}`]: _gone, ...rest }) => rest);
-            }}
-          />
-        ))}
+        {customDefs.filter((f) => !f.header).map(customInput)}
         <fieldset className="space-y-2">
           <legend className="mb-1 text-xs font-medium">{t('records.files')}</legend>
           {row && <AttachmentList serial={serial} items={row.attachments} canEdit={canEdit} />}
@@ -478,6 +499,7 @@ function FieldInput({
   options,
   suggestions,
   onChange,
+  disabled,
 }: {
   field: Field;
   value: string | boolean | undefined;
@@ -487,6 +509,8 @@ function FieldInput({
   /** Typed values offered as you type (a datalist); any other text is fine too. */
   suggestions?: string[];
   onChange: (value: string | boolean) => void;
+  /** Shown but not editable (a field only admins may fill in). */
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const id = `field-${field.key}`;
@@ -502,6 +526,7 @@ function FieldInput({
     'aria-invalid': !!error || undefined,
     'aria-describedby': described || undefined,
     'aria-required': field.required || undefined,
+    disabled,
   };
 
   if (field.type === 'bool') {

@@ -16,12 +16,16 @@ import {
   Pencil,
   Plus,
   Search,
+  SlidersHorizontal,
   Trash2,
   TriangleAlert,
 } from 'lucide-react';
-import { hasRole, OWN_RECORD_KINDS, type RecordKind } from '@fleet-hub/shared';
+import { hasRole, type RecordKind } from '@fleet-hub/shared';
+import { useCan } from '@/auth/can';
 import { useSession } from '@/auth/session';
 import { Button } from '@/components/ui/button';
+import { Sheet } from '@/components/Sheet';
+import { CardFields } from '@/settings/CardFields';
 import { cn } from '@/lib/cn';
 import type { VehicleDetail } from '../data';
 import { useRecords, useSetDeleted, type RecordFilters, type RecordRow } from './api';
@@ -108,12 +112,14 @@ export default function RecordPanel({
   /** A wiggle test just saved with an X: editors are offered a malfunction report (and its text). */
   const [offer, setOffer] = useState<RecordRow | null>(null);
   const [reporting, setReporting] = useState<string | null>(null);
+  // Admins add this card's own fields here, without leaving the vehicle page.
+  const [managing, setManaging] = useState(false);
   const tableCols = useMemo(() => allCols.filter((c) => !c.report), [allCols]);
 
+  const can = useCan();
   const isEditor = !!user && hasRole(user.role, 'EDITOR');
-  const own = OWN_RECORD_KINDS.includes(kind);
-  const canAdd = !!user && (isEditor || own);
-  const canChange = (row: RecordRow) => isEditor || (own && !!user && row.createdById === user.id);
+  const canAdd = can.card(kind);
+  const canChange = (row: RecordRow) => can.row(kind, row.createdById);
 
   const rows = useMemo(() => records.data?.pages.flatMap((p) => p.items) ?? [], [records.data]);
   const total = records.data?.pages[0]?.total ?? 0;
@@ -307,6 +313,18 @@ export default function RecordPanel({
             )}
             {t('records.export')}
           </Button>
+          {can.isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setManaging(true)}
+              title={t('settings.extra.manage')}
+              data-testid="manage-fields"
+            >
+              <SlidersHorizontal aria-hidden />
+              <span className="max-sm:sr-only">{t('settings.extra.manage')}</span>
+            </Button>
+          )}
           {canAdd && (
             <Button size="sm" onClick={() => setEditing('new')} data-testid="add-record">
               <Plus aria-hidden />
@@ -556,6 +574,15 @@ export default function RecordPanel({
             setEditing(null);
           }}
         />
+      )}
+      {managing && (
+        <Sheet
+          title={t('settings.extra.titleFor', { card: t(`vehicle.records.${kind as 'notes'}`) })}
+          onClose={() => setManaging(false)}
+          reduced={reduced}
+        >
+          <CardFields kind={kind} onSaved={() => setManaging(false)} />
+        </Sheet>
       )}
       {reporting !== null && (
         <RecordForm

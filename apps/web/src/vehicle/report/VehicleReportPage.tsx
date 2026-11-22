@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn';
 import { useVehicle, type VehicleDetail } from '../data';
 import { fetchAllRecords, useDocuments, type DocumentRow, type RecordRow } from '../records/api';
 import { cellText, useFormatCtx } from '../records/format';
-import { colTitle, createdByCol, type Column, type FormatCtx } from '../records/kinds';
+import { colTitle, type Column, type FormatCtx } from '../records/kinds';
 import { kindColumns } from '../records/columns';
 import { useAppSettings } from '../records/api';
 import { useLogo } from '@/settings/ReportLogo';
@@ -332,10 +332,7 @@ export function VehicleReportPage() {
             />
             {REPORT_KINDS.filter((k) => o.parts.includes(k)).map((k) => {
               const rows = records.data?.[k] ?? [];
-              const columns = [
-                ...kindColumns(k, settings),
-                ...(k === 'notes' ? [] : [createdByCol]),
-              ];
+              const columns = [...kindColumns(k, settings)];
               return (
                 <Part key={k} title={t(`vehicle.records.${k}`)} count={rows.length}>
                   {rows.length ? (

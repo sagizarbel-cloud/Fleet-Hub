@@ -29,6 +29,8 @@ export type RecordRow = Record<string, unknown> & {
   id: string;
   createdById: string | null;
   createdBy: string | null;
+  /** Who last changed it (2026-11-22); null if never changed. */
+  updatedBy?: string | null;
   attachments: Attachment[];
 };
 

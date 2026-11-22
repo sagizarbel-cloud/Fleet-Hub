@@ -12,6 +12,7 @@ import {
   type VehiclePicture,
   VEHICLE_PICTURES,
 } from '@fleet-hub/shared';
+import { useCan } from '@/auth/can';
 import { useSession } from '@/auth/session';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
@@ -93,6 +94,7 @@ const MESSAGES = {
   taken: 'vehicleForm.error.taken',
   unknown: 'records.error.invalid',
   future: 'records.error.future',
+  locked: 'vehicleForm.error.locked',
 };
 
 // Input kinds for `text()` below.
@@ -148,6 +150,9 @@ export function VehicleForm({
   });
   const [pictures, setPictures] = useState<Pictures>({});
   const canCodes = !!user?.canViewStartCodes;
+  // Fields the admin kept from this user's role show, but can't be changed.
+  const can = useCan();
+  const locked = (k: Field | 'type') => !can.field(k);
   const lang = i18n.language;
 
   // Fill the form once the saved values arrive.
@@ -283,6 +288,7 @@ export function VehicleForm({
         inputMode={opts.inputMode}
         dir={opts.ltr ? 'ltr' : undefined}
         value={values[k]}
+        disabled={locked(k)}
         onChange={(e) => set(k, opts.upper ? e.target.value.toUpperCase() : e.target.value)}
         className={cn(INPUT, opts.ltr && 'num text-start')}
       />
@@ -293,6 +299,7 @@ export function VehicleForm({
       <select
         {...errorProps(`vf-${k}`, errors[k])}
         value={values[k]}
+        disabled={locked(k)}
         onChange={(e) => set(k, e.target.value)}
         className={INPUT}
       >
@@ -344,11 +351,13 @@ export function VehicleForm({
     year: text('year', COUNT),
     department: select('department', 'departments'),
     location: (
-      <LocationField
-        value={values.location}
-        error={errors.location}
-        onChange={(c) => set('location', c)}
-      />
+      <fieldset disabled={locked('location')} className="contents">
+        <LocationField
+          value={values.location}
+          error={errors.location}
+          onChange={(c) => set('location', c)}
+        />
+      </fieldset>
     ),
     operatorName: text('operatorName'),
     usage: unit === 'HOURS' ? text('engineHours', COUNT) : text('odometerKm', COUNT),
@@ -389,6 +398,7 @@ export function VehicleForm({
                   name="vehicle-type"
                   className="sr-only"
                   checked={values.type === ty.code}
+                  disabled={locked('type')}
                   onChange={() => set('type', ty.code)}
                 />
                 <span className="grid h-16 place-items-center overflow-hidden">
@@ -462,6 +472,7 @@ export function VehicleForm({
               id="vf-warrantyTerms"
               rows={3}
               value={values.warrantyTerms}
+              disabled={locked('warrantyTerms')}
               onChange={(e) => set('warrantyTerms', e.target.value)}
               className={cn(INPUT, 'h-auto py-2')}
             />

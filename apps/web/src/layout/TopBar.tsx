@@ -2,7 +2,8 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router';
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { hasRole, type SessionUser } from '@fleet-hub/shared';
+import type { SessionUser } from '@fleet-hub/shared';
+import { useCan } from '@/auth/can';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserMenu } from '@/components/UserMenu';
@@ -18,6 +19,7 @@ const VehicleForm = lazy(() =>
 
 export function TopBar({ user }: { user: SessionUser }) {
   const { t } = useTranslation();
+  const canAddVehicle = useCan().card('vehicle');
   const ref = useRef<HTMLElement>(null);
   const look = useSaveLook();
   const [adding, setAdding] = useState(false);
@@ -56,7 +58,7 @@ export function TopBar({ user }: { user: SessionUser }) {
 
         <div className="ms-auto flex items-center gap-1">
           <SearchPhoneButton onOpen={() => setSearching(true)} />
-          {hasRole(user.role, 'EDITOR') && (
+          {canAddVehicle && (
             <Button
               size="sm"
               onClick={() => setAdding(true)}
