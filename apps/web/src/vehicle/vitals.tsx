@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FUEL_LOW_PCT, fuelState, type VitalKey } from '@fleet-hub/shared';
+import {
+  dueByDate,
+  dueByHours,
+  FUEL_LOW_PCT,
+  fuelState,
+  worstDue,
+  type DueLevel,
+  type VitalKey,
+} from '@fleet-hub/shared';
 import { lookupName, useLookups } from '@/fleet/data';
 import { formatMoney } from '@/fleet/events';
 import { useDateFormat } from '@/fleet/FleetGrid';
@@ -23,6 +31,8 @@ export interface Info {
   ltr?: boolean;
   hint?: string;
   tone?: Tone;
+  /** A service or inspection coming due: the card gets an orange or red frame, or turns red. */
+  due?: DueLevel | null;
 }
 
 const DAY_MS = 86_400_000;
@@ -48,13 +58,14 @@ export function useVehicleInfo(v: VehicleDetail | undefined) {
       return hours === null ? null : t('vehicle.units.hours', { value: num.format(hours) });
     return km === null ? null : t('vehicle.units.km', { value: num.format(km) });
   };
-  const countdown = (iso: string | null): Pick<Info, 'value' | 'hint' | 'tone'> => {
+  const countdown = (iso: string | null): Pick<Info, 'value' | 'hint' | 'tone' | 'due'> => {
     if (!iso) return { value: null };
     const days = daysUntil(iso, now);
     return {
       value: relative.format(days, 'day'),
       hint: formatDate(iso),
       tone: days < 0 ? 'bad' : days <= SOON_DAYS ? 'warn' : undefined,
+      due: dueByDate(iso, now),
     };
   };
   const place = (code: string | null) =>
@@ -87,11 +98,17 @@ export function useVehicleInfo(v: VehicleDetail | undefined) {
         const reading = usage(v.nextServiceKm, v.nextServiceHours);
         const date = countdown(v.nextServiceDate);
         const parts = [date.value, reading].filter(Boolean);
+        const hoursLeft =
+          v.usageUnit === 'HOURS' && v.nextServiceHours !== null && v.engineHours !== null
+            ? v.nextServiceHours - v.engineHours
+            : null;
+        const due = worstDue(date.due, dueByHours(hoursLeft));
         return {
           label,
           value: parts.length ? parts.join(' · ') : null,
           hint: date.hint,
-          tone: date.tone,
+          tone: due === 'soon' ? 'warn' : due ? 'bad' : date.tone,
+          due,
         };
       }
       case 'annualTest':

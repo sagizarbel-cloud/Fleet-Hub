@@ -431,3 +431,21 @@
     display: table-header-group;
   }
 }
+
+/* A service or inspection coming due (Sagi, 2026-11-22): orange frame, red frame, all red. */
+.fh-due-soon {
+  border-color: var(--fh-warn) !important;
+  box-shadow: inset 0 0 0 1px var(--fh-warn);
+}
+.fh-due-urgent {
+  border-color: var(--fh-bad) !important;
+  box-shadow: inset 0 0 0 1px var(--fh-bad);
+}
+.fh-due-overdue {
+  border-color: var(--fh-bad) !important;
+  background: var(--fh-bad) !important;
+  color: #fff;
+}
+.fh-due-overdue :is(.text-muted, .text-warn, .text-bad, .text-ok, .text-accent-ink) {
+  color: #fff !important;
+}

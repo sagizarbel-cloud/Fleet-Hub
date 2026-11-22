@@ -5,6 +5,7 @@ export * from './vitals';
 export * from './records';
 export * from './fuel';
 export * from './fleet';
+export * from './due';
 export * from './money';
 export * from './admin';
 export * from './import';

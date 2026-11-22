@@ -20,7 +20,8 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import type { EventType } from '@fleet-hub/shared';
+import { dueByDate, dueByHours, worstDue, type DueLevel, type EventType } from '@fleet-hub/shared';
+import { DUE_FRAME } from './VitalsBar';
 import { useDateFormat } from '@/fleet/FleetGrid';
 import { cn } from '@/lib/cn';
 import type { VehicleDetail } from './data';
@@ -78,11 +79,22 @@ function useSummary(v: VehicleDetail | undefined) {
   const { t, i18n } = useTranslation();
   const formatDate = useDateFormat();
   const relative = relativeFormat(localeOf(i18n.language), { numeric: 'auto' });
-  return (key: RecordKey): { text: string; warn?: boolean } => {
+  return (key: RecordKey): { text: string; warn?: boolean; due?: DueLevel | null } => {
     // Still loading: the cards are already in place, their counts follow.
     if (!v) return { text: '…' };
     const c = v.counts;
     switch (key) {
+      case 'service': {
+        // Coming due by date, or by engine hours (Sagi, 2026-11-22).
+        const hoursLeft =
+          v.usageUnit === 'HOURS' && v.nextServiceHours !== null && v.engineHours !== null
+            ? v.nextServiceHours - v.engineHours
+            : null;
+        return {
+          text: t('vehicle.records.count', { count: c.service }),
+          due: worstDue(dueByDate(v.nextServiceDate), dueByHours(hoursLeft)),
+        };
+      }
       case 'malfunctions':
         return c.malfunctionsOpen > 0
           ? { text: t('vehicle.records.open', { count: c.malfunctionsOpen }), warn: true }
@@ -97,6 +109,7 @@ function useSummary(v: VehicleDetail | undefined) {
                   'day',
                 ),
               }),
+              due: dueByDate(c.nextInspection.validUntil),
             }
           : { text: t('vehicle.records.count', { count: c.inspections }) };
       case 'wiggleTests': {
@@ -251,7 +264,11 @@ export function Records({
                     type="button"
                     onClick={() => show(key)}
                     data-record={key}
-                    className="glass hover:border-border-strong flex h-full w-full items-start gap-2 p-3 text-start"
+                    data-due={s.due ?? undefined}
+                    className={cn(
+                      'glass hover:border-border-strong flex h-full w-full items-start gap-2 p-3 text-start',
+                      s.due && DUE_FRAME[s.due],
+                    )}
                   >
                     <Icon aria-hidden className="text-accent-ink mt-0.5 size-4 shrink-0" />
                     <span className="min-w-0">
