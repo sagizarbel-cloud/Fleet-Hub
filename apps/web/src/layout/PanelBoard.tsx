@@ -263,7 +263,7 @@ export function PanelBoard<P extends string>({
   const frame = (id: P, list: Where['list'], index: number, count: number) => {
     const height = layout.heights[id];
     const resizable = screen.resizable.includes(id);
-    const name = t(`layout.panel.${id}`);
+    const name = t(`layout.panel.${id}` as 'layout.panel.kpi');
     const marker =
       dragging && dropAt?.list === list
         ? dropAt.index === index

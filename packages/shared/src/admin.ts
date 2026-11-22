@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { CUSTOM_FIELD_KEYS, CUSTOM_FIELD_TYPES, ROLES, VEHICLE_CATEGORIES } from './enums';
+import {
+  CUSTOM_FIELD_KEYS,
+  CUSTOM_FIELD_TYPES,
+  ROLES,
+  VEHICLE_CATEGORIES,
+  type VehicleCategory,
+} from './enums';
 import { DEFAULT_WIGGLE_TYPES, wiggleTypesSchema } from './wiggle';
 
 // ---------- Settings lists (SPEC 5.9) ----------
@@ -84,8 +90,21 @@ export const RESET_LINK_HOURS = 24;
 
 /** ISO 3779: 17 characters, letters and digits without I, O and Q. */
 export const VIN_PATTERN = /^[A-HJ-NPR-Z0-9]{17}$/;
-/** Israeli plates: 7 digits (12-345-67) or 8 digits (123-45-678). Stored as digits only. */
-export const PLATE_PATTERN = /^\d{7,8}$/;
+/**
+ * Israeli plates, stored as digits only: road vehicles 7 digits (12-345-67) or 8 (123-45-678);
+ * heavy machinery (Sagi, 2026-11-22) 6 digits, or 7–8 when it has a road plate (trailers, road
+ * registered machines). Dashes and spaces are allowed and don't count.
+ */
+export const PLATE_LENGTHS = { ROAD: [7, 8], EQUIPMENT: [6, 7, 8] } as const satisfies Record<
+  VehicleCategory,
+  readonly number[]
+>;
+export const PLATE_PATTERN = /^\d{6,8}$/;
+export const plateOk = (digits: string, category: VehicleCategory | undefined) =>
+  /^\d+$/.test(digits) &&
+  (category
+    ? (PLATE_LENGTHS[category] as readonly number[]).includes(digits.length)
+    : PLATE_PATTERN.test(digits));
 
 /** Digits only, so "12-345-67" and "1234567" are the same plate. */
 export const normalizePlate = (s: string) => s.replace(/[\s.-]/g, '');
@@ -170,7 +189,7 @@ export const vehicleBody = z
   .superRefine((v, ctx) => {
     if (v.category === 'ROAD' && v.vin && !VIN_PATTERN.test(v.vin))
       ctx.addIssue({ code: 'custom', path: ['vin'], message: 'vin' });
-    if (v.licenseNo && !PLATE_PATTERN.test(v.licenseNo))
+    if (v.licenseNo && !plateOk(v.licenseNo, v.category))
       ctx.addIssue({ code: 'custom', path: ['licenseNo'], message: 'plate' });
     if (v.purchaseDate && v.purchaseDate.getTime() > Date.now() + DAY_MS)
       ctx.addIssue({ code: 'custom', path: ['purchaseDate'], message: 'future' });

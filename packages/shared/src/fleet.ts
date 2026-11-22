@@ -31,7 +31,7 @@ export const FLEET_COLUMNS = {
     'operator',
   ],
   status: ['status', 'readiness', 'openIssues', 'lastActivity'],
-  usage: ['usage', 'economy30', 'lastFuel'],
+  usage: ['usage', 'economy30', 'lastFuel', 'lastFluid', 'fluids12m'],
   maintenance: ['nextService', 'lastService', 'services12m'],
   compliance: ['nextExpiry', 'annualTest', 'insurance', 'safetyCheck'],
   ownership: ['warrantyExpiry', 'purchaseDate', 'supplier', 'purchasePrice'],

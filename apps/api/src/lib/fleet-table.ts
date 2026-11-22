@@ -79,6 +79,8 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
     services12m,
     recentFuel,
     lastFuel,
+    lastFluids,
+    fluids12m,
     service12,
     repair12,
     fuel12,
@@ -114,6 +116,18 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
       orderBy: [{ vehicleId: 'asc' }, { date: 'desc' }],
       select: { vehicleId: true, date: true, liters: true },
     }),
+    // Fluid additions (Sagi, 2026-11-22): the last one, and litres added in 12 months.
+    db.fluidAddition.findMany({
+      where: live,
+      distinct: ['vehicleId'],
+      orderBy: [{ vehicleId: 'asc' }, { date: 'desc' }],
+      select: { vehicleId: true, date: true, liters: true, fluidType: { select: { code: true } } },
+    }),
+    db.fluidAddition.groupBy({
+      by: ['vehicleId'],
+      _sum: { liters: true },
+      where: { ...live, date: { gte: y1 } },
+    }),
     costBy('serviceRecord', 'date', y1),
     costBy('malfunction', 'reportedAt', y1),
     costBy('fuelEntry', 'date', y1),
@@ -144,12 +158,15 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
     ]);
   }
   const lastFill = new Map(lastFuel.map((f) => [f.vehicleId, f]));
+  const lastFluid = new Map(lastFluids.map((f) => [f.vehicleId, f]));
+  const fluidLiters = new Map(fluids12m.map((f) => [f.vehicleId, f._sum.liters?.toNumber() ?? 0]));
   const maint12 = add(service12, repair12, work12);
   const maint3 = add(service3, repair3, work3);
 
   return vehicles.map(
     ({ id, type, department, location, supplier, currentItems, purchasePrice, ...v }) => {
       const fill = lastFill.get(id);
+      const fluid = lastFluid.get(id);
       // Unlinked receipts join the costs (Sagi, 2026-10-27): see receiptCosts.
       const r12 = receipts12.get(id);
       const r3 = receipts3.get(id);
@@ -173,6 +190,10 @@ export async function fleetTable(app: FastifyInstance, now = new Date()) {
         services12m: serviceCounts.get(id) ?? 0,
         economy30: fuelEconomy(fuelByVehicle.get(id) ?? [], type.usageUnit)?.value ?? null,
         lastFuel: fill ? { date: fill.date, liters: fill.liters.toNumber() } : null,
+        lastFluid: fluid
+          ? { date: fluid.date, liters: fluid.liters.toNumber(), fluid: fluid.fluidType.code }
+          : null,
+        fluids12m: fluidLiters.get(id) ?? 0,
         costs: {
           maintenance12m: m12,
           fuel12m: f12,

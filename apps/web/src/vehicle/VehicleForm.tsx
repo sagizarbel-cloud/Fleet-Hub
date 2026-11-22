@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Check, ChevronLeft, ChevronRight, ImagePlus, KeyRound, Trash2, Undo2 } from 'lucide-react';
 import {
   normalizePlate,
+  plateOk,
   vehicleBody,
   VIN_PATTERN,
   type VehicleCategory,
@@ -329,10 +330,14 @@ export function VehicleForm({
     licenseNo: text('licenseNo', {
       ...DIGITS,
       label: t('vehicle.info.licenseNo'),
-      hint:
-        plateDigits.length === 7 || plateDigits.length === 8
-          ? t('vehicleForm.hint.plateOk')
-          : t('vehicleForm.hint.plate'),
+      hint: plateOk(plateDigits, category)
+        ? t('vehicleForm.hint.plateOk')
+        : [
+            t(category === 'ROAD' ? 'vehicleForm.hint.plateRoad' : 'vehicleForm.hint.plateMachine'),
+            plateDigits && t('vehicleForm.hint.plateCount', { count: plateDigits.length }),
+          ]
+            .filter(Boolean)
+            .join(' '),
     }),
     make: text('make', REQUIRED),
     model: text('model', REQUIRED),

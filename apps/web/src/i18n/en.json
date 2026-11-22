@@ -614,7 +614,12 @@
       "lastFuelLiters": "Last fuel (L)",
       "nextServiceDate": "Next service date",
       "nextServiceKm": "Next service (km)",
-      "nextServiceHours": "Next service (h)"
+      "nextServiceHours": "Next service (h)",
+      "lastFluid": "Last fluid added",
+      "fluids12m": "Fluids added, 12 months (L)",
+      "lastFluidDate": "Last fluid added: date",
+      "lastFluidType": "Last fluid added: fluid",
+      "lastFluidLiters": "Last fluid added: litres"
     },
     "due": {
       "inDays": "in {{count}} d",
@@ -665,7 +670,8 @@
       "fleet": "Whole fleet",
       "fleetHint": "Every vehicle and every record, one sheet each",
       "vehiclesSheet": "Vehicles"
-    }
+    },
+    "lastFluidValue": "{{fluid}} {{liters}} L • {{date}}"
   },
   "money": {
     "view": "View",
@@ -1091,12 +1097,14 @@
       "vinCount": "{{n}} of 17 characters.",
       "vinOk": "Looks like a valid VIN.",
       "pin": "Free text, as stamped on the machine.",
-      "plate": "7 or 8 digits; dashes are fine.",
-      "plateOk": "Looks like a valid Israeli plate."
+      "plateOk": "Looks like a valid Israeli plate.",
+      "plateRoad": "Road vehicles: 7 or 8 digits. Dashes are fine and don’t count.",
+      "plateMachine": "Heavy machinery: 6 digits (7 or 8 with a road plate). Dashes are fine and don’t count.",
+      "plateCount": "Digits so far: {{count}}."
     },
     "error": {
       "vin": "A VIN has 17 letters and digits, without I, O or Q.",
-      "plate": "An Israeli license has 7 or 8 digits.",
+      "plate": "Road vehicles have 7 or 8 digits, heavy machinery 6.",
       "serial": "Use letters, digits and dashes.",
       "taken": "Another vehicle already has this.",
       "pickType": "Choose a vehicle type.",
