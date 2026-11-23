@@ -107,6 +107,27 @@ describe('fleet table', () => {
     expect(r.usageUnit).toBe('KM');
   });
 
+  it('shows the last fluid added and the litres added in 12 months', async () => {
+    const at = (days: number) => new Date(Date.now() - days * DAY);
+    const fluidTypeId = (
+      await app.db.fluidType.upsert({
+        where: { code: 'test_oil' },
+        create: { code: 'test_oil', nameEn: 'Test oil', nameHe: 'שמן בדיקה' },
+        update: {},
+      })
+    ).id;
+    await app.db.fluidAddition.createMany({
+      data: [
+        { vehicleId, fluidTypeId, date: at(3), liters: 2.5 },
+        { vehicleId, fluidTypeId, date: at(90), liters: 4 },
+        { vehicleId, fluidTypeId, date: at(500), liters: 9 },
+      ],
+    });
+    const r = await row();
+    expect(r.lastFluid).toMatchObject({ liters: 2.5, fluid: 'test_oil' });
+    expect(r.fluids12m).toBe(6.5);
+  });
+
   it('exports every record of a kind across the fleet, with the serial', async () => {
     const res = await get('/api/fleet/records/service', viewer);
     expect(res.statusCode).toBe(200);

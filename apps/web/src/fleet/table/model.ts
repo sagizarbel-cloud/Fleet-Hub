@@ -51,6 +51,9 @@ export interface FleetRow {
   services12m: number;
   economy30: number | null;
   lastFuel: { date: string; liters: number } | null;
+  lastFluid: { date: string; liters: number; fluid: string } | null;
+  /** Litres of fluids added in the last 12 months. */
+  fluids12m: number;
   costs: Record<
     'maintenance12m' | 'fuel12m' | 'total12m' | 'maintenance3m' | 'fuel3m' | 'total3m',
     number
@@ -210,6 +213,30 @@ export const FLEET_COLUMN_DEFS: Record<FleetColumn, FleetColumnDef> = {
       ),
     ],
   }),
+  lastFluid: def('lastFluid', 'usage', 190, 'date', (r) => date(r.lastFluid?.date), {
+    text: (r, ctx) => {
+      const f = row(r).lastFluid;
+      return f
+        ? ctx.t('fleet.lastFluidValue', {
+            fluid: name('fluidTypes', f.fluid, ctx),
+            liters: ctx.number(f.liters, 1),
+            date: ctx.date(f.date),
+          })
+        : '';
+    },
+    excel: [
+      plain('lastFluidDate', 'fleet.col.lastFluidDate', 'date', (r) =>
+        date(row(r).lastFluid?.date),
+      ),
+      plain('lastFluidType', 'fleet.col.lastFluidType', 'text', (r, ctx) =>
+        row(r).lastFluid ? name('fluidTypes', row(r).lastFluid!.fluid, ctx) : null,
+      ),
+      plain('lastFluidLiters', 'fleet.col.lastFluidLiters', 'number', (r) =>
+        row(r).lastFluid ? row(r).lastFluid!.liters : null,
+      ),
+    ],
+  }),
+  fluids12m: def('fluids12m', 'usage', 130, 'number', (r) => r.fluids12m, { numFmt: '0.0' }),
   // Maintenance
   nextService: def('nextService', 'maintenance', 160, 'date', (r) => date(r.nextServiceDate), {
     text: (r, ctx) => {

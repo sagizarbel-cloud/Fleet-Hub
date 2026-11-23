@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import {
-  hasRole,
+  customBody,
   ownershipBody,
   progressBody,
   progressItemParams,
@@ -32,7 +32,8 @@ import {
   type VehicleRef,
 } from '../lib/records';
 import { refreshStatus } from '../lib/status';
-import { checkFuelRequired } from '../lib/app-settings';
+import { checkFuelRequired, readAppSettings } from '../lib/app-settings';
+import { requireCard } from '../lib/permissions';
 import { requireRole, requireUser } from '../plugins/auth';
 
 type Db = FastifyInstance['db'] | Prisma.TransactionClient;
@@ -83,12 +84,22 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
   app.post('/:serial/records/:kind', { preHandler: requireUser }, async (req, reply) => {
     const { serial, kind } = parse(recordParams, req.params);
     const user = req.user!;
-    if (!canCreate(user, kind)) throw new HttpError(403, 'forbidden');
     const input = parse(RECORD_BODIES[kind], req.body);
+    const { custom } = parse(customBody, req.body);
     const result = await app.db.$transaction(async (tx) => {
+      const { permissions } = await readAppSettings(tx);
+      if (!canCreate(user, kind, permissions)) throw new HttpError(403, 'forbidden');
       if (kind === 'fuel') await checkFuelRequired(tx, input as object);
       const vehicle = await vehicleRef(tx, serial);
-      const row = await createRecord(tx, user, kind as RecordKind, vehicle, input as never);
+      const row = await createRecord(
+        tx,
+        user,
+        kind as RecordKind,
+        vehicle,
+        input as never,
+        null,
+        custom,
+      );
       const status = await refreshStatus(tx, vehicle.id, user.id);
       return { item: await serializeOne(tx, kind, vehicle, row), status };
     });
@@ -99,10 +110,19 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
     const { serial, kind, id } = parse(recordIdParams, req.params);
     const user = req.user!;
     const input = parse(RECORD_BODIES[kind], req.body);
+    const { custom } = parse(customBody, req.body);
     return app.db.$transaction(async (tx) => {
       if (kind === 'fuel') await checkFuelRequired(tx, input as object);
       const vehicle = await vehicleRef(tx, serial);
-      const row = await updateRecord(tx, user, kind as RecordKind, vehicle, id, input as never);
+      const row = await updateRecord(
+        tx,
+        user,
+        kind as RecordKind,
+        vehicle,
+        id,
+        input as never,
+        custom,
+      );
       const status = await refreshStatus(tx, vehicle.id, user.id);
       return { item: await serializeOne(tx, kind, vehicle, row), status };
     });
@@ -133,12 +153,11 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
   /** Editors add "what was done so far" to a malfunction; each update is an Event too. */
   app.post(
     '/:serial/records/malfunctions/:id/progress',
-    { preHandler: requireUser },
+    { preHandler: [requireUser, requireCard('malfunctions')] },
     async (req, reply) => {
       const { serial, id } = parse(progressParams, req.params);
       const { at, body, author, resolve } = parse(progressBody, req.body);
       const user = req.user!;
-      if (!hasRole(user.role, 'EDITOR')) throw new HttpError(403, 'forbidden');
       const result = await app.db.$transaction(async (tx) => {
         const vehicle = await vehicleRef(tx, serial);
         const m = await tx.malfunction.findFirst({
@@ -190,7 +209,7 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
   /** Removes a progress update (editors), and its timeline entry. */
   app.delete(
     '/:serial/records/malfunctions/:id/progress/:progressId',
-    { preHandler: requireRole('EDITOR') },
+    { preHandler: [requireUser, requireCard('malfunctions')] },
     async (req) => {
       const { serial, id, progressId } = parse(progressItemParams, req.params);
       return app.db.$transaction(async (tx) => {
@@ -226,7 +245,7 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
   // ---------- Excavator tool (Revisions 1) ----------
 
   /** Changes the tool on an excavator's arm; the drawing follows and Activity logs it. */
-  app.put('/:serial/tool', { preHandler: requireRole('EDITOR') }, async (req) => {
+  app.put('/:serial/tool', { preHandler: [requireUser, requireCard('tool')] }, async (req) => {
     const { serial } = parse(serialParam, req.params);
     const { tool } = parse(toolBody, req.body);
     return app.db.$transaction(async (tx) => {
@@ -292,44 +311,48 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  app.put('/:serial/ownership', { preHandler: requireRole('EDITOR') }, async (req) => {
-    const { serial } = parse(serialParam, req.params);
-    const input = parse(ownershipBody, req.body);
-    const user = req.user!;
-    return app.db.$transaction(async (tx) => {
-      const before = await tx.vehicle.findUnique({
-        where: { serial },
-        select: { id: true, ...Object.fromEntries(OWNERSHIP_FIELDS.map((f) => [f, true])) },
+  app.put(
+    '/:serial/ownership',
+    { preHandler: [requireUser, requireCard('ownership')] },
+    async (req) => {
+      const { serial } = parse(serialParam, req.params);
+      const input = parse(ownershipBody, req.body);
+      const user = req.user!;
+      return app.db.$transaction(async (tx) => {
+        const before = await tx.vehicle.findUnique({
+          where: { serial },
+          select: { id: true, ...Object.fromEntries(OWNERSHIP_FIELDS.map((f) => [f, true])) },
+        });
+        if (!before) throw new HttpError(404, 'vehicle_not_found');
+        if (input.supplierId) {
+          const s = await tx.supplier.findUnique({ where: { id: input.supplierId } });
+          if (!s) throw new HttpError(400, 'unknown_supplier');
+        }
+        const same = (a: unknown, b: unknown) => String(a ?? '') === String(b ?? '');
+        const changed = OWNERSHIP_FIELDS.filter((f) => {
+          const a = (before as Record<string, unknown>)[f];
+          const b = input[f];
+          return a instanceof Date || b instanceof Date
+            ? (a as Date | null)?.getTime() !== (b as Date | null)?.getTime()
+            : !same(a, b);
+        });
+        if (!changed.length) return { ok: true, changed };
+        await tx.vehicle.update({ where: { id: before.id }, data: input });
+        await tx.event.create({
+          data: {
+            type: 'VEHICLE_UPDATED',
+            vehicleId: before.id,
+            occurredAt: new Date(),
+            userId: user.id,
+            params: { fields: changed },
+            sourceType: 'Vehicle',
+            sourceId: before.id,
+          },
+        });
+        return { ok: true, changed };
       });
-      if (!before) throw new HttpError(404, 'vehicle_not_found');
-      if (input.supplierId) {
-        const s = await tx.supplier.findUnique({ where: { id: input.supplierId } });
-        if (!s) throw new HttpError(400, 'unknown_supplier');
-      }
-      const same = (a: unknown, b: unknown) => String(a ?? '') === String(b ?? '');
-      const changed = OWNERSHIP_FIELDS.filter((f) => {
-        const a = (before as Record<string, unknown>)[f];
-        const b = input[f];
-        return a instanceof Date || b instanceof Date
-          ? (a as Date | null)?.getTime() !== (b as Date | null)?.getTime()
-          : !same(a, b);
-      });
-      if (!changed.length) return { ok: true, changed };
-      await tx.vehicle.update({ where: { id: before.id }, data: input });
-      await tx.event.create({
-        data: {
-          type: 'VEHICLE_UPDATED',
-          vehicleId: before.id,
-          occurredAt: new Date(),
-          userId: user.id,
-          params: { fields: changed },
-          sourceType: 'Vehicle',
-          sourceId: before.id,
-        },
-      });
-      return { ok: true, changed };
-    });
-  });
+    },
+  );
 
   // ---------- Manual status override (admins), logged ----------
 

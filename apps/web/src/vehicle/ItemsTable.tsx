@@ -1,22 +1,20 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Package, Plus, X } from 'lucide-react';
-import { hasRole } from '@fleet-hub/shared';
-import { useSession } from '@/auth/session';
 import { Button } from '@/components/ui/button';
 import { useDateFormat } from '@/fleet/FleetGrid';
 import { prefersReducedMotion } from '@/lib/motion';
 import { ItemChooser, NewItemForVehicle } from './AddItem';
 import { useItemAction, type VehicleDetail } from './data';
+import { useCan } from '@/auth/can';
 
 const DASH = '—';
 
 /** Accessories and work tools on this vehicle, with Assign and Remove for editors and admins. */
 export function ItemsTable({ vehicle }: { vehicle: VehicleDetail }) {
   const { t } = useTranslation();
-  const { data: user } = useSession();
   const formatDate = useDateFormat();
-  const canEdit = !!user && hasRole(user.role, 'EDITOR');
+  const canEdit = useCan().card('items');
   const [choosing, setChoosing] = useState(false);
   const [creating, setCreating] = useState(false);
   const [reduced] = useState(prefersReducedMotion);

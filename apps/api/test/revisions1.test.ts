@@ -402,7 +402,7 @@ describe('location change details', () => {
       (
         await req('PUT', '/api/settings/app', editor, {
           fuelRequired: NONE_REQUIRED,
-          movementFields: fields,
+          recordFields: { movements: fields },
         })
       ).statusCode,
     ).toBe(403);
@@ -410,7 +410,7 @@ describe('location change details', () => {
       (
         await req('PUT', '/api/settings/app', admin, {
           fuelRequired: NONE_REQUIRED,
-          movementFields: fields,
+          recordFields: { movements: fields },
         })
       ).statusCode,
     ).toBe(200);

@@ -14,7 +14,13 @@ type Key = keyof AppSettings;
 /** Every app setting, with defaults for keys never saved; a stored value that no longer parses falls back too. */
 export async function readAppSettings(tx: Tx): Promise<AppSettings> {
   const rows = await tx.appSetting.findMany();
-  const stored = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const stored: Record<string, unknown> = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  // Before 2026-11-22 only location changes had extra fields, saved as `movementFields`.
+  if (!('recordFields' in stored) && Array.isArray(stored.movementFields))
+    stored.recordFields = {
+      ...DEFAULT_APP_SETTINGS.recordFields,
+      movements: stored.movementFields,
+    };
   const merged = { ...DEFAULT_APP_SETTINGS, ...stored };
   const parsed = appSettingsBody.safeParse(merged);
   return parsed.success ? parsed.data : DEFAULT_APP_SETTINGS;

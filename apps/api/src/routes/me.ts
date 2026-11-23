@@ -38,7 +38,7 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
     const current = await read(userId);
     const next = { ...current, ...body };
     const { layouts, ...rest } = next;
-    const data = { ...rest, layouts: layouts ?? Prisma.DbNull };
+    const data = { ...rest, layouts: (layouts as Prisma.InputJsonValue | null) ?? Prisma.DbNull };
     await app.db.userPreference.upsert({
       where: { userId },
       create: { userId, ...data },

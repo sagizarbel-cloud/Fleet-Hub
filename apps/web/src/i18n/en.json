@@ -477,7 +477,8 @@
       "contractor": "Transport contractor",
       "duration": "Time, hours",
       "distance": "Distance",
-      "services": "Services included"
+      "services": "Services included",
+      "updatedBy": "Last changed by"
     },
     "field": {
       "nextServiceDate": "Next service date (optional)",
@@ -614,7 +615,12 @@
       "lastFuelLiters": "Last fuel (L)",
       "nextServiceDate": "Next service date",
       "nextServiceKm": "Next service (km)",
-      "nextServiceHours": "Next service (h)"
+      "nextServiceHours": "Next service (h)",
+      "lastFluid": "Last fluid added",
+      "fluids12m": "Fluids added, 12 months (L)",
+      "lastFluidDate": "Last fluid added: date",
+      "lastFluidType": "Last fluid added: fluid",
+      "lastFluidLiters": "Last fluid added: litres"
     },
     "due": {
       "inDays": "in {{count}} d",
@@ -665,7 +671,8 @@
       "fleet": "Whole fleet",
       "fleetHint": "Every vehicle and every record, one sheet each",
       "vehiclesSheet": "Vehicles"
-    }
+    },
+    "lastFluidValue": "{{fluid}} {{liters}} L • {{date}}"
   },
   "money": {
     "view": "View",
@@ -842,7 +849,8 @@
       "import": "Excel import",
       "required": "Record fields",
       "report": "Printed reports",
-      "live": "Live data"
+      "live": "Live data",
+      "permissions": "Permissions"
     },
     "loadFailed": "Couldn't load this. Try again.",
     "mine": {
@@ -968,8 +976,9 @@
       "failed": "The logo wasn't saved. Try again."
     },
     "extra": {
-      "title": "Extra fields on location changes",
-      "hint": "Up to three fields of your own, for example a permit number or the escort. They show in the form, the table, the report and the exports.",
+      "title": "Extra fields on each card",
+      "titleFor": "Extra fields: {{card}}",
+      "hint": "Fields of your own on any card, for example a service type, a permit number or the escort. A list offers fixed choices. They show in the form, the table, the report and the exports.",
       "none": "No extra fields yet.",
       "field": "Extra field {{n}}",
       "labelEn": "Name in English",
@@ -978,12 +987,23 @@
       "types": {
         "text": "Text",
         "number": "Number",
-        "date": "Date"
+        "date": "Date",
+        "list": "List"
       },
       "add": "Add a field",
       "remove": "Remove the field",
-      "invalid": "Each field needs a name in English and in Hebrew.",
-      "note": "Removing a field hides it; values already saved are kept."
+      "invalid": "Each field needs a name in English and in Hebrew, and a list needs at least one choice.",
+      "note": "Removing a field hides it; values already saved are kept.",
+      "options": "Choices",
+      "optionEn": "Choice {{n}} in English",
+      "optionHe": "Choice {{n}} in Hebrew",
+      "addOption": "Add a choice",
+      "removeOption": "Remove the choice",
+      "header": "Header of the card (leads the table and names each record)",
+      "whoFills": "Who fills it in",
+      "likeCard": "Whoever edits the card",
+      "card": "Card",
+      "manage": "Fields"
     },
     "wiggle": {
       "title": "Wiggle test",
@@ -1091,18 +1111,21 @@
       "vinCount": "{{n}} of 17 characters.",
       "vinOk": "Looks like a valid VIN.",
       "pin": "Free text, as stamped on the machine.",
-      "plate": "7 or 8 digits; dashes are fine.",
-      "plateOk": "Looks like a valid Israeli plate."
+      "plateOk": "Looks like a valid Israeli plate.",
+      "plateRoad": "Road vehicles: 7 or 8 digits. Dashes are fine and don’t count.",
+      "plateMachine": "Heavy machinery: 6 digits (7 or 8 with a road plate). Dashes are fine and don’t count.",
+      "plateCount": "Digits so far: {{count}}."
     },
     "error": {
       "vin": "A VIN has 17 letters and digits, without I, O or Q.",
-      "plate": "An Israeli license has 7 or 8 digits.",
+      "plate": "Road vehicles have 7 or 8 digits, heavy machinery 6.",
       "serial": "Use letters, digits and dashes.",
       "taken": "Another vehicle already has this.",
       "pickType": "Choose a vehicle type.",
       "picture": "The vehicle is saved, but a picture didn't upload. Try again.",
       "pictureTooBig": "The vehicle is saved, but a picture is too large.",
-      "pictureType": "The vehicle is saved, but a picture isn't a JPEG, PNG, WebP or SVG."
+      "pictureType": "The vehicle is saved, but a picture isn't a JPEG, PNG, WebP or SVG.",
+      "locked": "This role can’t change this field."
     },
     "startCode": {
       "hint": "Optional. Stored encrypted and shown masked.",
@@ -1348,7 +1371,9 @@
     "resolved": "Marked resolved",
     "resolveFailed": "Couldn't mark it resolved. Try again.",
     "enteredBy": "entered by {{name}}",
-    "colOpenFor": "Days open"
+    "colOpenFor": "Days open",
+    "more": "More details",
+    "changedBy": "Last changed by {{name}}"
   },
   "workCard": {
     "type": {
@@ -1527,6 +1552,32 @@
       "records": "Records",
       "items": "Assigned items",
       "activity": "Activity"
+    }
+  },
+  "permissions": {
+    "cardsTitle": "Who may edit each card",
+    "cardsHint": "For each card of a vehicle page: viewers and up, editors and up, or admins only. On a card open to viewers, a viewer changes only what they added. Changes are saved at once.",
+    "fieldsTitle": "Who may edit each vehicle field",
+    "fieldsHint": "The fields of the Add / Edit vehicle form. A field set like the vehicle card follows that card’s setting.",
+    "likeVehicle": "Like the vehicle card ({{level}})",
+    "likeVehicleShort": "like the vehicle card",
+    "historyTitle": "History of changes",
+    "historyHint": "Every change to who may edit what, newest first. Only admins see this.",
+    "historyNone": "No changes yet.",
+    "change": "{{what}}: {{from}} → {{to}}",
+    "someone": "Someone",
+    "noDifference": "No difference (saved again).",
+    "level": {
+      "VIEWER": "Viewers and up",
+      "EDITOR": "Editors and up",
+      "ADMIN": "Admins only"
+    },
+    "card": {
+      "vehicle": "Vehicle details",
+      "ownership": "Ownership and warranty",
+      "items": "Assigned items",
+      "tool": "Excavator tool",
+      "fuelLevel": "Current fuel level"
     }
   }
 }

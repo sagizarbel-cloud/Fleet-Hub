@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, PackagePlus, Plus } from 'lucide-react';
-import { hasRole } from '@fleet-hub/shared';
-import { useSession } from '@/auth/session';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
 import { isolate } from '@/lib/bidi';
 import { ItemForm } from '@/money/ItemForm';
 import { useItemAction, useUnassignedItems } from './data';
+import { useCan } from '@/auth/can';
 
 /**
  * Pick a free item from the yard and put it on this vehicle, or start a new one ("New item…").
@@ -103,9 +102,9 @@ export function NewItemForVehicle({
  */
 export function AddToolButton({ serial, reduced }: { serial: string; reduced: boolean }) {
   const { t } = useTranslation();
-  const { data: user } = useSession();
+  const canAssign = useCan().card('items');
   const [open, setOpen] = useState<null | 'choose' | 'new'>(null);
-  if (!user || !hasRole(user.role, 'EDITOR')) return null;
+  if (!canAssign) return null;
   return (
     <>
       <button

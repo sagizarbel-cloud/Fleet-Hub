@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, useAnimate } from 'motion/react';
 import { ArrowLeft, FileText, Loader2, Pencil } from 'lucide-react';
 import type { DetailView } from '@fleet-hub/shared';
-import { DETAIL_VIEWS, hasRole, VEHICLE_SCREEN, type VehiclePanel } from '@fleet-hub/shared';
-import { useSession } from '@/auth/session';
+import { DETAIL_VIEWS, VEHICLE_SCREEN, type VehiclePanel } from '@fleet-hub/shared';
 import { HeroVisual, type HeroPose } from '@/drawings/HeroVisual';
 import { PanelBoard } from '@/layout/PanelBoard';
 import { cn } from '@/lib/cn';
@@ -25,6 +24,7 @@ import { ReportHost } from '@/vehicle/ReportHost';
 import { VehicleNav, type SlideDirection } from '@/vehicle/VehicleNav';
 import { VitalsBar } from '@/vehicle/VitalsBar';
 import { lookupName, useLookups, type Tile } from './data';
+import { useCan } from '@/auth/can';
 
 // The last view is cached here so the transition can pick its final pose at once;
 // the saved preference (per user, on the server) is the source of truth.
@@ -120,8 +120,7 @@ export function VehicleStage({
   const prefs = usePreferences();
   const savePrefs = useSavePreferences();
   const [scope, animate] = useAnimate<HTMLDivElement>();
-  const { data: user } = useSession();
-  const canEdit = !!user && hasRole(user.role, 'EDITOR');
+  const canEdit = useCan().vehicleForm();
   const [editing, setEditing] = useState(false);
   const [reporting, setReporting] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);

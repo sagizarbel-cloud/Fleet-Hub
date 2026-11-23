@@ -100,6 +100,8 @@ function vehicle(over: Partial<FleetRow>): FleetRow {
     services12m: 0,
     economy30: null,
     lastFuel: null,
+    lastFluid: null,
+    fluids12m: 0,
     costs: {
       maintenance12m: 0,
       fuel12m: 0,
