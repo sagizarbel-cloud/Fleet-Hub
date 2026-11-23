@@ -159,13 +159,16 @@ export const fuelBody = z.object({
 });
 
 /** Values of admin-defined extra fields (Revisions 1): text, a number or a day, by key. */
-export const customValues = z
+const customRecord = z
   .partialRecord(
     z.enum(CUSTOM_FIELD_KEYS),
     z.union([z.string().trim().max(200), z.number().min(-1e9).max(1e9), z.null()]),
   )
-  .nullable()
-  .default(null);
+  .nullable();
+export const customValues = customRecord.default(null);
+
+/** The extra-field values sent with any record; left out = unchanged (2026-11-22). */
+export const customBody = z.object({ custom: customRecord.optional() }).passthrough();
 
 export const movementBody = z
   .object({

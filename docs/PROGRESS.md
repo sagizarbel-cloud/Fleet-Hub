@@ -9,6 +9,17 @@
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
 
+### Permissions, extra fields, due frames — 2026-11-22
+
+- Sagi's second list of 2026-11-22. Plates: heavy machinery 6 digits (7–8 when it has a road plate), road vehicles 7–8; dashes are fine and never counted (`plateOk` in shared).
+- Due frames on the service and inspection cards and the vitals: orange at 80 engine hours or 1 month left, red at 20 hours or 1 week, all red when overdue (`packages/shared/src/due.ts`).
+- Extra fields on every card (c1..c8: text, number, date or list), each named in English and Hebrew; one may be the card's header (first in the form and table, appended to the report title) and one may be limited by role. Services ship with "Service type" (general, electrical, 1000 h, system addition). Admins edit them in Settings → Record fields or from a Fields button on each card. `recordFields` replaces `movementFields` (old values are migrated on read).
+- Permissions: Settings → Permissions sets, per card and per vehicle field, who may edit (viewers and up, editors and up, admins only). Saved on each change; the history panel reads the `setting.changed` audit entries (`GET /api/settings/app/history?key=permissions`). The server checks every write (`apps/api/src/lib/permissions.ts`); the web hides buttons and locks fields through `useCan()`.
+- Every record keeps who last changed it (`updatedById`): Added by / Last changed by columns and the report footer.
+- Fleet table: Last fluid added and Fluids added in 12 months columns in the usage group.
+- Also fixes type errors on main left by the previous list.
+- Tests: api `permissions.test.ts`, shared `due.test.ts`, e2e `e2e/permissions-2026-11-22.spec.ts`.
+
 ### Search, malfunctions, live hours, panels — 2026-11-22
 
 - Sagi's list of 2026-11-22. Top bar search works (it was a placeholder, like the grid's Add vehicle button): serial, VIN, plate and any text field of vehicles, their records (including malfunction progress notes) and items, grouped, with the vehicle serial on every hit. Arrow keys, Enter (an exact serial goes straight to the vehicle), Esc. Phones open it from an icon. Start codes are never searched. `GET /api/search?q=`.
@@ -236,6 +247,7 @@ Round 3 (Sagi, 2026-11-05):
 - The first admin gets a one-time set-password link from `create-admin`, so no password passes through a terminal or chat.
 - 2026-11-22 (Sagi): live engine hours stay out of the timeline, like live fuel. Panels can be arranged on the dashboard and the vehicle page (Sagi's choice), saved per user, not per device. Search covers every text field except start codes.
 - Revisions 1 (2026-11-04, from the fleet manager via Sagi): "malfunction icons" = the vehicle's status badge and the Activity list; resize = the report window and the table columns; fuel place is a list plus free text, who and provider typed with suggestions; Diesel and Petrol 95 to start; mandatory switches don't apply to Excel imports; malfunctions get a progress log. Round 2 assumptions (in the plan doc): work cards are their own record kind, editors and admins add them; tools are bucket and hammer (Sagi, 2026-11-05); work cards can gather existing services; the vehicle report is printed to PDF by the browser; extra fields are for location changes only, up to three.
+- 2026-11-22 (Sagi, second list): cards open to viewers (notes, wiggle tests) let viewers change only their own entries; a vehicle field without its own level follows the vehicle card; the hour rule applies to engine-hour vehicles, the date rule to the next service, annual test, insurance and certified-inspector check.
 
 ## Later
 

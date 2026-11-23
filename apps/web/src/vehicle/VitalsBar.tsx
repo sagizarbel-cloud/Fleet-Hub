@@ -7,6 +7,12 @@ import { usePreferences, useSavePreferences, type VehicleDetail } from './data';
 import { useVehicleInfo, type Info } from './vitals';
 
 const TONE = { ok: 'text-ok', warn: 'text-warn', bad: 'text-bad' } as const;
+/** Frames for a service or inspection coming due (Sagi, 2026-11-22); see dueBy* in shared. */
+export const DUE_FRAME = {
+  soon: 'fh-due-soon',
+  urgent: 'fh-due-urgent',
+  overdue: 'fh-due-overdue',
+} as const;
 
 export function InfoValue({ info, className }: { info: Info; className?: string }) {
   const { t } = useTranslation();
@@ -47,7 +53,11 @@ export function VitalsBar({ vehicle }: { vehicle: VehicleDetail | undefined }) {
             <div
               key={key}
               data-vital={key}
-              className="border-border bg-surface-strong/60 min-w-0 rounded-lg border px-2.5 py-1.5"
+              data-due={v.due ?? undefined}
+              className={cn(
+                'border-border bg-surface-strong/60 min-w-0 rounded-lg border px-2.5 py-1.5',
+                v.due && DUE_FRAME[v.due],
+              )}
             >
               <dt className="text-muted truncate text-xs">{v.label}</dt>
               <dd className="text-sm font-medium break-words">

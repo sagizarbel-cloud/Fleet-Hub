@@ -16,13 +16,11 @@ import { takeNewTile } from './newTile';
 import { ChevronDown, MapPin, Package, Plus } from 'lucide-react';
 import {
   FLEET_GROUPINGS,
-  hasRole,
   VEHICLE_STATUSES,
   VEHICLE_TYPE_CODES,
   type FleetGrouping,
   type VehicleStatus,
 } from '@fleet-hub/shared';
-import { useSession } from '@/auth/session';
 import { drawingFor } from '@/drawings/registry';
 import { VehicleVisual } from '@/drawings/VehicleVisual';
 import { Button } from '@/components/ui/button';
@@ -40,6 +38,7 @@ import { dateFormat, localeOf } from '@/lib/intl';
 import { usePreferences, useSavePreferences } from '@/vehicle/data';
 import { useAppSettings } from '@/vehicle/records/api';
 import { useYardPlayTrigger } from '@/play/trigger';
+import { useCan } from '@/auth/can';
 
 // Both load only when used: a file dropped on a tile, or the equipment tray opened.
 const ReceiptForm = lazy(() =>
@@ -344,7 +343,6 @@ const typeOrder = (code: string) => {
 export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
   const { t, i18n } = useTranslation();
   const { data: lookups } = useLookups();
-  const { data: user } = useSession();
   const hover = useHover();
   const rootRef = useRef<HTMLDivElement>(null);
   const [statuses, setStatuses] = useState<VehicleStatus[]>([]);
@@ -436,7 +434,7 @@ export function FleetGrid({ tiles, activeSerial, away }: GridProps) {
     allowed: __YARD_PLAY__ && !!appSettings.data?.yardPlay && !reduced && !away && !play,
     start: () => rootRef.current && setPlay({ root: rootRef.current, tiles: visible }),
   });
-  const canAdd = !!user && hasRole(user.role, 'EDITOR');
+  const canAdd = useCan().card('vehicle');
   const [adding, setAdding] = useState(false);
   const lang = i18n.language;
 

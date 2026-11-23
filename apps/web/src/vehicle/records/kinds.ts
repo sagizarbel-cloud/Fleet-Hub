@@ -57,7 +57,14 @@ export interface Column {
 export const colTitle = (col: Column, t: TFunction, lang: string) =>
   col.title ? col.title(lang) : (t(col.header as never) as string);
 
-/** Columns for the extra fields an admin defined (Revisions 1); values live in `row.custom`. */
+/** The label of a list field's choice in the active language (the code if it was removed). */
+export const optionLabel = (f: CustomFieldDef, code: unknown, lang: string) => {
+  if (typeof code !== 'string') return null;
+  const o = f.options?.find((x) => x.code === code);
+  return o ? (lang === 'he' ? o.labelHe : o.labelEn) : code;
+};
+
+/** Columns for the extra fields an admin defined (every card since 2026-11-22); values live in `row.custom`. */
 export function customColumns(defs: readonly CustomFieldDef[]): Column[] {
   return defs.map((f) => {
     const raw = (r: RecordRow) => {
@@ -69,8 +76,16 @@ export function customColumns(defs: readonly CustomFieldDef[]): Column[] {
       header: 'records.col.extra',
       title: (lang: string) => (lang === 'he' ? f.labelHe : f.labelEn),
       kind: f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text',
-      value: (r) => (f.type === 'number' ? n(raw(r)) : f.type === 'date' ? d(raw(r)) : s(raw(r))),
-      minor: true,
+      value: (r, ctx) =>
+        f.type === 'number'
+          ? n(raw(r))
+          : f.type === 'date'
+            ? d(raw(r))
+            : f.type === 'list'
+              ? optionLabel(f, raw(r), ctx.lang)
+              : s(raw(r)),
+      // A header field (e.g. a service's type) shows on phones too.
+      minor: !f.header,
     } satisfies Column;
   });
 }
@@ -833,6 +848,8 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
 
 /** The column "Added by" and the attachment list, shown or exported for every kind. */
 export const createdByCol: Column = textCol('createdBy', 'records.col.createdBy');
+/** Who last changed the record (Sagi, 2026-11-22), shown for every kind. */
+export const updatedByCol: Column = textCol('updatedBy', 'records.col.updatedBy', { minor: true });
 
 /** Form values → the request body the shared schema expects. */
 export function toBody(kind: RecordKind, values: FormValues, unit: UsageUnit, isNew: boolean) {

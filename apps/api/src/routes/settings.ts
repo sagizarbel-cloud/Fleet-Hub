@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { Prisma } from '@prisma/client';
 import {
   appSettingsBody,
+  settingHistoryQuery,
   LOGO_MAX_BYTES,
   logoBody,
   LOOKUP_KINDS,
@@ -77,6 +78,29 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
   app.put('/app', { preHandler: requireRole('ADMIN') }, async (req) => {
     const body = parse(appSettingsBody, req.body);
     return app.db.$transaction((t) => writeAppSettings(t, req.user!.id, body));
+  });
+
+  /**
+   * The history of one app setting, newest first (admins; Sagi, 2026-11-22: who changed the
+   * permissions and when). Every save of a setting writes one audit-log entry with before / after.
+   */
+  app.get('/app/history', { preHandler: requireRole('ADMIN') }, async (req) => {
+    const { key } = parse(settingHistoryQuery, req.query);
+    const rows = await app.db.auditLog.findMany({
+      where: { action: 'setting.changed', targetType: 'AppSetting', targetId: key },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      select: { id: true, createdAt: true, meta: true, user: { select: { name: true } } },
+    });
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        at: r.createdAt,
+        by: r.user?.name ?? null,
+        before: (r.meta as { before?: unknown }).before ?? null,
+        after: (r.meta as { after?: unknown }).after ?? null,
+      })),
+    };
   });
 
   // ---------- Company logo for printed reports (Revisions 1) ----------

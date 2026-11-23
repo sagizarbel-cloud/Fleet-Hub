@@ -2,7 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { fuelLevelBody, NO_FUEL_TYPES, serialParam } from '@fleet-hub/shared';
 import { HttpError, parse } from '../lib/http';
 import { fuelPanel, storeReading, type FuelLevelView } from '../lib/live-fuel';
-import { requireRole, requireUser } from '../plugins/auth';
+import { requireUser } from '../plugins/auth';
+import { requireCard } from '../lib/permissions';
 
 const HEARTBEAT_MS = 25_000;
 /** How often an open stream checks its session is still valid (signed out, user turned off). */
@@ -19,7 +20,7 @@ export const fuelRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', { preHandler: requireUser }, async () => fuelPanel(app));
 
   /** An editor sets the level from the gauge. Logged in the timeline like any other change. */
-  app.put('/:serial', { preHandler: requireRole('EDITOR') }, async (req) => {
+  app.put('/:serial', { preHandler: [requireUser, requireCard('fuelLevel')] }, async (req) => {
     const { serial } = parse(serialParam, req.params);
     const body = parse(fuelLevelBody, req.body);
     const vehicle = await app.db.vehicle.findUnique({

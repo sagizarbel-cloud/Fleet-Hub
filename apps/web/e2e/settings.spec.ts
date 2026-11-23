@@ -46,7 +46,7 @@ test.describe('add and edit a vehicle', () => {
     await sheet.getByLabel('Model').fill('Pickup');
     await page.getByTestId('vehicle-next').click();
     await expect(sheet).toContainText('A VIN has 17 letters and digits');
-    await expect(sheet).toContainText('An Israeli license has 7 or 8 digits.');
+    await expect(sheet).toContainText('Road vehicles have 7 or 8 digits, heavy machinery 6.');
 
     // A made-up VIN and plate.
     await sheet.getByLabel('VIN / Chassis No.').fill(`FAKEVHN${stamp()}0000`.slice(0, 17));

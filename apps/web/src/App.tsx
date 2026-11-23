@@ -31,6 +31,7 @@ const SETTINGS = [
   ['users', '/settings/users'],
   ['import', '/settings/import'],
   ['live', '/settings/live'],
+  ['permissions', '/settings/permissions'],
 ] as const;
 // The printable vehicle report (Revisions 1).
 const VehicleReportPage = lazy(() =>

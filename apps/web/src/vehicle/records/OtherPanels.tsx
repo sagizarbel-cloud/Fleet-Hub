@@ -1,8 +1,7 @@
 import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileSpreadsheet, Loader2, Pencil } from 'lucide-react';
-import { hasRole, ownershipBody } from '@fleet-hub/shared';
-import { useSession } from '@/auth/session';
+import { ownershipBody } from '@fleet-hub/shared';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
@@ -20,6 +19,7 @@ import { AttachmentList, FilePicker } from './Attachments';
 import { cellText, useFormatCtx } from './format';
 import { localDay, type Column } from './kinds';
 import { useExport } from './useExport';
+import { useCan } from '@/auth/can';
 
 const str = (v: unknown) => (typeof v === 'string' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
@@ -105,11 +105,10 @@ const ownershipRow = (o: Ownership): RecordRow => ({
 export function OwnershipPanel({ vehicle, reduced }: { vehicle: VehicleDetail; reduced: boolean }) {
   const { t } = useTranslation();
   const ctx = useFormatCtx(vehicle.usageUnit);
-  const { data: user } = useSession();
   const ownership = useOwnership(vehicle.serial);
   const exporter = useExport();
   const [editing, setEditing] = useState(false);
-  const canEdit = !!user && hasRole(user.role, 'EDITOR');
+  const canEdit = useCan().card('ownership');
 
   if (ownership.isPending)
     return <Loader2 aria-hidden className="text-muted mx-auto my-8 size-5 animate-spin" />;

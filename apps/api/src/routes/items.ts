@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { assignItemBody, idParam, itemBody, itemsQuery } from '@fleet-hub/shared';
 import { HttpError, parse } from '../lib/http';
 import { requireRole, requireUser } from '../plugins/auth';
+import { requireCard } from '../lib/permissions';
 
 const requireEditor = requireRole('EDITOR');
 
@@ -133,7 +134,7 @@ export const itemRoutes: FastifyPluginAsync = async (app) => {
   }
 
   // Items not on any vehicle: the choices for "Assign".
-  app.get('/unassigned', { preHandler: requireEditor }, async () => ({
+  app.get('/unassigned', { preHandler: [requireUser, requireCard('items')] }, async () => ({
     items: await app.db.item.findMany({
       where: { currentVehicleId: null, retiredAt: null },
       orderBy: { name: 'asc' },
@@ -141,7 +142,7 @@ export const itemRoutes: FastifyPluginAsync = async (app) => {
     }),
   }));
 
-  app.post('/:id/assign', { preHandler: requireEditor }, async (req) => {
+  app.post('/:id/assign', { preHandler: [requireUser, requireCard('items')] }, async (req) => {
     const { id } = parse(idParam, req.params);
     const { vehicle: serial } = parse(assignItemBody, req.body);
     const userId = req.user!.id;
@@ -191,7 +192,7 @@ export const itemRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.post('/:id/remove', { preHandler: requireEditor }, async (req) => {
+  app.post('/:id/remove', { preHandler: [requireUser, requireCard('items')] }, async (req) => {
     const { id } = parse(idParam, req.params);
     const userId = req.user!.id;
     return app.db.$transaction(async (tx) => {

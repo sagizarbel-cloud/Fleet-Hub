@@ -2,13 +2,13 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Clock, Fuel, Hand, Loader2, Pencil, Radio } from 'lucide-react';
-import { FUEL_LOW_PCT, fuelState, hasRole, type FuelState } from '@fleet-hub/shared';
-import { useSession } from '@/auth/session';
+import { FUEL_LOW_PCT, fuelState, type FuelState } from '@fleet-hub/shared';
 import { cn } from '@/lib/cn';
 import { localeOf, numberFormat } from '@/lib/intl';
 import { prefersReducedMotion } from '@/lib/motion';
 import { useFuel, useFuelStream, type FuelRow, type StreamState } from './data';
 import { fuelAmount, useFuelAge } from './format';
+import { useCan } from '@/auth/can';
 
 const SetFuelSheet = lazy(() => import('./SetFuelSheet'));
 
@@ -40,8 +40,7 @@ const STATE_STYLE: Record<FuelState, { icon: typeof Radio; tone: string }> = {
 export function FuelPanel() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { data: user } = useSession();
-  const canSet = !!user && hasRole(user.role, 'EDITOR');
+  const canSet = useCan().card('fuelLevel');
   const fuel = useFuel();
   const { state: link, updated, now } = useFuelStream();
   const age = useFuelAge();

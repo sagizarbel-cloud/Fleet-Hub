@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 export const INPUT =
-  'border-border-strong bg-surface h-9 w-full rounded-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)] aria-[invalid=true]:border-bad';
+  'border-border-strong bg-surface h-9 w-full rounded-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)] aria-[invalid=true]:border-bad disabled:cursor-not-allowed disabled:opacity-60';
 
 export type Errors = Record<string, string>;
 

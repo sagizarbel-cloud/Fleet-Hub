@@ -7,6 +7,7 @@ import {
   ListChecks,
   Printer,
   Radio,
+  ShieldCheck,
   UserRound,
   Users,
   type LucideIcon,
@@ -17,7 +18,8 @@ import { cn } from '@/lib/cn';
 import { ListsEditor } from './ListsEditor';
 import { MySettings } from './MySettings';
 import { RequiredFields } from './RequiredFields';
-import { MovementFields } from './MovementFields';
+import { CardFieldsSettings } from './CardFields';
+import { PermissionsAdmin } from './PermissionsAdmin';
 import { WiggleTypes } from './WiggleTypes';
 import { ReportLogo } from './ReportLogo';
 import { UsersAdmin } from './UsersAdmin';
@@ -30,6 +32,7 @@ export const SETTINGS_SECTIONS = [
   'mine',
   'lists',
   'required',
+  'permissions',
   'report',
   'users',
   'import',
@@ -43,6 +46,8 @@ const SECTIONS: Record<SettingsSection, { path: string; icon: LucideIcon; role: 
   lists: { path: '/settings/lists', icon: ListChecks, role: 'EDITOR' },
   // Which fields must be filled (Revisions 1): admins only.
   required: { path: '/settings/required', icon: Asterisk, role: 'ADMIN' },
+  // Who may edit which card and field, with its history (Sagi, 2026-11-22).
+  permissions: { path: '/settings/permissions', icon: ShieldCheck, role: 'ADMIN' },
   // The logo printed on vehicle reports (Revisions 1).
   report: { path: '/settings/report', icon: Printer, role: 'ADMIN' },
   users: { path: '/settings/users', icon: Users, role: 'ADMIN' },
@@ -102,10 +107,11 @@ export function SettingsPage({ section }: { section: SettingsSection }) {
         {section === 'required' && (
           <div className="space-y-4">
             <RequiredFields />
-            <MovementFields />
+            <CardFieldsSettings />
             <WiggleTypes />
           </div>
         )}
+        {section === 'permissions' && <PermissionsAdmin />}
         {section === 'report' && <ReportLogo />}
         {section === 'users' && <UsersAdmin />}
         {section === 'live' && <ConnectionsAdmin />}

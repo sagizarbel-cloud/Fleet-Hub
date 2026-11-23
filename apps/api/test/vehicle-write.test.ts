@@ -98,9 +98,20 @@ describe('add and edit a vehicle', () => {
       serial: 'VW-3',
       type: 'vw_digger',
       vin: 'PIN-ANY-FORMAT',
-      licenseNo: null,
+      licenseNo: '12-34-56',
     });
     expect(machine.statusCode).toBe(201);
+    // Heavy machinery has 6-digit plates (dashes don't count); road vehicles 7 or 8.
+    expect(await app.db.vehicle.findUniqueOrThrow({ where: { serial: 'VW-3' } })).toMatchObject({
+      licenseNo: '123456',
+    });
+    const road6 = await req('POST', '/api/vehicles', editor, {
+      ...PICKUP,
+      serial: 'VW-5',
+      vin: null,
+      licenseNo: '654321',
+    });
+    expect(road6.json().issues).toContainEqual({ path: 'licenseNo', code: 'plate' });
     const unknown = await req('POST', '/api/vehicles', editor, {
       ...PICKUP,
       serial: 'VW-4',

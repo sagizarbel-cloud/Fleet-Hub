@@ -140,13 +140,14 @@ test('admins add an extra field to location changes; it shows in the form and re
   const clear = async () => {
     const settings = await (await page.request.get('/api/settings/app')).json();
     await page.request.put('/api/settings/app', {
-      data: { ...settings, movementFields: [] },
+      data: { ...settings, recordFields: { ...settings.recordFields, movements: [] } },
       headers: { origin: 'http://localhost:5173' },
     });
   };
   await clear();
   await page.goto('/settings/required');
-  const box = page.getByTestId('movement-fields');
+  await page.getByTestId('extra-card').selectOption('movements');
+  const box = page.getByTestId('card-fields-movements');
   await box.getByRole('button', { name: 'Add a field' }).click();
   await box.getByLabel('Name in English').fill('Permit no.');
   await box.getByLabel('Name in Hebrew').fill('מספר היתר');

@@ -4,7 +4,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import multipart from '@fastify/multipart';
 import {
   attachmentQuery,
-  hasRole,
+  canEditCard,
   idParam,
   type AttachmentOwner,
   type RecordKind,
@@ -14,6 +14,7 @@ import { HttpError, parse } from '../lib/http';
 import { canEditQuote, visibleQuotesWhere } from '../lib/quote-visibility';
 import { canChangeReceipt } from '../lib/receipts';
 import { canChange, delegate } from '../lib/records';
+import { readAppSettings } from '../lib/app-settings';
 import { cleanFileName, resolveStored, storeUpload } from '../lib/uploads';
 import { requireUser } from '../plugins/auth';
 
@@ -49,7 +50,9 @@ async function ownerAllows(
   if (ownerType === 'Vehicle') {
     const v = await db.vehicle.findUnique({ where: { id: ownerId }, select: { id: true } });
     if (!v) return false;
-    return !write || hasRole(user.role, 'EDITOR');
+    if (!write) return true;
+    const { permissions } = await readAppSettings(db as never);
+    return canEditCard(user.role, permissions, 'vehicle');
   }
   if (ownerType === 'Document') {
     const d = await db.document.findFirst({ where: { id: ownerId, deletedAt: null } });
@@ -66,7 +69,9 @@ async function ownerAllows(
   if (!kind) return false;
   const row = await delegate(db, kind).findFirst({ where: { id: ownerId, deletedAt: null } });
   if (!row) return false;
-  return !write || canChange(user, kind, row);
+  if (!write) return true;
+  const { permissions } = await readAppSettings(db as never);
+  return canChange(user, kind, row, permissions);
 }
 
 /** File attachments on any record. Files live under UPLOAD_DIR and are only served from here. */

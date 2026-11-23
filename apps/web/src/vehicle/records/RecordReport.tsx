@@ -12,7 +12,7 @@ import {
   TriangleAlert,
   Wrench,
 } from 'lucide-react';
-import { hasRole, isWiggleProfile, OWN_RECORD_KINDS, type RecordKind } from '@fleet-hub/shared';
+import { isWiggleProfile, type RecordKind } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
 import { ResizableSheet } from '@/components/ResizableSheet';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import { dateFormat, localeOf } from '@/lib/intl';
 import type { VehicleDetail } from '../data';
 import {
   attachmentUrl,
+  useAppSettings,
   useProgress,
   useRecord,
   type ProgressEntry,
@@ -33,12 +34,13 @@ import {
 import { AttachmentList } from './Attachments';
 import { ServiceCost } from './CostSource';
 import { cellText, useFormatCtx } from './format';
-import { colTitle, KIND_UI, localDay, type Column, type FormatCtx } from './kinds';
+import { colTitle, KIND_UI, localDay, optionLabel, type Column, type FormatCtx } from './kinds';
 import { useKindColumns } from './columns';
 import { RecordForm } from './RecordForm';
 import { useWiggleProfile } from './Wiggle';
 import { openDays, openForKey } from './openFor';
 import { useRecordLink, type ReportTarget } from './recordLink';
+import { useCan } from '@/auth/can';
 
 /** Malfunctions read as two parts (Revisions 1): what the issue was, and what happened about it. */
 const MALFUNCTION_PARTS = [
@@ -487,8 +489,9 @@ function OneRecord({
   onBack?: () => void;
   close: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const ui = KIND_UI[kind];
+  const { data: settings } = useAppSettings();
   const record = useRecord(vehicle.serial, kind, id);
   const row = record.data?.item;
   const columns = useKindColumns(
@@ -499,11 +502,8 @@ function OneRecord({
   const { data: user } = useSession();
   const [editing, setEditing] = useState(false);
   const profile = useWiggleProfile(vehicle.type);
-  const canEdit =
-    !!user &&
-    !!row &&
-    (hasRole(user.role, 'EDITOR') ||
-      (OWN_RECORD_KINDS.includes(kind) && row.createdById === user.id));
+  const can = useCan();
+  const canEdit = !!row && can.row(kind, row.createdById);
 
   // The edit form takes the report's place, then the report comes back with the new values.
   if (editing && row)
@@ -523,7 +523,22 @@ function OneRecord({
     );
 
   const dateCol = ui.columns.find((c) => c.key === ui.dateKey);
-  const title = t('report.title', { record: t(`vehicle.records.one.${kind}`) });
+  // A header field (e.g. the service type) names the record (Sagi, 2026-11-22).
+  const headerDef = (settings?.recordFields[kind] ?? []).find((f) => f.header);
+  const headerValue =
+    headerDef && row
+      ? (optionLabel(
+          headerDef,
+          (row.custom as Record<string, unknown> | null)?.[headerDef.key],
+          i18n.language,
+        ) ?? (row.custom as Record<string, unknown> | null)?.[headerDef.key])
+      : null;
+  const title = [
+    t('report.title', { record: t(`vehicle.records.one.${kind}`) }),
+    typeof headerValue === 'string' || typeof headerValue === 'number' ? String(headerValue) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const subtitle = (
     <>
       <bdi dir="ltr">{vehicle.serial}</bdi>
@@ -547,10 +562,11 @@ function OneRecord({
                 {t('report.backToList')}
               </Button>
             )}
-            <span className="text-muted me-auto truncate text-xs">
+            <span className="text-muted me-auto truncate text-xs" data-testid="report-people">
               {row.createdBy && t('report.addedBy', { name: row.createdBy })}
+              {row.updatedBy && <> · {t('report.changedBy', { name: row.updatedBy })}</>}
             </span>
-            {open && user && hasRole(user.role, 'EDITOR') && (
+            {open && user && can.card('malfunctions') && (
               <ResolveButton serial={vehicle.serial} id={row.id} userName={user.name} />
             )}
             {canEdit && (
@@ -590,12 +606,23 @@ function OneRecord({
                   />
                 </Section>
               ))}
+              {/* Extra fields an admin added, and who added and last changed it. */}
+              <Section title={t('report.more')}>
+                <Fields
+                  columns={columns.filter(
+                    (c) =>
+                      c.key.startsWith('custom.') || c.key === 'createdBy' || c.key === 'updatedBy',
+                  )}
+                  row={row}
+                  ctx={ctx}
+                />
+              </Section>
               <Section title={t('report.progress')}>
                 <ProgressLog
                   vehicle={vehicle}
                   malfunctionId={row.id}
                   entries={(row.progress as ProgressEntry[] | undefined) ?? []}
-                  canEdit={!!user && hasRole(user.role, 'EDITOR')}
+                  canEdit={can.card('malfunctions')}
                   open={!!open}
                   userName={user?.name ?? ''}
                 />
