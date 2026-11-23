@@ -69,6 +69,23 @@ describe('record forms', () => {
     expect(RECORD_BODIES.service.safeParse(body).success).toBe(true);
   });
 
+  it('turn a service cost link into { kind, id } and back (Sagi, 2026-11-15)', () => {
+    const values = { date: '2026-10-01', description: 'x', costNote: ' Package ' };
+    const linked = toBody('service', { ...values, costSource: 'receipt:abc' }, 'KM', false);
+    expect(linked).toMatchObject({
+      costNote: 'Package',
+      costSource: { kind: 'receipt', id: 'abc' },
+    });
+    expect(RECORD_BODIES.service.safeParse(linked).success).toBe(true);
+    expect(toBody('service', values, 'KM', false).costSource).toBeNull();
+    const back = toForm(
+      'service',
+      { id: 's1', costNote: 'Package', costSource: { kind: 'quote', id: 'q1' } } as never,
+      'KM',
+    );
+    expect(back).toMatchObject({ costNote: 'Package', costSource: 'quote:q1' });
+  });
+
   it('leave out add-only fields when editing, and fill the form back from a row', () => {
     const body = toBody('service', { date: '2026-10-01', description: 'x' }, 'KM', false);
     expect(body).not.toHaveProperty('nextServiceDate');

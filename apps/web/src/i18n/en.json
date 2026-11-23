@@ -478,6 +478,7 @@
       "duration": "Time, hours",
       "distance": "Distance",
       "services": "Services included",
+      "costNote": "Cost note",
       "updatedBy": "Last changed by"
     },
     "field": {
@@ -489,7 +490,11 @@
       "noReceipts": "No approved receipts on this vehicle to link.",
       "contractorHint": "Leave empty when the team moved it.",
       "noServices": "No services on this vehicle to include.",
-      "servicesHint": "Tick services already recorded that are part of this work. New work goes in the fields above."
+      "servicesHint": "Tick services already recorded that are part of this work. New work goes in the fields above.",
+      "costNote": "Cost note (optional)",
+      "costNoteHint": "Any text, e.g. \"Package: 10 services for 2,000 ILS\".",
+      "costSource": "Receipt or quote (optional)",
+      "costCounted": "This receipt's amount already counts in costs, so the service has no amount of its own."
     },
     "filter": {
       "accidents": "Accidents only",
@@ -513,7 +518,8 @@
       "export": "Couldn't create the Excel file. Try again.",
       "upload": "Saved, but the files didn't upload. Try again.",
       "fileTooBig": "Saved, but a file is too large.",
-      "fileType": "Saved, but a file isn't a photo or PDF."
+      "fileType": "Saved, but a file isn't a photo or PDF.",
+      "receiptCounts": "This receipt already counts in costs. Leave the cost empty, or link a quote instead."
     },
     "unit": {
       "km": "km",
@@ -547,6 +553,18 @@
     },
     "resizeColumn": "Resize column",
     "resizeColumnHint": "Drag to resize, double-click to reset",
+    "costSource": {
+      "none": "None",
+      "receipts": "Receipts",
+      "quotes": "Price quotes",
+      "hint": "Links the cost to the original receipt or quote.",
+      "nothing": "No approved receipts or price quotes on this vehicle yet.",
+      "receipt": "Receipt · {{name}} · {{date}}",
+      "quote": "Price quote · {{name}} · {{date}}",
+      "hiddenQuote": "A price quote you can't see",
+      "open_receipt": "Open {{name}}",
+      "open_quote": "Open {{name}}"
+    },
     "other": {
       "option": "Other (type it)…",
       "label": "{{field}}: other value",
@@ -739,7 +757,9 @@
     "dropHere": "Drop to add receipts",
     "openFile": "Open {{name}}",
     "noFile": "No file",
-    "noVendor": "No vendor"
+    "noVendor": "No vendor",
+    "oneShown": "Showing one receipt, opened from a service.",
+    "showAll": "Show all receipts"
   },
   "quotes": {
     "one": "Price quote",

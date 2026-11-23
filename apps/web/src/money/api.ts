@@ -70,7 +70,7 @@ export interface Receipt {
 
 export type ReceiptFilters = Partial<
   Record<
-    'vehicle' | 'category' | 'state' | 'from' | 'to' | 'min' | 'max' | 'q' | 'sort' | 'dir',
+    'id' | 'vehicle' | 'category' | 'state' | 'from' | 'to' | 'min' | 'max' | 'q' | 'sort' | 'dir',
     string
   >
 >;

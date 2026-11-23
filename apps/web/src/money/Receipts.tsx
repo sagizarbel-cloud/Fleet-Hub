@@ -47,7 +47,17 @@ import { VehicleTagChip } from './VehiclePicker';
 import { isolate } from '@/lib/bidi';
 
 const TABLE_KEYS = ['date', 'vehicles', 'vendor', 'category', 'amount'] as const;
-const FILTER_KEYS = ['vehicle', 'category', 'state', 'from', 'to', 'min', 'max', 'q'] as const;
+const FILTER_KEYS = [
+  'id',
+  'vehicle',
+  'category',
+  'state',
+  'from',
+  'to',
+  'min',
+  'max',
+  'q',
+] as const;
 
 const str = (v: unknown) => (typeof v === 'string' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
@@ -488,6 +498,19 @@ export function ReceiptsView({ vehicle }: { vehicle?: string }) {
         onDrop={onDrop}
         data-testid="receipts-view"
       >
+        {filters.id && (
+          // Opened from a service's cost link: just that receipt, with a way back to all of them.
+          <div
+            className="border-border bg-surface flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+            data-testid="receipt-one"
+          >
+            <Link2 aria-hidden className="text-muted size-4 shrink-0" />
+            <span className="me-auto">{t('receipts.oneShown')}</span>
+            <Button variant="outline" size="sm" onClick={() => setFilters({ id: undefined })}>
+              {t('receipts.showAll')}
+            </Button>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <SearchBox
             label={t('receipts.search')}

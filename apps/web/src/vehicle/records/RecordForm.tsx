@@ -16,6 +16,7 @@ import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { ApiError } from '@/lib/api';
+import { isolate } from '@/lib/bidi';
 import { cn } from '@/lib/cn';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -26,10 +27,12 @@ import {
   useAppSettings,
   useFuelSuggestions,
   useDocuments,
+  useQuotes,
   useSaveRecord,
   type RecordRow,
 } from './api';
 import { AttachmentList, FilePicker } from './Attachments';
+import { costSourceOf, costSourceText } from './CostSource';
 import { useFormatCtx } from './format';
 import { fieldOfPath, KIND_UI, toBody, toForm, type Field, type FormValues } from './kinds';
 import { WiggleChecklist } from './Wiggle';
@@ -112,6 +115,11 @@ export function RecordForm({
   const isRequired = (f: Field) =>
     !!f.required || (!!f.adminRequired && !!settings?.fuelRequired[f.adminRequired]);
   const [errors, setErrors] = useState<Errors>({});
+  /**
+   * A service whose cost is a receipt that counts in costs by itself keeps no amount of its own,
+   * or the money would count twice (Sagi, 2026-11-15).
+   */
+  const [costCounted, setCostCounted] = useState(costSourceOf(row)?.counted === true);
   // Extra fields an admin defined for this card (every card since 2026-11-22), as text by key.
   const customDefs = settings?.recordFields[kind] ?? [];
   const { data: me } = useSession();
@@ -252,7 +260,11 @@ export function RecordForm({
           Object.fromEntries(
             err.issues.map((i) => [
               fieldOfPath(i.path),
-              i.code === 'required' ? 'records.error.required' : 'records.error.invalid',
+              i.code === 'required'
+                ? 'records.error.required'
+                : i.code === 'receipt_counts'
+                  ? 'records.error.receiptCounts'
+                  : 'records.error.invalid',
             ]),
           ),
         );
@@ -290,6 +302,19 @@ export function RecordForm({
         value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
         onChange={(v) => set(f.key, v)}
       />
+    ) : f.type === 'costSource' ? (
+      <CostSourcePicker
+        key={f.key}
+        serial={serial}
+        row={row}
+        label={t(f.label as never)}
+        value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
+        onChange={(v, counted) => {
+          set(f.key, v);
+          setCostCounted(counted);
+          if (counted) set('cost', '');
+        }}
+      />
     ) : f.type === 'receipts' ? (
       <ReceiptPicker
         key={f.key}
@@ -302,7 +327,14 @@ export function RecordForm({
     ) : (
       <FieldInput
         key={f.key}
-        field={{ ...f, required: isRequired(f) }}
+        field={{
+          ...f,
+          required: isRequired(f),
+          ...(kind === 'service' && f.key === 'cost' && costCounted
+            ? { hint: 'records.field.costCounted' }
+            : {}),
+        }}
+        disabled={kind === 'service' && f.key === 'cost' && costCounted}
         suggestions={
           f.suggest
             ? [
@@ -406,6 +438,82 @@ export function RecordForm({
         </fieldset>
       </form>
     </Sheet>
+  );
+}
+
+/**
+ * The receipt or price quote a service's cost comes from (Sagi, 2026-11-15): one of the
+ * vehicle's approved receipts, or a quote for it the user can see. A quote linked by someone
+ * else that this user can't see stays chosen, shown only as "a quote you can't see".
+ */
+function CostSourcePicker({
+  serial,
+  row,
+  label,
+  value,
+  onChange,
+}: {
+  serial: string;
+  row?: RecordRow;
+  label: string;
+  value: string;
+  /** `counted`: the chosen receipt counts in costs by itself. */
+  onChange: (value: string, counted: boolean) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const ctx = useFormatCtx('KM');
+  const docs = useDocuments(serial).data?.items ?? [];
+  const quotes = useQuotes(serial).data?.items ?? [];
+  const current = costSourceOf(row);
+  const receipts = docs.filter((d) => d.approved);
+  const id = 'field-costSource';
+  const money = (n: number | null) => (n === null ? '' : ` · ${ctx.money(n)}`);
+  const pick = (v: string) => {
+    const doc = v.startsWith('receipt:') ? docs.find((d) => `receipt:${d.id}` === v) : undefined;
+    onChange(v, !!doc && !doc.linkedRecordId);
+  };
+  return (
+    <div className="space-y-1" data-testid="cost-source-picker">
+      <label htmlFor={id} className="block text-xs font-medium">
+        {label}
+      </label>
+      <select
+        id={id}
+        name="costSource"
+        value={value}
+        onChange={(e) => pick(e.target.value)}
+        className={cn(INPUT, 'h-9')}
+        lang={i18n.language}
+      >
+        <option value="">{t('records.costSource.none')}</option>
+        {current?.hidden && (
+          <option value={`quote:${current.id}`}>{costSourceText(current, ctx)}</option>
+        )}
+        {receipts.length > 0 && (
+          <optgroup label={t('records.costSource.receipts')}>
+            {receipts.map((d) => (
+              <option key={d.id} value={`receipt:${d.id}`}>
+                {`${ctx.date(d.date)} · ${isolate(d.vendor ?? t(`records.documentKind.${d.kind}` as never))}${money(d.amount)}`}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {quotes.length > 0 && (
+          <optgroup label={t('records.costSource.quotes')}>
+            {quotes.map((q) => (
+              <option key={q.id} value={`quote:${q.id}`}>
+                {`${ctx.date(q.date)} · ${isolate(q.supplier)}${money(q.total)}`}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+      <p className="text-muted text-xs">
+        {receipts.length || quotes.length
+          ? t('records.costSource.hint')
+          : t('records.costSource.nothing')}
+      </p>
+    </div>
   );
 }
 
@@ -549,7 +657,7 @@ function ServicePicker({
 const OTHER = '__other__';
 
 const INPUT =
-  'border-border-strong bg-surface w-full rounded-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)]';
+  'border-border-strong bg-surface w-full rounded-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)] disabled:cursor-not-allowed disabled:opacity-60';
 
 function FieldInput({
   field,

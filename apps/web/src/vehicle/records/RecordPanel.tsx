@@ -30,6 +30,7 @@ import { cn } from '@/lib/cn';
 import type { VehicleDetail } from '../data';
 import { useRecords, useSetDeleted, type RecordFilters, type RecordRow } from './api';
 import { AttachmentList } from './Attachments';
+import { ServiceCost } from './CostSource';
 import { cellText, useFormatCtx } from './format';
 import { colTitle, createdByCol, KIND_UI, type Column, type FormatCtx } from './kinds';
 import { useKindColumns } from './columns';
@@ -62,6 +63,8 @@ function BoolCell({ col, row, ctx }: { col: Column; row: RecordRow; ctx: FormatC
 
 function CellView({ col, row, ctx }: { col: Column; row: RecordRow; ctx: FormatCtx }) {
   if (col.kind === 'bool') return <BoolCell col={col} row={row} ctx={ctx} />;
+  // A service's cost with its note and receipt or quote link (Sagi, 2026-11-15).
+  if (col.key === 'cost' && 'costSource' in row) return <ServiceCost row={row} ctx={ctx} compact />;
   const text = cellText(col, row, ctx);
   if (!text) return <span className="text-muted">—</span>;
   // Typed text keeps its own direction (bdi), so "20 t class" never turns into "t class 20".

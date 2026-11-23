@@ -78,7 +78,7 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
   app.get('/:serial/records/:kind/:id', { preHandler: requireUser }, async (req) => {
     const { serial, kind, id } = parse(recordIdParams, req.params);
     const tx = app.db as unknown as Prisma.TransactionClient;
-    return getRecord(tx, kind, await vehicleRef(tx, serial), id);
+    return getRecord(tx, req.user!, kind, await vehicleRef(tx, serial), id);
   });
 
   app.post('/:serial/records/:kind', { preHandler: requireUser }, async (req, reply) => {
@@ -101,7 +101,7 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
         custom,
       );
       const status = await refreshStatus(tx, vehicle.id, user.id);
-      return { item: await serializeOne(tx, kind, vehicle, row), status };
+      return { item: await serializeOne(tx, user, kind, vehicle, row), status };
     });
     return reply.status(201).send(result);
   });
@@ -124,7 +124,7 @@ export const recordRoutes: FastifyPluginAsync = async (app) => {
         custom,
       );
       const status = await refreshStatus(tx, vehicle.id, user.id);
-      return { item: await serializeOne(tx, kind, vehicle, row), status };
+      return { item: await serializeOne(tx, user, kind, vehicle, row), status };
     });
   });
 

@@ -32,6 +32,7 @@ import {
   type RecordRow,
 } from './api';
 import { AttachmentList } from './Attachments';
+import { ServiceCost } from './CostSource';
 import { cellText, useFormatCtx } from './format';
 import { colTitle, KIND_UI, localDay, optionLabel, type Column, type FormatCtx } from './kinds';
 import { useKindColumns } from './columns';
@@ -54,6 +55,9 @@ const MALFUNCTION_PARTS = [
 const SUMMARY_KEYS = ['reportedAt', 'severity', 'state'];
 
 function Value({ col, row, ctx }: { col: Column; row: RecordRow; ctx: FormatCtx }) {
+  // The note is its own field here; the cost shows the amount and the receipt or quote link.
+  if (col.key === 'cost' && 'costSource' in row)
+    return <ServiceCost row={row} ctx={ctx} withNote={false} />;
   const text = cellText(col, row, ctx);
   if (!text) return <span className="text-muted">—</span>;
   // Typed text keeps its own direction but lines up with the labels (start of the page's direction).

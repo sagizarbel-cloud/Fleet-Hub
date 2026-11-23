@@ -36,6 +36,15 @@
 - Panels: "Arrange panels" on the dashboard and the vehicle page. Drag a panel by its handle (mouse or touch) or use the arrows to move it or send it to the other column; drag the divider to change the columns' widths (within limits); drag the bottom edge of the fuel, recent activity and vehicle activity lists to change their height (180 to 1,400 px). Saved to the account (`UserPreference.layouts`, migration `panel_layouts`, additive), with Reset to default. Phones have their own one-column order. On the vehicle page the header and drawing stay on top. A column emptied by the user gives its width to the other.
 - Tests: api (search, resolve, live hours, layouts), unit (open-for days), e2e `e2e/revisions-2026-11-22.spec.ts`.
 
+### Service cost note and link — 2026-11-15
+
+- Sagi: a service's cost can be text, e.g. one of 10 services bought as a package for 2,000 ILS, with a link back to the original receipt or price quote. `ServiceRecord` gets `costNote`, `costReceiptId` and `costQuoteId` (migration `service_cost_note`, additive; links clear if the receipt or quote is ever hard-deleted).
+- Form: "Cost note" (free text, searchable) and "Receipt or quote", a list of the vehicle's approved receipts and the quotes for it the user can see. The table's cost cell shows the amount and/or note plus a link icon; the report shows the link, with the note as its own field; the Excel export gets a Cost note column.
+- No double counting: an approved receipt that isn't linked to a record already counts in costs, so a service linked to one keeps no amount (the cost field locks; the API refuses with `receipt_counts`). Quotes never count, so a service linked to a quote may keep an amount. A text-only cost adds nothing to totals.
+- Quote visibility holds: only visible quotes can be picked; a quote someone else linked that this user can't see shows as "a price quote you can't see" without its details, and editing the service keeps it.
+- The link opens `/receipts?id=…` (just that receipt, with "Show all receipts") or `/quotes?open=…` (the quote's detail).
+- Tests: 4 api tests (`test/service-cost.test.ts`), a web unit test, 1 e2e (`e2e/records.spec.ts`).
+
 ### Vehicle page notes — 2026-11-15
 
 - Sagi's notes after trying the site. The fleet grid's dashed "Add vehicle" button was a never-wired placeholder; it now opens the Add vehicle form.
@@ -258,6 +267,7 @@ Round 3 (Sagi, 2026-11-05):
 - A content security policy for the web app (the api already has a strict one)
 - Excel import of the new work card, movement and extra fields; extra fields on other record kinds
 - Count location-change costs in the fleet cost totals (only the vehicle report sums them now)
+- Service cost note and link: not in the Excel import, the printed vehicle report or a work card's service list yet
 
 - Auto-fill receipt date, vendor and total from the photo (SPEC 5.5)
 - Installable PWA (home-screen icon on phones)

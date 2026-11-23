@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowRight,
@@ -700,7 +701,21 @@ export function QuotesView({ vehicle }: { vehicle?: string }) {
     [filters, vehicle],
   );
   const list = useQuotes(scoped);
-  const [open, setOpen] = useState<string | null>(null);
+  // `?open=<id>` opens one quote, e.g. from a service's cost link (Sagi, 2026-11-15).
+  const [params, setParams] = useSearchParams();
+  const [open, setOpenState] = useState<string | null>(() => (vehicle ? null : params.get('open')));
+  const setOpen = (id: string | null) => {
+    setOpenState(id);
+    if (!id && !vehicle && params.has('open'))
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('open');
+          return next;
+        },
+        { replace: true },
+      );
+  };
   const [editing, setEditing] = useState<Quote | 'new' | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [comparing, setComparing] = useState<string[] | null>(null);
