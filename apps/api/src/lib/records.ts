@@ -393,8 +393,13 @@ export async function keepDefinedCustom(
     else if (f.type === 'date' && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))
       out[f.key] = v;
     else if (f.type === 'text' && typeof v === 'string') out[f.key] = v;
-    else if (f.type === 'list' && typeof v === 'string' && f.options?.some((o) => o.code === v))
-      out[f.key] = v;
+    else if (
+      f.type === 'list' &&
+      typeof v === 'string' &&
+      (f.free !== false || f.options?.some((o) => o.code === v))
+    )
+      // A typed value (not one of the choices) is kept as typed.
+      out[f.key] = v.trim().slice(0, 200);
     else throw bad(f.key);
   }
   return Object.keys(out).length ? out : Prisma.DbNull;

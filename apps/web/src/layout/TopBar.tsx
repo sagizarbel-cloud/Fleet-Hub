@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router';
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +24,7 @@ export function TopBar({ user }: { user: SessionUser }) {
   const look = useSaveLook();
   const [adding, setAdding] = useState(false);
   const [searching, setSearching] = useState(false);
+  const openAdd = useCallback(() => setAdding(true), []);
   const [reduced] = useState(prefersReducedMotion);
   usePreferenceSync();
 
@@ -54,7 +55,11 @@ export function TopBar({ user }: { user: SessionUser }) {
           <span className="hidden min-[420px]:inline">{t('app.name')}</span>
         </NavLink>
 
-        <GlobalSearch phoneOpen={searching} onPhoneClose={() => setSearching(false)} />
+        <GlobalSearch
+          phoneOpen={searching}
+          onPhoneClose={() => setSearching(false)}
+          onAddVehicle={canAddVehicle ? openAdd : undefined}
+        />
 
         <div className="ms-auto flex items-center gap-1">
           <SearchPhoneButton onOpen={() => setSearching(true)} />

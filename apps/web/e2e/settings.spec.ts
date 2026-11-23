@@ -75,10 +75,10 @@ test.describe('add and edit a vehicle', () => {
     await sheet.getByLabel('Model').fill('Pickup');
     await page.getByTestId('vehicle-next').click();
     const location = sheet.getByLabel('Current location');
-    await location.selectOption({ label: 'New location…' });
-    await page.getByTestId('new-location-en').fill(name);
+    await location.selectOption({ label: 'Other place…' });
+    await page.getByTestId('new-location-name').fill(name);
     // Enter adds the location; it doesn't submit the vehicle form.
-    await page.getByTestId('new-location-en').press('Enter');
+    await page.getByTestId('new-location-name').press('Enter');
     await expect(page.getByTestId('new-location')).toBeHidden();
     await expect(location.locator('option:checked')).toHaveText(name);
     await expect(sheet).toBeVisible();

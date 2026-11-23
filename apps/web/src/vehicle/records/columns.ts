@@ -29,19 +29,26 @@ export function kindColumns(
     ...(base.some((c) => c.key === 'createdBy') ? [] : [{ ...createdByCol, minor: true }]),
     updatedByCol,
   ];
-  // A header field (e.g. the service type) leads, right after the date; the rest go before notes.
+  // A header field (e.g. the service type) leads, right after the date. One an admin placed
+  // after a field (Sagi, 2026-11-23) follows that field's column; the rest go before notes.
   const header = customColumns(defs.filter((f) => f.header));
-  const rest = customColumns(defs.filter((f) => !f.header));
   const notes = base.findIndex((c) => c.key === 'notes');
   const at = notes < 0 ? base.length : notes;
-  return [
-    ...base.slice(0, 1),
-    ...header,
-    ...base.slice(1, at),
-    ...rest,
-    ...base.slice(at),
-    ...people,
-  ];
+  const cols = [...base.slice(0, 1), ...header, ...base.slice(1, at)];
+  const tail = base.slice(at);
+  const left = defs.filter((f) => !f.header);
+  // Placed ones may follow each other, so place until nothing moves.
+  for (let moved = true; moved;) {
+    moved = false;
+    for (const f of [...left]) {
+      const target = cols.findIndex((c) => c.key === f.after || c.key === `custom.${f.after}`);
+      if (!f.after || target < 0) continue;
+      cols.splice(target + 1, 0, ...customColumns([f]));
+      left.splice(left.indexOf(f), 1);
+      moved = true;
+    }
+  }
+  return [...cols, ...customColumns(left), ...tail, ...people];
 }
 
 export function useKindColumns(kind: RecordKind, profile?: WiggleProfile | null) {

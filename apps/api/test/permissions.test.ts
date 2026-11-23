@@ -65,16 +65,17 @@ describe('extra fields on every card', () => {
     ]);
   });
 
-  it('keeps a chosen value, refuses one not on the list, and shows who added and changed it', async () => {
+  it('keeps a chosen or typed value, and shows who added and changed it', async () => {
     const serial = await vehicle();
     const url = `/api/vehicles/${serial}/records/service`;
-    const bad = await req('POST', url, editor, {
+    // The service type also takes a value typed in the form (Sagi, 2026-11-23).
+    const typed = await req('POST', url, editor, {
       date: isoDay(-1),
-      description: 'Oil and filters',
-      custom: { c1: 'nope' },
+      description: 'Hydraulics',
+      custom: { c1: 'Hydraulic service' },
     });
-    expect(bad.statusCode).toBe(400);
-    expect(bad.json().issues).toContainEqual({ path: 'custom.c1', code: 'invalid' });
+    expect(typed.statusCode).toBe(201);
+    expect(typed.json().item.custom).toEqual({ c1: 'Hydraulic service' });
 
     const res = await req('POST', url, editor, {
       date: isoDay(-1),
@@ -96,6 +97,22 @@ describe('extra fields on every card', () => {
     expect(item.createdBy).toBeTruthy();
     expect(item.updatedBy).toBeTruthy();
     expect(item.updatedBy).not.toBe(item.createdBy);
+  });
+
+  it('a list kept to its choices refuses a typed value', async () => {
+    const s = await settings();
+    const [type] = s.recordFields.service;
+    await saveSettings({
+      recordFields: { ...s.recordFields, service: [{ ...type, free: false }] },
+    });
+    const bad = await req('POST', `/api/vehicles/${await vehicle()}/records/service`, editor, {
+      date: isoDay(-1),
+      description: 'Oil and filters',
+      custom: { c1: 'nope' },
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().issues).toContainEqual({ path: 'custom.c1', code: 'invalid' });
+    await saveSettings({ recordFields: s.recordFields });
   });
 
   it('a field only admins may fill in keeps its value when an editor saves', async () => {
@@ -201,5 +218,48 @@ describe('who may edit what', () => {
       (await req('POST', '/api/vehicles', viewer, { ...values, serial: 'PM-NEW' })).statusCode,
     ).toBe(403);
     await saveSettings({ permissions: { cards: {}, fields: {} } });
+  });
+});
+
+describe('places typed in a form', () => {
+  it('an editor adds one; the same name returns it; a viewer may not', async () => {
+    const name = `Quarry ${Date.now()}`;
+    const res = await req('POST', '/api/lookups/locations', editor, { name });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ nameEn: name, nameHe: name });
+    const again = await req('POST', '/api/lookups/locations', editor, { name: name.toUpperCase() });
+    expect(again.json().code).toBe(res.json().code);
+    const hebrew = await req('POST', '/api/lookups/locations', editor, { name: 'מחצבה חדשה' });
+    expect(hebrew.json().code).toMatch(/^loc_/);
+    expect((await req('POST', '/api/lookups/locations', viewer, { name: 'X' })).statusCode).toBe(
+      403,
+    );
+  });
+});
+
+describe('search finds documents and list choices', () => {
+  it('a file on a record leads to its vehicle, a place to its list', async () => {
+    const serial = await vehicle();
+    const v = await app.db.vehicle.findUniqueOrThrow({ where: { serial } });
+    const rec = await app.db.note.create({ data: { vehicleId: v.id, body: 'Paperwork' } });
+    const stamp = Date.now();
+    await app.db.attachment.create({
+      data: {
+        ownerType: 'Note',
+        ownerId: rec.id,
+        fileName: `invoice-${stamp}.pdf`,
+        mimeType: 'application/pdf',
+        sizeBytes: 10,
+        storagePath: 'x',
+      },
+    });
+    await req('POST', '/api/lookups/locations', editor, { name: `Depot ${stamp}` });
+    const { hits } = (await req('GET', `/api/search?q=${stamp}`, viewer)).json();
+    expect(hits).toContainEqual(
+      expect.objectContaining({ group: 'document', serial, kind: 'notes', id: rec.id }),
+    );
+    expect(hits).toContainEqual(
+      expect.objectContaining({ group: 'option', kind: 'locations', text: `Depot ${stamp}` }),
+    );
   });
 });

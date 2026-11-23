@@ -24,37 +24,26 @@ import { WiggleTypes } from './WiggleTypes';
 import { ReportLogo } from './ReportLogo';
 import { UsersAdmin } from './UsersAdmin';
 import { ConnectionsAdmin } from './ConnectionsAdmin';
+import { SETTINGS_PATHS, SETTINGS_SECTIONS, type SettingsSection } from './paths';
 
 // ExcelJS is large: it loads only when someone opens the import page.
 const ImportPage = lazy(() => import('./ImportPage'));
 
-export const SETTINGS_SECTIONS = [
-  'mine',
-  'lists',
-  'required',
-  'permissions',
-  'report',
-  'users',
-  'import',
-  'live',
-] as const;
-export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+export { SETTINGS_SECTIONS, type SettingsSection } from './paths';
 
-const SECTIONS: Record<SettingsSection, { path: string; icon: LucideIcon; role: Role }> = {
-  mine: { path: '/settings', icon: UserRound, role: 'VIEWER' },
-  // Editors manage the lists too (Sagi, 2026-10-27).
-  lists: { path: '/settings/lists', icon: ListChecks, role: 'EDITOR' },
-  // Which fields must be filled (Revisions 1): admins only.
-  required: { path: '/settings/required', icon: Asterisk, role: 'ADMIN' },
-  // Who may edit which card and field, with its history (Sagi, 2026-11-22).
-  permissions: { path: '/settings/permissions', icon: ShieldCheck, role: 'ADMIN' },
-  // The logo printed on vehicle reports (Revisions 1).
-  report: { path: '/settings/report', icon: Printer, role: 'ADMIN' },
-  users: { path: '/settings/users', icon: Users, role: 'ADMIN' },
-  import: { path: '/settings/import', icon: FileSpreadsheet, role: 'ADMIN' },
-  // Live data connections (2026-11-15): tokens for connected vehicles.
-  live: { path: '/settings/live', icon: Radio, role: 'ADMIN' },
+const ICONS: Record<SettingsSection, LucideIcon> = {
+  mine: UserRound,
+  lists: ListChecks,
+  required: Asterisk,
+  permissions: ShieldCheck,
+  report: Printer,
+  users: Users,
+  import: FileSpreadsheet,
+  live: Radio,
 };
+const SECTIONS = Object.fromEntries(
+  SETTINGS_SECTIONS.map((s) => [s, { ...SETTINGS_PATHS[s], icon: ICONS[s] }]),
+) as Record<SettingsSection, { path: string; icon: LucideIcon; role: Role }>;
 
 /** Settings (SPEC 5.9): your own defaults, the bilingual lists, users, and Excel import. */
 export function SettingsPage({ section }: { section: SettingsSection }) {

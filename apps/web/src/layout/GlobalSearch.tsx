@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -9,16 +9,52 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { recordParam } from '@/vehicle/records/recordLink';
 import { AREA_ROUTES } from './nav';
+import { useLocalHits, type LocalHit } from './searchLocal';
 
-const GROUPS = ['vehicle', 'record', 'item'] as const;
+/** The order of the groups in the list. Pages, actions and fields are found in the app itself. */
+const GROUPS = [
+  'vehicle',
+  'action',
+  'page',
+  'record',
+  'document',
+  'item',
+  'option',
+  'field',
+] as const;
+type Group = (typeof GROUPS)[number];
+const SERIAL_GROUPS: Group[] = ['vehicle', 'record', 'document', 'item'];
+/** Lists whose choices lead to the fleet table filtered by them; the rest open Settings → Lists. */
+const FLEET_LISTS = ['locations', 'departments', 'vehicleTypes'];
 
-/** Where a hit leads: the vehicle, the record's report on its vehicle page, or the item in Equipment. */
+/** One row of the list, from the server or found locally. */
+interface Entry {
+  key: string;
+  group: Group;
+  serial: string | null;
+  title: string;
+  sub: string;
+  go: string | (() => void);
+  hit?: SearchHit;
+}
+
+/**
+ * Where a hit leads: the vehicle, the record's report on its vehicle page, the item in
+ * Equipment, a receipt in Receipts, or a list choice in the fleet table or the lists.
+ */
 export function hitPath(h: SearchHit): string {
   const v = h.serial ? `/vehicles/${encodeURIComponent(h.serial)}` : null;
-  if (h.group === 'vehicle' && v) return v;
-  if (h.group === 'record' && v && h.kind)
+  const text = encodeURIComponent(h.text.replace(/…/g, '').trim());
+  if ((h.group === 'vehicle' || (h.group === 'document' && h.kind === 'vehicle')) && v) return v;
+  if ((h.group === 'record' || h.group === 'document') && v && h.kind && h.kind !== 'receipt')
     return `${v}?record=${encodeURIComponent(recordParam(h.kind as never, h.id))}`;
-  return `${AREA_ROUTES.equipment.path}?q=${encodeURIComponent(h.text.replace(/…/g, '').trim())}`;
+  if (h.group === 'document')
+    return `${AREA_ROUTES.receipts.path}?q=${h.field === 'fileName' ? '' : text}`;
+  if (h.group === 'option')
+    return FLEET_LISTS.includes(h.kind ?? '')
+      ? `${AREA_ROUTES.fleetTable.path}?q=${text}`
+      : '/settings/lists';
+  return `${AREA_ROUTES.equipment.path}?q=${text}`;
 }
 
 function useDebounced(value: string, ms: number) {
@@ -38,10 +74,13 @@ function useDebounced(value: string, ms: number) {
 export function GlobalSearch({
   phoneOpen,
   onPhoneClose,
+  onAddVehicle,
 }: {
   /** On phones the box is hidden until the top bar's search icon opens it. */
   phoneOpen: boolean;
   onPhoneClose: () => void;
+  /** The "Add vehicle" action, run from the list. */
+  onAddVehicle?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -65,7 +104,7 @@ export function GlobalSearch({
     staleTime: 15_000,
     placeholderData: (prev) => prev,
   });
-  const hits = useMemo(() => (enabled ? (search.data?.hits ?? []) : []), [enabled, search.data]);
+  const local = useLocalHits(enabled ? q : '', { addVehicle: onAddVehicle });
 
   // A click outside closes the list.
   useEffect(() => {
@@ -83,9 +122,10 @@ export function GlobalSearch({
     if (phoneOpen) input.current?.focus();
   }, [phoneOpen]);
 
-  const go = (h: SearchHit | undefined) => {
-    if (!h) return;
-    navigate(hitPath(h));
+  const go = (e: Entry | undefined) => {
+    if (!e) return;
+    if (typeof e.go === 'string') navigate(e.go);
+    else e.go();
     setText('');
     setOpen(false);
     onPhoneClose();
@@ -95,17 +135,17 @@ export function GlobalSearch({
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setOpen(true);
-      setActive((a) => Math.min(a + 1, hits.length - 1));
+      setActive((a) => Math.min(a + 1, entries.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
       // An exact serial goes straight to its vehicle.
-      const exact = hits.find(
+      const exact = entries.find(
         (h) => h.group === 'vehicle' && h.serial?.toLowerCase() === text.trim().toLowerCase(),
       );
-      go(exact ?? hits[active]);
+      go(exact ?? entries[active]);
     } else if (e.key === 'Escape') {
       e.stopPropagation();
       if (text) setText('');
@@ -128,7 +168,32 @@ export function GlobalSearch({
       ? typeName(h.type)
       : h.group === 'record'
         ? t(`vehicle.records.one.${h.kind as 'notes'}`)
-        : t(`equipment.kinds.${(h.kind ?? 'other') as 'other'}`);
+        : h.group === 'document'
+          ? h.kind === 'receipt' || h.kind === 'vehicle'
+            ? t(`search.kind.${h.kind}`)
+            : t(`vehicle.records.one.${h.kind as 'notes'}`)
+          : h.group === 'option'
+            ? t(`settings.lists.kinds.${h.kind as 'locations'}`)
+            : t(`equipment.kinds.${(h.kind ?? 'other') as 'other'}`);
+  const fromServer = (enabled ? (search.data?.hits ?? []) : []).map((h): Entry => ({
+    key: `${h.group}-${h.kind}-${h.id}-${h.field}`,
+    group: h.group,
+    serial: h.serial,
+    title: h.text,
+    sub: `${label(h)} · ${t(`search.field.${h.field as 'serial'}`)}`,
+    go: hitPath(h),
+    hit: h,
+  }));
+  const fromApp = local.map((l: LocalHit): Entry => ({
+    key: l.key,
+    group: l.group,
+    serial: null,
+    title: l.label,
+    sub: l.where ?? t(`search.group.${l.group}`),
+    go: l.to,
+  }));
+  // In the order the list shows them, so the arrow keys follow the screen.
+  const entries = GROUPS.flatMap((g) => [...fromServer, ...fromApp].filter((e) => e.group === g));
 
   const showList = open && enabled;
   let n = -1;
@@ -157,7 +222,7 @@ export function GlobalSearch({
             aria-expanded={showList}
             aria-controls={listId}
             aria-autocomplete="list"
-            aria-activedescendant={showList && hits[active] ? `${listId}-${active}` : undefined}
+            aria-activedescendant={showList && entries[active] ? `${listId}-${active}` : undefined}
             value={text}
             onChange={(e) => {
               setText(e.target.value);
@@ -186,13 +251,13 @@ export function GlobalSearch({
             className="fh-search-results border-border bg-surface text-text absolute inset-x-0 top-full z-50 mt-1 max-h-[min(70dvh,28rem)] overflow-y-auto rounded-lg border p-1 shadow-lg"
             data-testid="search-results"
           >
-            {hits.length === 0 ? (
+            {entries.length === 0 ? (
               <p className="text-muted px-3 py-2 text-sm">
                 {search.isPending ? t('search.searching') : t('search.none')}
               </p>
             ) : (
               GROUPS.map((g) => {
-                const list = hits.filter((h) => h.group === g);
+                const list = entries.filter((h) => h.group === g);
                 if (!list.length) return null;
                 return (
                   <div key={g} role="group" aria-label={t(`search.group.${g}`)}>
@@ -204,7 +269,7 @@ export function GlobalSearch({
                       const i = n;
                       return (
                         <button
-                          key={`${h.group}-${h.kind}-${h.id}-${h.field}`}
+                          key={h.key}
                           id={`${listId}-${i}`}
                           type="button"
                           role="option"
@@ -216,17 +281,19 @@ export function GlobalSearch({
                             i === active && 'bg-border',
                           )}
                           data-testid="search-hit"
+                          data-group={h.group}
                         >
-                          <span className="num w-16 shrink-0 pt-0.5 text-xs font-semibold">
-                            {h.serial ? <bdi dir="ltr">{h.serial}</bdi> : '—'}
-                          </span>
+                          {/* Only hits that belong to a vehicle carry its serial. */}
+                          {SERIAL_GROUPS.includes(h.group) && (
+                            <span className="num w-16 shrink-0 pt-0.5 text-xs font-semibold">
+                              {h.serial ? <bdi dir="ltr">{h.serial}</bdi> : '—'}
+                            </span>
+                          )}
                           <span className="min-w-0 flex-1">
                             <span className="block truncate">
-                              <bdi>{h.text}</bdi>
+                              <bdi>{h.title}</bdi>
                             </span>
-                            <span className="text-muted block truncate text-xs">
-                              {label(h)} · {t(`search.field.${h.field as 'serial'}`)}
-                            </span>
+                            <span className="text-muted block truncate text-xs">{h.sub}</span>
                           </span>
                         </button>
                       );
