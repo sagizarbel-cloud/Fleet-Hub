@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Plus, Trash2, X } from 'lucide-react';
 import {
@@ -18,7 +19,7 @@ const INPUT =
   'border-border-strong bg-surface h-9 w-full rounded-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)] disabled:opacity-60';
 
 /** Makes a code for a new list choice from its English name, unique within the field. */
-function codeFor(name: string, taken: string[]) {
+export function codeFor(name: string, taken: string[]) {
   const base =
     name
       .toLowerCase()
@@ -235,6 +236,18 @@ export function CardFields({ kind, onSaved }: { kind: RecordKind; onSaved?: () =
               />
               {t('settings.extra.header')}
             </label>
+            {row.type === 'list' && (
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={row.free !== false}
+                  onChange={(e) => update(i, { free: e.target.checked ? undefined : false })}
+                  className="accent-[var(--fh-accent)] size-4"
+                  data-testid="field-free"
+                />
+                {t('settings.extra.free')}
+              </label>
+            )}
             <label className="flex items-center gap-2">
               <span>{t('settings.extra.whoFills')}</span>
               <select
@@ -291,7 +304,12 @@ export function CardFields({ kind, onSaved }: { kind: RecordKind; onSaved?: () =
 /** Settings → Record fields: pick a card, then edit its extra fields. */
 export function CardFieldsSettings() {
   const { t } = useTranslation();
-  const [kind, setKind] = useState<RecordKind>('service');
+  // The search's field hits open a card here (?card=fuel).
+  const [params] = useSearchParams();
+  const asked = params.get('card') as RecordKind | null;
+  const [kind, setKind] = useState<RecordKind>(
+    asked && RECORD_KINDS.includes(asked) ? asked : 'service',
+  );
   return (
     <Panel title={t('settings.extra.title')} hint={t('settings.extra.hint')}>
       <label className="flex flex-wrap items-center gap-2 text-sm">

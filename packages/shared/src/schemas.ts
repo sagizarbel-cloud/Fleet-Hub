@@ -461,11 +461,17 @@ export const itemsQuery = z.object({
 /** The top bar's search (2026-11-22): any text field of vehicles, their records and items. */
 export const searchQuery = z.object({ q: z.string().trim().min(2).max(100) });
 export type SearchHit = {
-  /** What matched: a vehicle itself, one of its records, or an item. */
-  group: 'vehicle' | 'record' | 'item';
+  /**
+   * What matched: a vehicle itself, one of its records, an item, a document (an attached file
+   * or a receipt) or a choice on one of the lists (Sagi, 2026-11-23).
+   */
+  group: 'vehicle' | 'record' | 'item' | 'document' | 'option';
   serial: string | null;
   type: string | null;
-  /** The record kind (records) or item kind (items). */
+  /**
+   * The record kind (records, files on a record), item kind (items), 'vehicle' or 'receipt'
+   * (documents), or the list's name (options).
+   */
   kind: string | null;
   id: string;
   /** The field that matched, as a key the web app translates. */

@@ -126,6 +126,8 @@ export interface Field {
   adminRequired?: FuelDetailField;
   /** Typed text with suggestions: which suggestion list feeds it. */
   suggest?: 'place' | 'fueledBy' | 'provider';
+  /** A list anyone filling the form may add to by typing (Sagi, 2026-11-23). */
+  addable?: 'locations';
 }
 
 export type FormValues = Record<string, string | boolean>;
@@ -570,6 +572,7 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
         label: 'records.col.from',
         type: 'select',
         options: lookupOptions('locations'),
+        addable: 'locations',
       },
       {
         key: 'toLocation',
@@ -577,6 +580,7 @@ export const KIND_UI: Record<RecordKind, KindUi> = {
         type: 'select',
         required: true,
         options: lookupOptions('locations'),
+        addable: 'locations',
       },
       {
         key: 'contractor',

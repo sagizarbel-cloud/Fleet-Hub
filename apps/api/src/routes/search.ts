@@ -215,6 +215,153 @@ export const searchRoutes: FastifyPluginAsync = async (app) => {
         date: null,
       });
     }
+    hits.push(...(await documents(app.db, q)), ...(await options(app.db, q)));
     return { hits };
   });
 };
+
+/** Which record kind each attachment owner is, for files attached to records. */
+const OWNER_KINDS = Object.fromEntries(
+  RECORDS.map((r) => [r.model[0]!.toUpperCase() + r.model.slice(1), r]),
+) as Record<string, (typeof RECORDS)[number]>;
+/** Wiggle tests aren't searched as text, but a file on one still is. */
+OWNER_KINDS.WiggleTest = {
+  kind: 'wiggleTests',
+  model: 'wiggleTest',
+  date: 'date',
+  fields: [],
+} as never;
+
+type Db = Parameters<FastifyPluginAsync>[0]['db'];
+
+/**
+ * Documents (Sagi, 2026-11-23): files attached to records and vehicles, by file name, and
+ * receipts by vendor and notes. Price quotes keep their own visibility rules, so their files
+ * aren't searched here.
+ */
+async function documents(db: Db, q: string): Promise<SearchHit[]> {
+  const files = await db.attachment.findMany({
+    where: {
+      deletedAt: null,
+      fileName: has(q),
+      ownerType: { in: [...Object.keys(OWNER_KINDS), 'Vehicle', 'Document'] },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: PER_GROUP,
+    select: { id: true, ownerType: true, ownerId: true, fileName: true, createdAt: true },
+  });
+  // The vehicle of each file: its own, or its record's (a deleted record hides the file).
+  const owners = new Map<string, { id: string; serial: string; type: string } | null>();
+  for (const [ownerType, r] of Object.entries(OWNER_KINDS)) {
+    const ids = files.filter((f) => f.ownerType === ownerType).map((f) => f.ownerId);
+    if (!ids.length) continue;
+    const rows = await (db[r.model] as unknown as Delegate).findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      select: { id: true, vehicle: veh },
+    });
+    for (const row of rows) {
+      const v = row.vehicle as { serial: string; type: { code: string } };
+      owners.set(`${ownerType}:${String(row.id)}`, {
+        id: String(row.id),
+        serial: v.serial,
+        type: v.type.code,
+      });
+    }
+  }
+  const vehicleIds = files.filter((f) => f.ownerType === 'Vehicle').map((f) => f.ownerId);
+  if (vehicleIds.length)
+    for (const v of await db.vehicle.findMany({
+      where: { id: { in: vehicleIds } },
+      select: { id: true, serial: true, type: { select: { code: true } } },
+    }))
+      owners.set(`Vehicle:${v.id}`, { id: v.id, serial: v.serial, type: v.type.code });
+
+  const hits: SearchHit[] = [];
+  for (const f of files) {
+    const date = f.createdAt.toISOString();
+    const text = snippet(f.fileName, q);
+    if (f.ownerType === 'Document') {
+      hits.push({
+        group: 'document',
+        serial: null,
+        type: null,
+        kind: 'receipt',
+        id: f.ownerId,
+        field: 'fileName',
+        text,
+        date,
+      });
+      continue;
+    }
+    const o = owners.get(`${f.ownerType}:${f.ownerId}`);
+    if (!o) continue;
+    hits.push({
+      group: 'document',
+      serial: o.serial,
+      type: o.type,
+      kind: f.ownerType === 'Vehicle' ? 'vehicle' : OWNER_KINDS[f.ownerType]!.kind,
+      id: o.id,
+      field: 'fileName',
+      text,
+      date,
+    });
+  }
+
+  const receipts = await db.document.findMany({
+    where: { deletedAt: null, OR: [{ vendor: has(q) }, { notes: has(q) }] },
+    orderBy: { date: 'desc' },
+    take: 4,
+    select: { id: true, date: true, vendor: true, notes: true },
+  });
+  for (const r of receipts) {
+    const field = firstMatch(r, ['vendor', 'notes'], q) ?? 'vendor';
+    hits.push({
+      group: 'document',
+      serial: null,
+      type: null,
+      kind: 'receipt',
+      id: r.id,
+      field,
+      text: snippet(String(r[field as 'vendor'] ?? ''), q),
+      date: r.date.toISOString(),
+    });
+  }
+  return hits.slice(0, PER_GROUP);
+}
+
+/** The lists' choices (Sagi, 2026-11-23), in either language. */
+const LISTS = [
+  ['location', 'locations'],
+  ['department', 'departments'],
+  ['vehicleType', 'vehicleTypes'],
+  ['fluidType', 'fluidTypes'],
+  ['fuelType', 'fuelTypes'],
+  ['receiptCategory', 'receiptCategories'],
+] as const;
+
+async function options(db: Db, q: string): Promise<SearchHit[]> {
+  const found = await Promise.all(
+    LISTS.map(async ([list, kind]) => {
+      const rows = await (db[list] as unknown as Delegate).findMany({
+        where: { active: true, OR: [{ nameEn: has(q) }, { nameHe: has(q) }] },
+        orderBy: { nameEn: 'asc' },
+        take: 3,
+        select: { id: true, code: true, nameEn: true, nameHe: true },
+      });
+      return rows.map((r): SearchHit => {
+        const he = String(r.nameHe).toLowerCase().includes(q.toLowerCase());
+        return {
+          group: 'option',
+          serial: null,
+          type: null,
+          kind,
+          id: String(r.code),
+          field: he ? 'nameHe' : 'nameEn',
+          text: snippet(String(he ? r.nameHe : r.nameEn), q),
+          date: null,
+        };
+      });
+    }),
+  );
+  return found.flat().slice(0, PER_GROUP);
+}
