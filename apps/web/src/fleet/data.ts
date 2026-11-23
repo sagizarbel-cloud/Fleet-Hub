@@ -1,4 +1,10 @@
-import { useInfiniteQuery, useQuery, type InfiniteData } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from '@tanstack/react-query';
 import type { EventType, VehicleCategory, VehicleStatus } from '@fleet-hub/shared';
 import { api } from '@/lib/api';
 
@@ -63,6 +69,19 @@ export const useDashboard = () =>
 /** Lookup lists rarely change; one fetch per visit. */
 export const useLookups = () =>
   useQuery({ queryKey: ['lookups'], queryFn: () => api<Lookups>('/lookups'), staleTime: Infinity });
+
+/**
+ * Adds a place typed in a form (Sagi, 2026-11-23: not only admins), or finds the one with that
+ * name. Resolves to its code.
+ */
+export function useAddLocation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) =>
+      api<{ code: string }>('/lookups/locations', { method: 'POST', json: { name } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['lookups'] }),
+  });
+}
 
 /** Timeline pages. With no filter the first page comes from the dashboard response. */
 export function useEvents(opts: { types?: EventType[]; vehicle?: string; first?: EventPage }) {

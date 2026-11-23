@@ -16,7 +16,7 @@
     "settings": "Settings"
   },
   "topbar": {
-    "search": "Search serial, VIN, license or any field",
+    "search": "Search vehicles, records, files, pages or actions",
     "add": "Add",
     "comingSoon": "Coming in a later phase"
   },
@@ -564,6 +564,21 @@
       "hiddenQuote": "A price quote you can't see",
       "open_receipt": "Open {{name}}",
       "open_quote": "Open {{name}}"
+    },
+    "other": {
+      "option": "Other (type it)…",
+      "label": "{{field}}: other value",
+      "placeholder": "Type a value",
+      "add": "Add"
+    },
+    "addField": {
+      "toggle": "Add a field",
+      "here": "Add a field here",
+      "title": "New field",
+      "choices": "Choices, one per line",
+      "hint": "Saved for every vehicle's card, in this place. More options (who fills it, header) are in the card's Fields.",
+      "nameRequired": "Type a name for the field.",
+      "save": "Add the field"
     }
   },
   "fleet": {
@@ -1023,7 +1038,8 @@
       "whoFills": "Who fills it in",
       "likeCard": "Whoever edits the card",
       "card": "Card",
-      "manage": "Fields"
+      "manage": "Fields",
+      "free": "Also allow typing another value"
     },
     "wiggle": {
       "title": "Wiggle test",
@@ -1172,14 +1188,12 @@
       "undo": "Undo"
     },
     "location": {
-      "new": "New location…",
-      "name_en": "Name in English",
-      "name_he": "Name in Hebrew",
-      "hint": "Fill one name or both. The other language can be changed later in Settings → Lists.",
-      "add": "Add location",
+      "new": "Other place…",
+      "name": "Place name",
+      "hint": "Typed once, in any language. The name in the other language can be added later in Settings → Lists.",
+      "add": "Add place",
       "cancel": "Cancel",
-      "nameRequired": "Type a name for the location.",
-      "taken": "A location with this name already exists, maybe hidden in Settings."
+      "nameRequired": "Type a name for the place."
     }
   },
   "import": {
@@ -1523,7 +1537,12 @@
     "group": {
       "vehicle": "Vehicles",
       "record": "Records",
-      "item": "Equipment & tools"
+      "item": "Equipment & tools",
+      "action": "Actions",
+      "page": "Pages",
+      "document": "Documents",
+      "option": "List choices",
+      "field": "Fields"
     },
     "field": {
       "serial": "Serial No.",
@@ -1548,7 +1567,24 @@
       "doneBy": "Done by",
       "progress": "Progress update",
       "name": "Name",
-      "spec": "Spec"
+      "spec": "Spec",
+      "fileName": "File name",
+      "nameEn": "Name in English",
+      "nameHe": "Name in Hebrew"
+    },
+    "kind": {
+      "receipt": "Receipt",
+      "vehicle": "Vehicle file"
+    },
+    "action": {
+      "import": "Import from Excel",
+      "addUser": "Add a user",
+      "exportFleet": "Export the fleet to Excel",
+      "addReceipt": "Add a receipt",
+      "addQuote": "Add a price quote",
+      "addItem": "Add equipment or a tool",
+      "addField": "Add a field to a card",
+      "permissions": "Change who may edit what"
     }
   },
   "layout": {

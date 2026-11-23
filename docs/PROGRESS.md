@@ -9,6 +9,14 @@
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
 
+### Typed values, wider search, fields from the form — 2026-11-23
+
+- Sagi's follow-up of 2026-11-23. List fields (the service type and any list an admin adds) end with "Other (type it)…": the typed text is saved as is. Admins can keep a list to its choices (`free: false`).
+- Places: the vehicle form's location and a location change's From and To take a typed place, added at once for anyone who may set the location or record a move (`POST /api/lookups/locations`, which returns an existing place with the same name). The other language's name can be added in Settings → Lists.
+- Search also finds pages, actions (add a vehicle, import, add a user…) and, for admins, cards and fields, in English or Hebrew whatever the screen language (`layout/searchLocal.ts`); and from the server, documents (files on records and vehicles, receipts) and list choices.
+- Admins add a field from inside a card's form ("Add a field", then "Add a field here" between fields). It is saved with `after`, which places it in the form and the table.
+- Tests: api `permissions.test.ts`, web `columns.test.ts`, e2e `e2e/permissions-2026-11-22.spec.ts`.
+
 ### Permissions, extra fields, due frames — 2026-11-22
 
 - Sagi's second list of 2026-11-22. Plates: heavy machinery 6 digits (7–8 when it has a road plate), road vehicles 7–8; dashes are fine and never counted (`plateOk` in shared).

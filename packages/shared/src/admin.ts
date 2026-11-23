@@ -46,6 +46,13 @@ export const lookupBody = z.object({
 });
 export type LookupBody = z.input<typeof lookupBody>;
 
+/**
+ * A place typed in a form (Sagi, 2026-11-23: not only admins add places). Anyone who may edit
+ * the vehicle's location or its location changes adds one; the same name returns the place
+ * that already has it.
+ */
+export const quickLocationBody = z.object({ name: z.string().trim().min(1).max(80) });
+
 /** A new order for a whole list: ids, first to last. */
 export const lookupOrderBody = z.object({
   ids: z.array(z.string().min(1).max(40)).min(1).max(500),
@@ -274,6 +281,16 @@ export const customFieldDef = z
     header: z.boolean().optional(),
     /** Who may fill it in; unset = whoever may edit the card. */
     editLevel: z.enum(ROLES).optional(),
+    /**
+     * A list also takes a value typed in the form (Sagi, 2026-11-23: "the current options plus a
+     * free type option"); unset = allowed. False keeps it to the choices.
+     */
+    free: z.boolean().optional(),
+    /**
+     * Where it sits in the form and the table: after this field of the card (a built-in key or
+     * another extra field). Unset = after the card's own fields; a header always comes first.
+     */
+    after: z.string().max(40).optional(),
   })
   .refine((f) => f.type !== 'list' || (f.options?.length ?? 0) > 0, {
     path: ['options'],

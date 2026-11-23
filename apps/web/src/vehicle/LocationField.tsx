@@ -2,39 +2,18 @@ import { useId, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { lookupName, useLookups } from '@/fleet/data';
+import { lookupName, useAddLocation, useLookups } from '@/fleet/data';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { errorProps, INPUT, Labeled } from '@/money/form';
-import { useSaveLookup } from '@/settings/api';
 
 const NEW = '__new__';
 const FIELD_ID = 'vf-location';
-/** The name fields in the reader's order: their own language first. */
-const LANGS = [
-  ['en', 'he'],
-  ['he', 'en'],
-] as const;
-
-/** A stable list code from the English name, or a generated one when the name has no Latin letters. */
-export function locationCode(name: string, taken: readonly string[]): string {
-  const slug = name
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^[^a-z]+/, '')
-    .replace(/_+$/, '')
-    .slice(0, 32);
-  const base = slug || `loc_${Date.now().toString(36)}`;
-  let code = base;
-  for (let n = 2; taken.includes(code); n++) code = `${base}_${n}`;
-  return code;
-}
 
 /**
- * The vehicle form's Location: the Settings list plus "New location…", which adds a site to the
- * list on the spot (Sagi, 2026-11-15) instead of a trip to Settings. Both names start as typed;
- * the other language can be fixed later in Settings → Lists.
+ * The vehicle form's Location: the Settings list plus "Other place…", which adds a site on the
+ * spot (Sagi, 2026-11-15). Since 2026-11-23 anyone who may set the location adds one by typing
+ * its name once; the other language can be fixed later in Settings → Lists.
  */
 export function LocationField({
   value,
@@ -47,49 +26,32 @@ export function LocationField({
 }) {
   const { t, i18n } = useTranslation();
   const { data: lookups } = useLookups();
-  const save = useSaveLookup('locations');
+  const add = useAddLocation();
   const [adding, setAdding] = useState(false);
-  const [nameEn, setNameEn] = useState('');
-  const [nameHe, setNameHe] = useState('');
+  const [name, setName] = useState('');
   const [failed, setFailed] = useState<string | null>(null);
   const uid = useId();
-  const he = i18n.language.startsWith('he');
   const list = lookups?.locations ?? [];
 
   const close = () => {
     setAdding(false);
-    setNameEn('');
-    setNameHe('');
+    setName('');
     setFailed(null);
   };
   const create = async () => {
-    const en = nameEn.trim() || nameHe.trim();
-    const hb = nameHe.trim() || nameEn.trim();
-    if (!en) {
+    if (!name.trim()) {
       setFailed('vehicleForm.location.nameRequired');
       return;
     }
     try {
-      const row = await save.mutateAsync({
-        body: {
-          code: locationCode(
-            nameEn,
-            list.map((l) => l.code),
-          ),
-          nameEn: en,
-          nameHe: hb,
-          active: true,
-        },
-      });
+      const row = await add.mutateAsync(name.trim());
       onChange(row.code);
       close();
     } catch (err) {
       setFailed(
-        err instanceof ApiError && err.issues.some((i) => i.code === 'taken')
-          ? 'vehicleForm.location.taken'
-          : err instanceof ApiError && err.status === 403
-            ? 'records.error.forbidden'
-            : 'records.error.save',
+        err instanceof ApiError && err.status === 403
+          ? 'records.error.forbidden'
+          : 'records.error.save',
       );
     }
   };
@@ -100,23 +62,6 @@ export function LocationField({
       void create();
     }
   };
-  const nameInput = (lang: 'en' | 'he') => (
-    <Labeled key={lang} id={`${uid}-${lang}`} label={t(`vehicleForm.location.name_${lang}`)}>
-      <input
-        id={`${uid}-${lang}`}
-        dir={lang === 'en' ? 'ltr' : 'rtl'}
-        maxLength={80}
-        value={lang === 'en' ? nameEn : nameHe}
-        onChange={(e) => {
-          (lang === 'en' ? setNameEn : setNameHe)(e.target.value);
-          setFailed(null);
-        }}
-        onKeyDown={onKey}
-        className={cn(INPUT, 'text-start')}
-        data-testid={`new-location-${lang}`}
-      />
-    </Labeled>
-  );
 
   return (
     <div className="space-y-2">
@@ -148,7 +93,21 @@ export function LocationField({
           className="border-border space-y-2 rounded-lg border border-dashed p-2"
           data-testid="new-location"
         >
-          <div className="grid gap-2 sm:grid-cols-2">{LANGS[he ? 1 : 0].map(nameInput)}</div>
+          <Labeled id={`${uid}-name`} label={t('vehicleForm.location.name')}>
+            <input
+              id={`${uid}-name`}
+              maxLength={80}
+              value={name}
+              autoFocus
+              onChange={(e) => {
+                setName(e.target.value);
+                setFailed(null);
+              }}
+              onKeyDown={onKey}
+              className={cn(INPUT, 'text-start')}
+              data-testid="new-location-name"
+            />
+          </Labeled>
           <p className="text-muted text-xs">{t('vehicleForm.location.hint')}</p>
           {failed && (
             <p role="alert" className="text-bad text-xs">
@@ -160,7 +119,7 @@ export function LocationField({
               type="button"
               size="sm"
               onClick={() => void create()}
-              disabled={save.isPending}
+              disabled={add.isPending}
               data-testid="new-location-save"
             >
               <Check aria-hidden className="size-3.5" />

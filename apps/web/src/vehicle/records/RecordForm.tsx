@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { Fragment, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   hasRole,
@@ -11,9 +11,10 @@ import {
   type WiggleProfile,
 } from '@fleet-hub/shared';
 import { useSession } from '@/auth/session';
-import { lookupName } from '@/fleet/data';
+import { lookupName, useAddLocation } from '@/fleet/data';
 import { Sheet } from '@/components/Sheet';
 import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { ApiError } from '@/lib/api';
 import { isolate } from '@/lib/bidi';
 import { cn } from '@/lib/cn';
@@ -35,6 +36,7 @@ import { costSourceOf, costSourceText } from './CostSource';
 import { useFormatCtx } from './format';
 import { fieldOfPath, KIND_UI, toBody, toForm, type Field, type FormValues } from './kinds';
 import { WiggleChecklist } from './Wiggle';
+import { AddFieldHere } from './AddFieldHere';
 
 type Errors = Record<string, string>;
 
@@ -122,6 +124,9 @@ export function RecordForm({
   const customDefs = settings?.recordFields[kind] ?? [];
   const { data: me } = useSession();
   const mayFill = (f: CustomFieldDef) => !f.editLevel || (!!me && hasRole(me.role, f.editLevel));
+  // Admins can add a field right where it should sit (Sagi, 2026-11-23).
+  const isAdmin = !!me && hasRole(me.role, 'ADMIN');
+  const [placing, setPlacing] = useState(false);
   const [custom, setCustom] = useState<Record<string, string>>(() => {
     const stored = (row?.custom ?? {}) as Record<string, unknown>;
     return Object.fromEntries(
@@ -135,6 +140,8 @@ export function RecordForm({
   const [savedId, setSavedId] = useState<string | null>(null);
   const save = useSaveRecord(serial, kind);
   const qc = useQueryClient();
+  const addLocation = useAddLocation();
+  const addPlace = async (name: string) => (await addLocation.mutateAsync(name)).code;
 
   const set = (key: string, value: string | boolean) => {
     setValues((v) => ({ ...v, [key]: value }));
@@ -165,6 +172,7 @@ export function RecordForm({
         label: i18n.language === 'he' ? o.labelHe : o.labelEn,
       }))}
       disabled={!mayFill(f)}
+      other={f.type === 'list' && f.free !== false ? 'text' : undefined}
       value={custom[f.key] ?? ''}
       error={errors[`custom.${f.key}`]}
       unit={unit}
@@ -264,6 +272,118 @@ export function RecordForm({
     }
   };
 
+  /** One of the card's own fields. */
+  const builtin = (f: Field) =>
+    f.type === 'checklist' ? (
+      profile ? (
+        <WiggleChecklist
+          key={f.key}
+          profile={profile}
+          fieldKey={f.key}
+          values={values}
+          error={errors[f.key]}
+          onChange={(k, v) => {
+            setValues((cur) => ({ ...cur, [k]: v }));
+            setErrors(({ [f.key]: _gone, ...rest }) => rest);
+          }}
+        />
+      ) : (
+        <p key={f.key} role="alert" className="text-bad text-sm">
+          {t('wiggle.notForType')}
+        </p>
+      )
+    ) : f.type === 'services' ? (
+      <ServicePicker
+        key={f.key}
+        serial={serial}
+        unit={unit}
+        cardId={row?.id ?? savedId}
+        label={t(f.label as never)}
+        value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
+        onChange={(v) => set(f.key, v)}
+      />
+    ) : f.type === 'costSource' ? (
+      <CostSourcePicker
+        key={f.key}
+        serial={serial}
+        row={row}
+        label={t(f.label as never)}
+        value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
+        onChange={(v, counted) => {
+          set(f.key, v);
+          setCostCounted(counted);
+          if (counted) set('cost', '');
+        }}
+      />
+    ) : f.type === 'receipts' ? (
+      <ReceiptPicker
+        key={f.key}
+        serial={serial}
+        cardId={row?.id ?? savedId}
+        label={t(f.label as never)}
+        value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
+        onChange={(v) => set(f.key, v)}
+      />
+    ) : (
+      <FieldInput
+        key={f.key}
+        field={{
+          ...f,
+          required: isRequired(f),
+          ...(kind === 'service' && f.key === 'cost' && costCounted
+            ? { hint: 'records.field.costCounted' }
+            : {}),
+        }}
+        disabled={kind === 'service' && f.key === 'cost' && costCounted}
+        suggestions={
+          f.suggest
+            ? [
+                ...(f.suggest === 'place'
+                  ? (ctx.lookups?.locations ?? []).map((l) => lookupName(l, ctx.lang) ?? l.code)
+                  : []),
+                ...(suggestions?.[f.suggest] ?? []),
+              ]
+            : undefined
+        }
+        value={values[f.key]}
+        error={errors[f.key]}
+        unit={unit}
+        options={f.options?.(ctx)}
+        other={f.addable === 'locations' ? addPlace : undefined}
+        onChange={(v) => set(f.key, v)}
+      />
+    );
+
+  /**
+   * The form's order: a header field first, then the card's own fields, each followed by the
+   * extra fields an admin placed after it (Sagi, 2026-11-23), then any others.
+   */
+  const order: { key: string; field?: Field; custom?: CustomFieldDef }[] = [];
+  const placed = new Set<string>();
+  const followers = (key: string) => {
+    for (const c of customDefs)
+      if (!c.header && c.after === key && !placed.has(c.key)) {
+        placed.add(c.key);
+        order.push({ key: `custom.${c.key}`, custom: c });
+        followers(c.key);
+      }
+  };
+  for (const c of customDefs.filter((x) => x.header)) {
+    placed.add(c.key);
+    order.push({ key: `custom.${c.key}`, custom: c });
+    followers(c.key);
+  }
+  for (const f of visible) {
+    order.push({ key: f.key, field: f });
+    followers(f.key);
+  }
+  for (const c of customDefs)
+    if (!placed.has(c.key)) {
+      placed.add(c.key);
+      order.push({ key: `custom.${c.key}`, custom: c });
+      followers(c.key);
+    }
+
   const title = t(isNew ? 'records.addTitle' : 'records.editTitle', {
     record: t(`vehicle.records.one.${kind}`),
   });
@@ -290,90 +410,27 @@ export function RecordForm({
       }
     >
       <form id="record-form" noValidate onSubmit={submit} className="space-y-4" data-kind={kind}>
-        {customDefs.filter((f) => f.header).map(customInput)}
-        {visible.map((f) =>
-          f.type === 'checklist' ? (
-            profile ? (
-              <WiggleChecklist
-                key={f.key}
-                profile={profile}
-                fieldKey={f.key}
-                values={values}
-                error={errors[f.key]}
-                onChange={(k, v) => {
-                  setValues((cur) => ({ ...cur, [k]: v }));
-                  setErrors(({ [f.key]: _gone, ...rest }) => rest);
-                }}
-              />
-            ) : (
-              <p key={f.key} role="alert" className="text-bad text-sm">
-                {t('wiggle.notForType')}
-              </p>
-            )
-          ) : f.type === 'services' ? (
-            <ServicePicker
-              key={f.key}
-              serial={serial}
-              unit={unit}
-              cardId={row?.id ?? savedId}
-              label={t(f.label as never)}
-              value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
-              onChange={(v) => set(f.key, v)}
-            />
-          ) : f.type === 'costSource' ? (
-            <CostSourcePicker
-              key={f.key}
-              serial={serial}
-              row={row}
-              label={t(f.label as never)}
-              value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
-              onChange={(v, counted) => {
-                set(f.key, v);
-                setCostCounted(counted);
-                if (counted) set('cost', '');
-              }}
-            />
-          ) : f.type === 'receipts' ? (
-            <ReceiptPicker
-              key={f.key}
-              serial={serial}
-              cardId={row?.id ?? savedId}
-              label={t(f.label as never)}
-              value={typeof values[f.key] === 'string' ? (values[f.key] as string) : ''}
-              onChange={(v) => set(f.key, v)}
-            />
-          ) : (
-            <FieldInput
-              key={f.key}
-              field={{
-                ...f,
-                required: isRequired(f),
-                ...(kind === 'service' && f.key === 'cost' && costCounted
-                  ? { hint: 'records.field.costCounted' }
-                  : {}),
-              }}
-              disabled={kind === 'service' && f.key === 'cost' && costCounted}
-              suggestions={
-                f.suggest
-                  ? [
-                      ...(f.suggest === 'place'
-                        ? (ctx.lookups?.locations ?? []).map(
-                            (l) => lookupName(l, ctx.lang) ?? l.code,
-                          )
-                        : []),
-                      ...(suggestions?.[f.suggest] ?? []),
-                    ]
-                  : undefined
-              }
-              value={values[f.key]}
-              error={errors[f.key]}
-              unit={unit}
-              options={f.options?.(ctx)}
-              onChange={(v) => set(f.key, v)}
-            />
-          ),
+        {isAdmin && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant={placing ? 'outline' : 'ghost'}
+              size="sm"
+              aria-pressed={placing}
+              onClick={() => setPlacing((p) => !p)}
+              data-testid="place-fields"
+            >
+              <Plus aria-hidden />
+              {t('records.addField.toggle')}
+            </Button>
+          </div>
         )}
-        {customDefs.filter((f) => !f.header).map(customInput)}
+        {order.map((item) => (
+          <Fragment key={item.key}>
+            {item.custom ? customInput(item.custom) : builtin(item.field!)}
+            {placing && <AddFieldHere kind={kind} after={item.custom?.key ?? item.field!.key} />}
+          </Fragment>
+        ))}
         <fieldset className="space-y-2">
           <legend className="mb-1 text-xs font-medium">{t('records.files')}</legend>
           {row && <AttachmentList serial={serial} items={row.attachments} canEdit={canEdit} />}
@@ -596,6 +653,9 @@ function ServicePicker({
   );
 }
 
+/** The "type another value" choice at the end of a list. */
+const OTHER = '__other__';
+
 const INPUT =
   'border-border-strong bg-surface w-full rounded-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-[var(--fh-accent)] disabled:cursor-not-allowed disabled:opacity-60';
 
@@ -608,6 +668,7 @@ function FieldInput({
   suggestions,
   onChange,
   disabled,
+  other,
 }: {
   field: Field;
   value: string | boolean | undefined;
@@ -619,9 +680,33 @@ function FieldInput({
   onChange: (value: string | boolean) => void;
   /** Shown but not editable (a field only admins may fill in). */
   disabled?: boolean;
+  /**
+   * A list that also takes a typed value (Sagi, 2026-11-23): `text` keeps the text as the value;
+   * a function adds it to the list (a new place) and resolves to its code.
+   */
+  other?: 'text' | ((name: string) => Promise<string>);
 }) {
   const { t } = useTranslation();
   const id = `field-${field.key}`;
+  const current = typeof value === 'string' ? value : '';
+  // A saved value that isn't one of the choices was typed: show it in the box.
+  const [typing, setTyping] = useState(
+    !!other && !!current && !options?.some((o) => o.value === current),
+  );
+  const [draft, setDraft] = useState('');
+  const [adding, setAdding] = useState<'busy' | 'failed' | null>(null);
+  const addTyped = async () => {
+    if (typeof other !== 'function' || !draft.trim()) return;
+    setAdding('busy');
+    try {
+      onChange(await other(draft.trim()));
+      setTyping(false);
+      setDraft('');
+      setAdding(null);
+    } catch {
+      setAdding('failed');
+    }
+  };
   const label = field.title
     ? field.title
     : field.type === 'reading'
@@ -672,19 +757,79 @@ function FieldInput({
           className={cn(INPUT, 'py-2')}
         />
       ) : field.type === 'select' ? (
-        <select
-          {...common}
-          value={str}
-          onChange={(e) => onChange(e.target.value)}
-          className={cn(INPUT, 'h-9')}
-        >
-          <option value="">{t('records.choose')}</option>
-          {options?.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        <>
+          <select
+            {...common}
+            value={typing ? OTHER : str}
+            onChange={(e) => {
+              const v = e.target.value;
+              setTyping(v === OTHER);
+              onChange(v === OTHER ? '' : v);
+            }}
+            className={cn(INPUT, 'h-9')}
+          >
+            <option value="">{t('records.choose')}</option>
+            {options?.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+            {other && <option value={OTHER}>{t('records.other.option')}</option>}
+          </select>
+          {typing && other === 'text' && (
+            <input
+              aria-label={t('records.other.label', { field: label })}
+              placeholder={t('records.other.placeholder')}
+              value={str}
+              maxLength={200}
+              disabled={disabled}
+              autoFocus
+              onChange={(e) => onChange(e.target.value)}
+              className={cn(INPUT, 'h-9')}
+              data-testid={`${id}-other`}
+            />
+          )}
+          {typing && typeof other === 'function' && (
+            <div className="flex gap-2">
+              <input
+                aria-label={t('records.other.label', { field: label })}
+                placeholder={t('records.other.placeholder')}
+                value={draft}
+                maxLength={80}
+                autoFocus
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  setAdding(null);
+                }}
+                // Enter adds the place instead of saving the whole form.
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void addTyped();
+                  }
+                }}
+                className={cn(INPUT, 'h-9')}
+                data-testid={`${id}-other`}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9"
+                disabled={!draft.trim() || adding === 'busy'}
+                onClick={() => void addTyped()}
+                data-testid={`${id}-other-add`}
+              >
+                {t('records.other.add')}
+              </Button>
+            </div>
+          )}
+          {adding === 'failed' && (
+            <p role="alert" className="text-bad text-xs">
+              {t('records.error.save')}
+            </p>
+          )}
+        </>
       ) : (
         <input
           {...common}

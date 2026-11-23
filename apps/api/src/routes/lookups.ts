@@ -1,4 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
+import type { Prisma } from '@prisma/client';
+import { canEditCard, canEditField, quickLocationBody } from '@fleet-hub/shared';
+import { readAppSettings } from '../lib/app-settings';
+import { HttpError, parse } from '../lib/http';
 import { requireUser } from '../plugins/auth';
 
 const select = { id: true, code: true, nameEn: true, nameHe: true } as const;
@@ -22,6 +26,56 @@ export const lookupRoutes: FastifyPluginAsync = async (app) => {
         app.db.receiptCategory.findMany({ where, select, orderBy }),
       ]);
     return { departments, locations, vehicleTypes, fluidTypes, fuelTypes, receiptCategories };
+  });
+
+  /**
+   * Adds a place typed into a form (Sagi, 2026-11-23), for anyone who may set a vehicle's
+   * location or record a location change. Both names start as typed; a place with that name in
+   * either language is returned instead of a copy.
+   */
+  app.post('/locations', { preHandler: requireUser }, async (req, reply) => {
+    const { name } = parse(quickLocationBody, req.body);
+    const { permissions } = await readAppSettings(app.db as unknown as Prisma.TransactionClient);
+    const role = req.user!.role;
+    if (
+      !canEditCard(role, permissions, 'movements') &&
+      !canEditField(role, permissions, 'location')
+    )
+      throw new HttpError(403, 'forbidden');
+    const same = { equals: name, mode: 'insensitive' as const };
+    const found = await app.db.location.findFirst({
+      where: { OR: [{ nameEn: same }, { nameHe: same }] },
+      select,
+    });
+    if (found) {
+      await app.db.location.update({ where: { id: found.id }, data: { active: true } });
+      return found;
+    }
+    const slug =
+      name
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^[^a-z]+/, '')
+        .replace(/_+$/, '')
+        .slice(0, 32) || `loc_${Date.now().toString(36)}`;
+    const taken = new Set(
+      (
+        await app.db.location.findMany({
+          where: { code: { startsWith: slug } },
+          select: { code: true },
+        })
+      ).map((l) => l.code),
+    );
+    let code = slug;
+    for (let n = 2; taken.has(code); n++) code = `${slug}_${n}`;
+    const last = await app.db.location.aggregate({ _max: { sortOrder: true } });
+    const row = await app.db.location.create({
+      data: { code, nameEn: name, nameHe: name, sortOrder: (last._max.sortOrder ?? 0) + 1 },
+      select,
+    });
+    reply.code(201);
+    return row;
   });
 
   /**
