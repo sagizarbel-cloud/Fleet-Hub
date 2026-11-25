@@ -18,9 +18,10 @@ import { cn } from '@/lib/cn';
 import { INPUT } from '@/money/form';
 import { fetchSavedMapping, useRunImport, type ImportResult, type ImportRow } from './api';
 import { Panel } from './MySettings';
-import { atHeaderRow, readWorkbook, type SheetData } from './readSheet';
+import { atHeaderRow, readTableFile, type SheetData } from './readSheet';
 
-const XLSX = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const ACCEPT =
+  '.xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv';
 const ACTION_TONE: Record<ImportAction, string> = {
   create: 'text-ok border-ok/40',
   update: 'text-accent-ink border-accent/50',
@@ -102,7 +103,7 @@ export default function ImportPage() {
     setSheets(null);
     setFileName(file.name);
     try {
-      const all = await readWorkbook(await file.arrayBuffer());
+      const all = await readTableFile(file);
       setSheets(all);
       const first = Math.max(
         0,
@@ -198,7 +199,7 @@ export default function ImportPage() {
           <span className="text-muted text-xs">{t('import.file.types')}</span>
           <input
             type="file"
-            accept={XLSX}
+            accept={ACCEPT}
             className="sr-only"
             data-testid="import-file"
             onChange={(e) => {

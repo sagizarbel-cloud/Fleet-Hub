@@ -208,6 +208,24 @@ test.describe('settings', () => {
     await expect(page.locator('[data-imported]').first()).toBeVisible();
   });
 
+  test('import: a semicolon CSV with a title row runs dry (no commit)', async ({ page }) => {
+    const csv = 'דלק ינואר\nכלי;תאריך;ליטרים\nPU-902;05/01/2026;"120"\nNOPE-1;05/01/2026;10\n';
+    await page.goto('/settings/import');
+    await page.getByTestId('import-file').setInputFiles({
+      name: 'fuel.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(csv, 'utf8'),
+    });
+    await page.getByTestId('import-target').selectOption('fuel');
+    await expect(page.getByTestId('import-header-row')).toHaveValue('2');
+    await expect(page.locator('[data-field=serial]')).toHaveValue('0');
+    await expect(page.locator('[data-field=liters]')).toHaveValue('2');
+    await page.getByTestId('import-preview').click();
+    const results = page.getByTestId('import-results');
+    await expect(results.locator('[data-action=create]')).toHaveCount(1);
+    await expect(results.locator('[data-action=error]')).toContainText(': not found');
+  });
+
   test('import: a hand-kept sheet with a title, plates and a totals row', async ({ page }) => {
     await page.goto('/settings/import');
     await page.getByTestId('import-file').setInputFiles('../../docs/samples/service-log.xlsx');
@@ -228,7 +246,7 @@ test.describe('as a viewer', () => {
     await page.goto('/settings/users');
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('link', { name: 'Lists' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Excel import' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Import (Excel, CSV)' })).toHaveCount(0);
     await expect(page.getByTestId('add-vehicle')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Change password' })).toBeVisible();
   });

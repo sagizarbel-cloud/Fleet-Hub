@@ -25,6 +25,7 @@ import { fuelRoutes } from './routes/fuel';
 import { searchRoutes } from './routes/search';
 import { telematicsRoutes } from './routes/telematics';
 import { fuelBusPlugin } from './lib/live-fuel';
+import { serveWeb } from './plugins/web-static';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -106,6 +107,7 @@ export async function buildApp(env: Env, opts: FastifyServerOptions = {}) {
   await app.register(fuelRoutes, { prefix: '/api/fuel' });
   await app.register(searchRoutes, { prefix: '/api/search' });
   await app.register(telematicsRoutes, { prefix: '/api/telematics' });
+  if (env.WEB_DIR) serveWeb(app, env.WEB_DIR);
 
   return app;
 }

@@ -44,7 +44,15 @@ const serial: ImportField = {
     'unit no',
     'unit number',
     'asset',
+    'asset no',
     'fleet no',
+    'fleet number',
+    'fleet id',
+    'מספר צי',
+    'מס׳ צי',
+    'מס צי',
+    'מספר פנימי',
+    'מס׳ פנימי',
   ],
 };
 /**

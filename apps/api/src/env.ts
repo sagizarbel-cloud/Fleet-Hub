@@ -11,6 +11,8 @@ const schema = z.object({
   FLEET_CODE_KEY: z.string().min(1, 'FLEET_CODE_KEY is required (run pnpm env:init)'),
   UPLOAD_DIR: z.string().default('./uploads'),
   UPLOAD_MAX_MB: z.coerce.number().default(20),
+  /** The web build to serve when no Caddy is in front (the Windows laptop install). */
+  WEB_DIR: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;

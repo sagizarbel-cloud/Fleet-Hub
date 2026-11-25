@@ -1,0 +1,38 @@
+﻿FLEET HUB FOR WINDOWS
+=====================
+
+1. Extract this whole zip (right-click > Extract All).
+2. Double-click "Install Fleet Hub.cmd". If Windows warns about the file, choose
+   "More info" > "Run anyway" (or "Run").
+3. Type your email and name when asked. Your browser opens a page where you choose
+   your password. That account is the admin.
+4. From then on, use the "Fleet Hub" icon on the desktop. The site is at
+   http://localhost:3001 and starts by itself when you sign in to Windows.
+
+Start menu > Fleet Hub also has "Stop Fleet Hub" and "Back up Fleet Hub"
+(backups go to Documents\Fleet Hub backups).
+
+Your data stays on this computer, in %LOCALAPPDATA%\FleetHub\data.
+Installing a newer version the same way keeps all of it.
+
+To bring in your existing records: sign in, then Settings > Import, and pick an
+Excel (.xlsx) or CSV file.
+
+
+פליט האב לווינדוס
+=================
+
+1. לחלץ את כל קובץ ה־zip (קליק ימני > חלץ הכל).
+2. לחיצה כפולה על "Install Fleet Hub.cmd". אם Windows מזהיר, לבחור
+   "מידע נוסף" > "הפעל בכל זאת".
+3. להקליד אימייל ושם. הדפדפן ייפתח בעמוד לבחירת סיסמה. זה חשבון המנהל.
+4. מעכשיו: האייקון "Fleet Hub" בשולחן העבודה. האתר בכתובת
+   http://localhost:3001 ועולה מעצמו בכניסה ל־Windows.
+
+בתפריט התחל > Fleet Hub יש גם "Stop Fleet Hub" (עצירה) ו־"Back up Fleet Hub"
+(גיבוי, נשמר במסמכים > Fleet Hub backups).
+
+הנתונים נשארים במחשב הזה, בתיקייה %LOCALAPPDATA%\FleetHub\data.
+התקנה של גרסה חדשה באותה דרך שומרת על כולם.
+
+ייבוא הרשומות הקיימות: להתחבר, ואז הגדרות > ייבוא, ולבחור קובץ אקסל (‎.xlsx‎) או CSV.

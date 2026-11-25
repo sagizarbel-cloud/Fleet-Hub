@@ -9,6 +9,12 @@
 
 <!-- One entry per finished phase: date, what shipped, anything deferred. Newest first. -->
 
+### Windows laptop install, CSV import — 2026-11-25
+
+- Sagi (2026-11-25): run the site on the Windows laptop that holds the vehicle records until the company server is ready, then import those records. `pnpm package:windows` builds one zip with Node, PostgreSQL 16 and the site; it installs per user (no admin, internet or Docker), with Fleet Hub / Stop / Back up shortcuts, start at sign-in and data in `%LOCALAPPDATA%\FleetHub\data`. See `docs/WINDOWS.md`. The api serves the web build itself when `WEB_DIR` is set (no Caddy on the laptop).
+- Import also reads .csv, .tsv and tab-separated .txt (quoted cells, `;` or tab separators, Excel's plain Hebrew CSV in Windows-1255).
+- Tests: web `readSheet.test.ts` (CSV), api `web-static.test.ts`, the `Windows package` workflow (install on a clean Windows machine).
+
 ### Typed values, wider search, fields from the form — 2026-11-23
 
 - Sagi's follow-up of 2026-11-23. List fields (the service type and any list an admin adds) end with "Other (type it)…": the typed text is saved as is. Admins can keep a list to its choices (`free: false`).
@@ -251,6 +257,8 @@ Round 3 (Sagi, 2026-11-05):
 ## Later
 
 <!-- Ideas and out-of-scope findings, to revisit after Phase 9. -->
+
+- Windows laptop: moving its data to the server needs a `pg_dump` (the bundled PostgreSQL has no client tools); opening the laptop's site from other devices on the office network (firewall rule, non-secure cookies over plain http); old .xls files in the import (save as .xlsx or CSV for now)
 
 - Current fuel: a tank size per vehicle (litres ↔ percent when only one is sent); a fill-up record setting the level to full; a low-fuel alert or timeline entry when a live level crosses 20%; a fuel level chart from the reading history; more live values (location) through the same ingest (engine hours done 2026-11-22)
 

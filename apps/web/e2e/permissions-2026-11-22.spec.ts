@@ -117,7 +117,7 @@ test.describe('search finds more', () => {
     const input = page.getByTestId('search-input');
     await input.fill('import');
     await expect(page.locator('[data-testid=search-hit][data-group=action]').first()).toContainText(
-      'Import from Excel',
+      'Import from Excel or CSV',
     );
     await input.fill('north yard');
     await expect(page.locator('[data-testid=search-hit][data-group=option]').first()).toContainText(

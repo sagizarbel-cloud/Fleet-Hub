@@ -106,3 +106,102 @@ export async function readWorkbook(data: ArrayBuffer): Promise<SheetData[]> {
     return atHeaderRow(sheet, guessHeaderRow(cells, numbers));
   });
 }
+
+/**
+ * Text bytes as a string. "CSV UTF-8" files read as they are; Excel's plain "CSV" on a Hebrew
+ * Windows is Windows-1255, so bytes that aren't UTF-8 are read as that.
+ */
+export function decodeText(data: ArrayBuffer): string {
+  let text: string;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(data);
+  } catch {
+    text = new TextDecoder('windows-1255').decode(data);
+  }
+  return text.replace(/^\uFEFF/, '');
+}
+
+/** RFC 4180 rows: quoted cells may hold the delimiter, doubled quotes and line breaks. */
+function splitCsv(text: string, d: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"' && cell.trim() === '') {
+      quoted = true;
+      cell = '';
+    } else if (ch === d) {
+      row.push(cell);
+      cell = '';
+    } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = '';
+    } else cell += ch;
+  }
+  if (cell !== '' || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** Comma, semicolon or tab: whichever splits the first lines most evenly into the most cells. */
+function guessDelimiter(text: string): string {
+  const head = text
+    .split(/\r?\n/)
+    .filter((l) => l.trim() !== '')
+    .slice(0, 10)
+    .join('\n');
+  let best = ',';
+  let bestScore = 0;
+  for (const d of [',', ';', '\t']) {
+    const counts = splitCsv(head, d).map((r) => r.length);
+    const most = Math.max(1, ...counts);
+    const score = most > 1 ? counts.filter((c) => c === most).length * most : 0;
+    if (score > bestScore) [best, bestScore] = [d, score];
+  }
+  return best;
+}
+
+/** A .csv (or tab-separated .tsv / .txt) file as one sheet, named after the file. */
+export function readCsv(data: ArrayBuffer, name: string): SheetData[] {
+  const text = decodeText(data);
+  const cells = new Map<number, Cell[]>();
+  splitCsv(text, guessDelimiter(text)).forEach((r, i) => {
+    const line = r.slice(0, MAX_COLUMNS).map((c) => cellValue(c));
+    if (line.some((c) => c !== null)) cells.set(i + 1, line);
+  });
+  const numbers = [...cells.keys()].sort((a, b) => a - b);
+  const sheet: SheetData = {
+    name: name.replace(/\.[^.]+$/, '').slice(0, 100) || 'CSV',
+    headerRow: 1,
+    headers: [],
+    rows: [],
+    cut: 0,
+    headerChoices: numbers.slice(0, HEADER_SEARCH),
+    cells,
+  };
+  return [atHeaderRow(sheet, guessHeaderRow(cells, numbers))];
+}
+
+const TEXT_FILE = /\.(csv|tsv|txt)$/i;
+
+/** Any file the import takes: .xlsx workbooks, or .csv / .tsv / .txt text tables. */
+export async function readTableFile(file: {
+  name: string;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}): Promise<SheetData[]> {
+  const data = await file.arrayBuffer();
+  return TEXT_FILE.test(file.name) ? readCsv(data, file.name) : readWorkbook(data);
+}

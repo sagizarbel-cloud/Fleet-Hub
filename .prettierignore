@@ -1,5 +1,6 @@
 pnpm-lock.yaml
 dist
+build
 coverage
 playwright-report
 test-results
