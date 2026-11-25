@@ -61,8 +61,10 @@ jobs:
           $token = (Get-Content link.txt).Split('/')[-1]
           $h = @{ Origin = $base }
           Invoke-RestMethod -Method Post "$base/api/auth/reset" -Headers $h -ContentType 'application/json' -Body (@{ token = $token; password = 'windows-test-password-1' } | ConvertTo-Json) | Out-Null
-          $login = Invoke-WebRequest -UseBasicParsing -Method Post "$base/api/auth/login" -Headers $h -ContentType 'application/json' -Body (@{ email = 'admin@example.test'; password = 'windows-test-password-1' } | ConvertTo-Json) -SessionVariable s
-          $me = Invoke-RestMethod "$base/api/auth/me" -WebSession $s
+          $login = Invoke-WebRequest -UseBasicParsing -Method Post "$base/api/auth/login" -Headers $h -ContentType 'application/json' -Body (@{ email = 'admin@example.test'; password = 'windows-test-password-1' } | ConvertTo-Json)
+          # The session cookie is Secure: browsers send it to http://localhost, PowerShell doesn't.
+          $cookie = ($login.Headers['Set-Cookie'] -split ';')[0]
+          $me = Invoke-RestMethod "$base/api/auth/me" -Headers @{ Cookie = $cookie }
           if ($me.user.role -ne 'ADMIN') { throw 'not signed in as admin' }
           $node = "$env:LOCALAPPDATA\FleetHub\runtime\node\node.exe"
           Push-Location "$env:LOCALAPPDATA\FleetHub\app\api"
