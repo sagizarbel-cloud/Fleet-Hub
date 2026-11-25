@@ -1,0 +1,97 @@
+# Builds the Windows laptop install (pnpm package:windows) and tries it on a clean Windows
+# machine: install, sign in, stop, start, back up, and install again over the top.
+name: Windows package
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - deploy/windows/**
+      - scripts/windows-package.mjs
+      - apps/api/src/plugins/web-static.ts
+      - .github/workflows/windows-package.yml
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm package:windows
+        env:
+          YARD_PLAY: 'on'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FleetHub-Windows
+          path: build/windows/FleetHub-Windows.zip
+          compression-level: 0
+          retention-days: 14
+
+  install:
+    needs: package
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: FleetHub-Windows
+      - name: Install
+        shell: powershell
+        run: |
+          Expand-Archive FleetHub-Windows.zip -DestinationPath setup
+          $out = cmd /c "setup\Fleet Hub setup\Install Fleet Hub.cmd" -AdminEmail admin@example.test -AdminName Tester -NoBrowser '<' NUL
+          $out | Out-File install-output.txt
+          $out
+          if ($LASTEXITCODE -ne 0) { throw "install exited $LASTEXITCODE" }
+          $link = $out | Where-Object { $_ -match 'http://localhost:3001/\S+' } | ForEach-Object { $Matches[0] } | Select-Object -Last 1
+          if (-not $link) { throw 'no password link printed' }
+          Set-Content link.txt $link
+      - name: Site, sign-in and native modules
+        shell: powershell
+        run: |
+          $base = 'http://localhost:3001'
+          $page = Invoke-WebRequest -UseBasicParsing "$base/vehicles/EX-1"
+          if ($page.Content -notmatch 'id="root"') { throw 'index.html not served for a page path' }
+          $token = (Get-Content link.txt).Split('/')[-1]
+          $h = @{ Origin = $base }
+          Invoke-RestMethod -Method Post "$base/api/auth/reset" -Headers $h -ContentType 'application/json' -Body (@{ token = $token; password = 'windows-test-password-1' } | ConvertTo-Json) | Out-Null
+          $login = Invoke-WebRequest -UseBasicParsing -Method Post "$base/api/auth/login" -Headers $h -ContentType 'application/json' -Body (@{ email = 'admin@example.test'; password = 'windows-test-password-1' } | ConvertTo-Json) -SessionVariable s
+          $me = Invoke-RestMethod "$base/api/auth/me" -WebSession $s
+          if ($me.user.role -ne 'ADMIN') { throw 'not signed in as admin' }
+          $node = "$env:LOCALAPPDATA\FleetHub\runtime\node\node.exe"
+          Push-Location "$env:LOCALAPPDATA\FleetHub\app\api"
+          & $node -e "require('sharp'); console.log('sharp ok')"
+          if ($LASTEXITCODE) { throw 'sharp' }
+          Pop-Location
+      - name: Stop, start, back up, install again
+        shell: powershell
+        run: |
+          $tools = "$env:LOCALAPPDATA\FleetHub\tools"
+          powershell -NoProfile -ExecutionPolicy Bypass -File "$tools\stop.ps1" -Quiet
+          try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 3 http://localhost:3001/api/health | Out-Null; throw 'still running after stop' } catch { if ($_.Exception.Message -eq 'still running after stop') { throw } }
+          powershell -NoProfile -ExecutionPolicy Bypass -File "$tools\start.ps1" -NoBrowser
+          if ($LASTEXITCODE) { throw 'start failed' }
+          Invoke-WebRequest -UseBasicParsing http://localhost:3001/api/health | Out-Null
+          powershell -NoProfile -ExecutionPolicy Bypass -File "$tools\backup.ps1" -Quiet
+          if ($LASTEXITCODE) { throw 'backup failed' }
+          $zip = Get-ChildItem "$([Environment]::GetFolderPath('MyDocuments'))\Fleet Hub backups\*.zip" | Select-Object -First 1
+          if (-not $zip -or $zip.Length -lt 1MB) { throw 'no backup zip' }
+          Invoke-WebRequest -UseBasicParsing http://localhost:3001/api/health | Out-Null
+          Remove-Item -Recurse -Force setup
+          Expand-Archive FleetHub-Windows.zip -DestinationPath setup
+          $out = cmd /c "setup\Fleet Hub setup\Install Fleet Hub.cmd" -NoBrowser '<' NUL
+          $out
+          if ($LASTEXITCODE -ne 0) { throw "second install exited $LASTEXITCODE" }
+          if ($out -match 'first admin') { throw 'second install asked for an admin again' }
+          $h = @{ Origin = 'http://localhost:3001' }
+          Invoke-WebRequest -UseBasicParsing -Method Post http://localhost:3001/api/auth/login -Headers $h -ContentType 'application/json' -Body (@{ email = 'admin@example.test'; password = 'windows-test-password-1' } | ConvertTo-Json) | Out-Null
+          $links = Get-ChildItem ([Environment]::GetFolderPath('Desktop')) -Filter 'Fleet Hub.lnk'
+          if (-not $links) { throw 'no desktop shortcut' }
+      - name: Logs
+        if: always()
+        shell: powershell
+        run: Get-ChildItem "$env:LOCALAPPDATA\FleetHub\data\logs" -ErrorAction SilentlyContinue | ForEach-Object { "==== $($_.Name)"; Get-Content $_.FullName -Tail 60 }
