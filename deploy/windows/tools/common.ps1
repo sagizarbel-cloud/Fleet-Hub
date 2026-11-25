@@ -89,9 +89,17 @@ function Start-Site {
   if (Test-Site) { return }
   Use-FleetEnv
   New-Item -ItemType Directory -Force -Path $Logs | Out-Null
-  $p = Start-Process -FilePath $Node -WorkingDirectory $Api -WindowStyle Hidden -PassThru `
-    -ArgumentList @("--env-file=`"$EnvFile`"", 'dist\server.js') `
-    -RedirectStandardOutput (Join-Path $Logs 'site.log') -RedirectStandardError (Join-Path $Logs 'site-errors.log')
+  # Through cmd (started by the shell, not inheriting this window's handles), so a caller that
+  # reads this script's output isn't kept waiting for as long as the site runs.
+  $line = "`"$Node`" `"--env-file=$EnvFile`" dist\server.js > `"$Logs\site.log`" 2> `"$Logs\site-errors.log`""
+  Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\cmd.exe') -ArgumentList "/d /s /c `"$line`"" `
+    -WorkingDirectory $Api -WindowStyle Hidden
+  $p = $null
+  for ($i = 0; $i -lt 20 -and -not $p; $i++) {
+    Start-Sleep -Milliseconds 250
+    $p = Get-Process -Name node -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Node } | Select-Object -First 1
+  }
+  if (-not $p) { throw "The site didn't start. Details: $Logs\site-errors.log" }
   Set-Content -LiteralPath $PidFile -Value $p.Id
   for ($i = 0; $i -lt 60; $i++) {
     if (Test-Site) { return }

@@ -35,11 +35,13 @@ jobs:
   install:
     needs: package
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: FleetHub-Windows
       - name: Install
+        timeout-minutes: 10
         shell: powershell
         run: |
           Expand-Archive FleetHub-Windows.zip -DestinationPath setup
@@ -68,6 +70,7 @@ jobs:
           if ($LASTEXITCODE) { throw 'sharp' }
           Pop-Location
       - name: Stop, start, back up, install again
+        timeout-minutes: 12
         shell: powershell
         run: |
           $tools = "$env:LOCALAPPDATA\FleetHub\tools"
