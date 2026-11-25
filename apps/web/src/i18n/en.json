@@ -861,7 +861,7 @@
       "mine": "My settings",
       "lists": "Lists",
       "users": "Users and roles",
-      "import": "Excel import",
+      "import": "Import (Excel, CSV)",
       "required": "Record fields",
       "report": "Printed reports",
       "live": "Live data",
@@ -1178,11 +1178,11 @@
   },
   "import": {
     "file": {
-      "title": "1. Excel file",
-      "hint": "An .xlsx file with a header row. Up to {{max}} rows per import; split bigger sheets.",
-      "choose": "Choose an Excel file or drop it here",
-      "types": ".xlsx only",
-      "unreadable": "Couldn't read this file. Save it as .xlsx and try again."
+      "title": "1. Excel or CSV file",
+      "hint": "An .xlsx or .csv file with a header row. Up to {{max}} rows per import; split bigger sheets.",
+      "choose": "Choose an Excel or CSV file or drop it here",
+      "types": ".xlsx, .csv or .txt (tab-separated)",
+      "unreadable": "Couldn't read this file. Save it as .xlsx or .csv and try again."
     },
     "sheet": {
       "title": "2. Sheet and contents",
@@ -1557,7 +1557,7 @@
       "vehicle": "Vehicle file"
     },
     "action": {
-      "import": "Import from Excel",
+      "import": "Import from Excel or CSV",
       "addUser": "Add a user",
       "exportFleet": "Export the fleet to Excel",
       "addReceipt": "Add a receipt",

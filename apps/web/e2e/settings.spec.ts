@@ -228,7 +228,7 @@ test.describe('as a viewer', () => {
     await page.goto('/settings/users');
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('link', { name: 'Lists' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Excel import' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Import (Excel, CSV)' })).toHaveCount(0);
     await expect(page.getByTestId('add-vehicle')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Change password' })).toBeVisible();
   });

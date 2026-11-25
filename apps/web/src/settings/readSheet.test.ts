@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import ExcelJS from 'exceljs';
 import { guessMapping, IMPORT_FIELDS, type ImportTarget } from '@fleet-hub/shared';
-import { atHeaderRow, readWorkbook } from './readSheet';
+import { atHeaderRow, decodeText, readCsv, readTableFile, readWorkbook } from './readSheet';
 
 const SAMPLES = '../../docs/samples';
 const SAMPLE_TARGETS: Record<string, ImportTarget> = {
@@ -83,4 +83,43 @@ describe('the sample sheets in docs/samples', () => {
         }
       }
     });
+});
+
+describe('readCsv', () => {
+  const bytes = (s: string) => new TextEncoder().encode(s).buffer as ArrayBuffer;
+
+  it('reads quoted cells, a BOM and a title row above the headers', () => {
+    const csv =
+      '\uFEFFצי כלים 2026\r\nמספר,שם,"הערות, כלליות"\r\nEX-1,"מחפר ""גדול""","שורה\nשנייה"\r\n\r\nEX-2,טרקטור,\r\n';
+    const [s] = readCsv(bytes(csv), 'fleet.csv');
+    expect(s!.name).toBe('fleet');
+    expect(s!.headerRow).toBe(2);
+    expect(s!.headers).toEqual(['מספר', 'שם', 'הערות, כלליות']);
+    expect(s!.rows).toEqual([
+      ['EX-1', 'מחפר "גדול"', 'שורה\nשנייה'],
+      [null, null, null],
+      ['EX-2', 'טרקטור', null],
+    ]);
+  });
+
+  it('finds semicolon and tab separators', () => {
+    expect(readCsv(bytes('a;b;c\n1;2,5;3\n'), 'x.csv')[0]!.rows).toEqual([['1', '2,5', '3']]);
+    expect(readCsv(bytes('a\tb\n1\t2\n'), 'x.txt')[0]!.headers).toEqual(['a', 'b']);
+  });
+
+  it('reads Excel’s plain Hebrew CSV (Windows-1255)', () => {
+    // "כלי,תאריך" then "EX-1,01/09/2026" in Windows-1255.
+    const he = [0xeb, 0xec, 0xe9, 0x2c, 0xfa, 0xe0, 0xf8, 0xe9, 0xea];
+    const data = new Uint8Array([...he, 0x0a, ...new TextEncoder().encode('EX-1,01/09/2026\n')]);
+    expect(decodeText(data.buffer)).toMatch(/^כלי,תאריך\n/);
+    const [s] = readCsv(data.buffer, 'fuel.csv');
+    expect(s!.headers).toEqual(['כלי', 'תאריך']);
+    expect(s!.rows).toEqual([['EX-1', '01/09/2026']]);
+  });
+
+  it('picks the reader by file name', async () => {
+    const file = (name: string, data: ArrayBuffer) => ({ name, arrayBuffer: async () => data });
+    const [s] = await readTableFile(file('list.CSV', bytes('serial,name\nEX-1,a\n')));
+    expect(s!.headers).toEqual(['serial', 'name']);
+  });
 });
