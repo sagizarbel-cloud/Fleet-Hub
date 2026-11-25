@@ -28,6 +28,7 @@ Bilingual (English/Hebrew, RTL) fleet-management web app, self-hosted on our own
 - `pnpm samples` (rewrites the fake Excel sheets in `docs/samples/` used to try the import)
 - `pnpm fuel:simulate [serial …]` (dev: posts live fuel readings through a real connection, so the dashboard's fuel panel can be watched updating; see `docs/LIVE-DATA.md`)
 - `pnpm i18n:check` (fails on any key without a Hebrew value; also the hidden `/i18n-check` page)
+- `pnpm package:windows` (builds `build/windows/FleetHub-Windows.zip`, the one-laptop Windows install with Node and PostgreSQL inside; see `docs/WINDOWS.md`)
 - `pnpm check:arm64` (static: arm64 Prisma engine + argon2 and sharp prebuilts) · `pnpm docker:arm64` (full: builds the production api image for linux/arm64, which checks its native modules; needs an ARM host or QEMU)
 - Seed logins: `admin@`, `editor@`, `viewer@fleethub.test`, password `SEED_PASSWORD` from `.env`
 - Prod (from `deploy/`, see `docs/RUNBOOK.md`): `./init-env.sh <domain>` · `docker compose up -d --build` · `docker compose exec api node dist/create-admin.js --email … --name …` · `./smoke.sh <domain>`
